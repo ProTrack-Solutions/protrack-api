@@ -1,0 +1,1 @@
+DROP TYPE IF EXISTS sale_status_enum;

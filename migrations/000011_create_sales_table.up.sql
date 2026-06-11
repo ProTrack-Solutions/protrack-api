@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS sales (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL,
+  company_id UUID NOT NULL,
+  sale_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  discount_amount NUMERIC(10, 2) DEFAULT 0.00,
+  subtotal NUMERIC(10, 2) NOT NULL,
+  total_amount NUMERIC(10, 2) NOT NULL,
+  down_payment NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+  installments_count INTEGER NOT NULL DEFAULT 1,
+  due_days INT DEFAULT NULL,
+  payment_method payment_method_enum DEFAULT 'cash',
+  status account_status_enum DEFAULT 'paid',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_by UUID NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_by UUID DEFAULT NULL,
+  deleted_at TIMESTAMPTZ DEFAULT NULL,
+  deleted_by UUID DEFAULT NULL,
+  CONSTRAINT fk_sale_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_sale_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+);
