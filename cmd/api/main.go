@@ -1,0 +1,249 @@
+package main
+
+import (
+	"context"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	accountsReceivableHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/handler"
+	accountsReceivableRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/repository"
+	accountsReceivableService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
+	redis_connection "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/redis"
+	analyticsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/analytics/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
+	authHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/handler"
+	authService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/service"
+	billCategoriesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/handler"
+	billCategoriesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/repository"
+	billCategoriesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/service"
+	billsPayableHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/handler"
+	billsPayableRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/repository"
+	billsPayableService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/service"
+	cashFlowHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/handler"
+	cashFlowRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/repository"
+	cashFlowService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/service"
+	companiesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/handler"
+	companiesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/repository"
+	companiesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/config"
+	customersHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/handler"
+	customersRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/repository"
+	customersService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database"
+	departmentsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/handler"
+	departmentsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/repository"
+	departmentsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/logger"
+	paymentHistoryHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/handler"
+	paymentHistoryRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/repository"
+	paymentHistoryService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/service"
+	paymentMethodsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/handler"
+	paymentMethodsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/repository"
+	paymentMethodsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/service"
+	paymentsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/handler"
+	paymentsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/service"
+	productsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/handler"
+	productsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/repository"
+	productsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
+	productsCategoriesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/handler"
+	productsCategoriesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/repository"
+	productsCategoriesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/service"
+	reportsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/handler"
+	reportsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/service"
+	saleItemsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/handler"
+	saleItemsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/repository"
+	saleItemsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/service"
+	salesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/handler"
+	salesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/repository"
+	salesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/service"
+	usersHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/handler"
+	usersRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/repository"
+	usersService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/service"
+	vendorsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/handler"
+	vendorsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/repository"
+	vendorsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp"
+	whatsappHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp/handler"
+	whatsappService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp/service"
+	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/worker"
+	"github.com/gin-contrib/cors"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
+)
+
+func main() {
+	gin.SetMode(gin.ReleaseMode)
+	r := gin.Default()
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:5173",
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Authorization","Accept",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+		},
+		AllowCredentials: true,
+		MaxAge: 0,
+	}))
+
+	r.HandleMethodNotAllowed = true
+	r.Use(func(c *gin.Context) {
+		if c.Request.Method == http.MethodOptions {
+			c.AbortWithStatus(http.StatusNoContent)
+			return
+		}
+		c.Next()
+	})
+
+	logger.InitLogger("development")
+
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error loading settings")
+	}
+
+	db, err := database.NewConnect(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to database")
+	}
+	defer db.Close()
+
+	redis, err := redis_connection.NewRedisConnection(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to connect to redis")
+	}
+	defer redis.Close()
+
+	whatsapp := whatsapp.NewWhatsapp(cfg)
+
+	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
+
+	blacklist := cache.NewTokenBlackList(redis)
+
+	usersRepository := usersRepository.NewRepository(db.Pool)
+	companiesRepository := companiesRepository.NewRepository(db.Pool)
+	departmentsRepository := departmentsRepository.NewRepository(db.Pool)
+	productsCategoriesRepository := productsCategoriesRepository.NewRepository(db.Pool)
+	productsRepository := productsRepository.NewRepository(db.Pool)
+	customersRepository := customersRepository.NewRepository(db.Pool)
+	salesRepository := salesRepository.NewRepository(db.Pool)
+	saleItemsRepository := saleItemsRepository.NewRepository(db.Pool)
+	paymentMethodsRepository := paymentMethodsRepository.NewRepository(db.Pool)
+	vendorsRepository := vendorsRepository.NewRepository(db.Pool)
+	billCategoriesRepository := billCategoriesRepository.NewRepository(db.Pool)
+	billsPayableRepository := billsPayableRepository.NewRepository(db.Pool)
+	paymentHistoryRepository := paymentHistoryRepository.NewRepository(db.Pool)
+	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
+	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
+
+	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
+	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
+	companiesService := companiesService.NewService(db.Pool, companiesRepository, usersRepository)
+	departmentsService := departmentsService.NewService(departmentsRepository)
+	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
+	productsService := productsService.NewService(productsRepository, db.Pool)
+	authService := authService.NewService(usersService, jwtManager)
+	customersService := customersService.NewService(customersRepository, db.Pool)
+	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
+	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
+	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService,companiesService, whatsapp)
+	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
+	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
+	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
+	billsPayableService := billsPayableService.NewService(billsPayableRepository, db.Pool)
+	paymentHistoryService := paymentHistoryService.NewService(paymentHistoryRepository, db.Pool)
+	paymentsService := paymentsService.NewService(db.Pool, paymentHistoryService, accountsReceivableService, customersService, salesService)
+	analyticsService := analyticsService.NewService(productsService, saleItemsService)
+	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
+	whatsappService := whatsappService.NewService(cfg, companiesService)
+
+	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
+	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
+	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
+	departmentsHandler := departmentsHandler.NewHandler(departmentsService)
+	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist)
+	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist)
+	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist)
+	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist)
+	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist)
+	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist)
+	paymentMethodsHandler := paymentMethodsHandler.NewHandler(paymentMethodsService, jwtManager, blacklist)
+	vendorsHandler := vendorsHandler.NewHandler(vendorsService, jwtManager, blacklist)
+	billCategoriesHandler := billCategoriesHandler.NewHandler(billCategoriesService, jwtManager, blacklist)
+	billsPayableHandler := billsPayableHandler.NewHandler(billsPayableService, jwtManager, blacklist)
+	paymentHistoryHandler := paymentHistoryHandler.NewHandler(paymentHistoryService, jwtManager, blacklist)
+	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist)
+	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
+	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
+	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
+
+	api := r.Group("/api/v1")
+	usersHandler.RegisterRoutes(api)
+	companiesHandler.RegisterRoutes(api)
+	departmentsHandler.RegisterRoutes(api)
+	productsCategoriesHandler.RegisterRoutes(api)
+	productsHandler.RegisterRoute(api)
+	authHandler.RegisterRoute(api)
+	customersHandler.RegisterRoute(api)
+	salesHandler.RegisterRoutes(api)
+	saleItemsHandler.RegisterRoute(api)
+	paymentMethodsHandler.RegisterRoutes(api)
+	vendorsHandler.RegisterRoute(api)
+	billCategoriesHandler.RegisterRoute(api)
+	billsPayableHandler.RegisterRoute(api)
+	paymentHistoryHandler.RegisterRoute(api)
+	accountsReceivableHandler.RegisterRoute(api)
+	paymentsHandler.RegisterRoute(api)
+	reportsHandler.RegisterRoutes(api)
+	cashFlowHandler.RegisterRoute(api)
+	whatsappHandler.RegisterRoute(api)
+
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+
+
+	worker.StartOverdueMonitor(salesService)
+	worker.StartBillPayableOverdueMonitor(billsPayableService)
+
+	srv := &http.Server{
+		Addr:    ":" + cfg.ApiPort,
+		Handler: r,
+	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		log.Info().Msgf("GoFinance running at the port %s", cfg.ApiPort)
+		log.Info().Msgf("Data Base: %s@%s:%s/%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
+
+		// ListenAndServe bloqueia até que o servidor seja fechado
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatal().Err(err).Msg("Failed to start server")
+		}
+	}()
+
+	<-sigChan
+	log.Info().Msg("Shutting down server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal().Err(err).Msg("Server forced to shutdown")
+	}
+
+	log.Info().Msg("Server exited")
+}

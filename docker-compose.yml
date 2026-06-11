@@ -1,0 +1,97 @@
+services:
+  redis:
+    image: redis:latest
+    container_name: protrack-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    restart: always
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  db:
+    image: postgres:16-alpine
+    container_name: protrack-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-protrack}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pr0tr@ck2026}
+      POSTGRES_DB: ${POSTGRES_DB:-protrack}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER:-protrack} -d $${POSTGRES_DB:-protrack}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: protrack-api
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      API_PORT: ${API_PORT:-8080}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+      EVOLUTION_KEY: ${EVOLUTION_KEY}
+      EVOLUTION_API: ${EVOLUTION_API}
+    depends_on:
+      redis:
+        condition: service_healthy
+      evolution-api:
+        condition: service_started
+  evolution-api:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.1.1
+    restart: always
+    privileged: true
+    ports:
+      - "8085:8081"
+    environment:
+      - SERVER_TYPE=http
+      - SERVER_PORT=8081
+      - SERVER_URL=http://localhost:8085
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=${EVOLUTION_KEY}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://protrack:pr0tr@ck2026@db:5432/evolution_db?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/0
+      - CACHE_REDIS_SAVE_INSTANCES=true
+      - CONFIG_SESSION_HTTP_BROWSER_ARGS="['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process', '--disable-gpu']"
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1033881095
+
+    security_opt:
+      - seccomp:unconfined
+    env_file:
+      - .env
+    volumes:
+      - evolution_instances:/evolution/instances
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  evolution_instances:

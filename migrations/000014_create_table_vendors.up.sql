@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS vendors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    tax_id VARCHAR(18),
+    email VARCHAR(100),
+    phone VARCHAR(20),
+    postal_code VARCHAR(20),
+    address_line_1 VARCHAR(255),
+    address_line_2 VARCHAR(255),
+    number VARCHAR(20),
+    neighborhood VARCHAR(100),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    country VARCHAR(100) DEFAULT 'Brazil',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_vendors_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+);
