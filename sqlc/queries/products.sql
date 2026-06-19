@@ -156,3 +156,21 @@ WHERE p.category_id = $1
     AND p.deleted_at IS NULL
     AND p.created_at >= $2
     AND p.created_at <= $3;
+-- name: CountProductsByCompany :one
+SELECT COUNT(*) FROM products
+WHERE company_id = $1
+    AND deleted_at IS NULL;
+-- name: ListProductsByCompanyPaginated :many
+SELECT 
+    p.id, p.company_id, p.category_id, p.name, p.description, p.barcode,
+    p.quantity, p.size, p.cost_price, p.sale_price,
+    p.created_by, p.updated_by, p.deleted_by,
+    p.created_at, p.updated_at, p.deleted_at,
+    c.name AS category_name
+FROM products p
+JOIN product_categories c ON c.id = p.category_id
+WHERE p.company_id = $1
+    AND p.deleted_at IS NULL
+ORDER BY p.created_at DESC
+LIMIT $2
+OFFSET $3;

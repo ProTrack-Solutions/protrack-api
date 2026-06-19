@@ -5,6 +5,7 @@ import (
 
 	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
 	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
+	globalDomain "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain"
 	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/domain"
 	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
 	"github.com/gin-gonic/gin"
@@ -148,13 +149,19 @@ func (h *Handler) ListProductsByCompany(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	products, err := h.service.ListProductsByCompany(c.Request.Context(), companyId)
+	var pagination globalDomain.PaginationParams
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	products, err := h.service.ListProductsByCompanyPaginated(c.Request.Context(), companyId, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"products": products})
+	c.JSON(http.StatusOK, products)
 }
 
 func (h *Handler) UpdateProduct(c *gin.Context) {
