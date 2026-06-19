@@ -5,6 +5,7 @@ import (
 
 	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
 	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	globalDomain "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain"
 	"github.com/google/uuid"
 )
 
@@ -152,6 +153,11 @@ type ListProductsByCategoryAndDateResponse struct {
 	CategoryID   uuid.UUID `json:"category_id"`
 	CreatedAt    time.Time `json:"created_at"`
 	CategoryName string    `json:"category_name"`
+}
+
+type ProductPaginatedResponse struct {
+	globalDomain.PaginatedResponse[ListProductsByCompanyRow]
+	TotalValueInStock float64 `json:"total_value_in_stock"`
 }
 
 func ApplyUpdateProductCategoryParams(

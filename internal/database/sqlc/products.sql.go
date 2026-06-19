@@ -25,6 +25,19 @@ func (q *Queries) CountProducts(ctx context.Context, companyID pgtype.UUID) (int
 	return sum, err
 }
 
+const countProductsByCompany = `-- name: CountProductsByCompany :one
+SELECT COUNT(*) FROM products
+WHERE company_id = $1
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countProductsByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createProduct = `-- name: CreateProduct :one
 INSERT INTO products(
         company_id,
@@ -495,6 +508,86 @@ func (q *Queries) ListProductsByCompany(ctx context.Context, companyID pgtype.UU
 	items := []ListProductsByCompanyRow{}
 	for rows.Next() {
 		var i ListProductsByCompanyRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.CategoryID,
+			&i.Name,
+			&i.Description,
+			&i.Barcode,
+			&i.Quantity,
+			&i.Size,
+			&i.CostPrice,
+			&i.SalePrice,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.DeletedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.CategoryName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsByCompanyPaginated = `-- name: ListProductsByCompanyPaginated :many
+SELECT 
+    p.id, p.company_id, p.category_id, p.name, p.description, p.barcode,
+    p.quantity, p.size, p.cost_price, p.sale_price,
+    p.created_by, p.updated_by, p.deleted_by,
+    p.created_at, p.updated_at, p.deleted_at,
+    c.name AS category_name
+FROM products p
+JOIN product_categories c ON c.id = p.category_id
+WHERE p.company_id = $1
+    AND p.deleted_at IS NULL
+ORDER BY p.created_at DESC
+LIMIT $2
+OFFSET $3
+`
+
+type ListProductsByCompanyPaginatedParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
+}
+
+type ListProductsByCompanyPaginatedRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	CompanyID    pgtype.UUID        `json:"company_id"`
+	CategoryID   pgtype.UUID        `json:"category_id"`
+	Name         string             `json:"name"`
+	Description  pgtype.Text        `json:"description"`
+	Barcode      pgtype.Text        `json:"barcode"`
+	Quantity     int32              `json:"quantity"`
+	Size         pgtype.Text        `json:"size"`
+	CostPrice    pgtype.Numeric     `json:"cost_price"`
+	SalePrice    pgtype.Numeric     `json:"sale_price"`
+	CreatedBy    pgtype.UUID        `json:"created_by"`
+	UpdatedBy    pgtype.UUID        `json:"updated_by"`
+	DeletedBy    pgtype.UUID        `json:"deleted_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	CategoryName string             `json:"category_name"`
+}
+
+func (q *Queries) ListProductsByCompanyPaginated(ctx context.Context, arg ListProductsByCompanyPaginatedParams) ([]ListProductsByCompanyPaginatedRow, error) {
+	rows, err := q.db.Query(ctx, listProductsByCompanyPaginated, arg.CompanyID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductsByCompanyPaginatedRow{}
+	for rows.Next() {
+		var i ListProductsByCompanyPaginatedRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CompanyID,
