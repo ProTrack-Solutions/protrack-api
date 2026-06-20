@@ -158,6 +158,8 @@ type ListProductsByCategoryAndDateResponse struct {
 type ProductPaginatedResponse struct {
 	globalDomain.PaginatedResponse[ListProductsByCompanyRow]
 	TotalValueInStock float64 `json:"total_value_in_stock"`
+	ItensInStock      int32   `json:"itens_in_stock"`
+	LowItensInStock   int32   `json:"low_itens_in_stock"`
 }
 
 func ApplyUpdateProductCategoryParams(
