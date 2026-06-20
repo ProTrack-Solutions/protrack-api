@@ -30,8 +30,8 @@ type RepositoryInterface interface {
 	GetInventoryReport(ctx context.Context, arg db.GetInventoryReportParams) ([]db.GetInventoryReportRow, error)
 	ListProductsByDate(ctx context.Context, arg db.ListProductsByDateParams) ([]db.ListProductsByDateRow, error)
 	ListProductBuCategoryIdAndDate(ctx context.Context, arg db.ListProductsByCategoryAndDateParams) ([]db.ListProductsByCategoryAndDateRow, error)
-	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error)
+	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 }
 
 type Service struct {
@@ -224,10 +224,17 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 	var response []domain.ListProductsByCompanyRow
 
 	var totalValueInStock float64
+	var itensInStock int32
+	var lowItensInStock int32
 
 	for _, product := range products {
 
 		totalValueInStock += pgconv.PgNumericToFloat64(product.CostPrice) * float64(product.Quantity)
+		itensInStock += product.Quantity
+		if product.Quantity < 5 {
+			lowItensInStock += 1
+		}
+
 		response = append(response, domain.ListProductsByCompanyRow{
 			ID:           pgconv.PgUUIDToUUID(product.ID),
 			CompanyID:    pgconv.PgUUIDToUUID(product.CompanyID),
@@ -254,6 +261,8 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 	return domain.ProductPaginatedResponse{
 		PaginatedResponse: paginationResponse,
 		TotalValueInStock: totalValueInStock,
+		ItensInStock:      itensInStock,
+		LowItensInStock:   lowItensInStock,
 	}, nil
 }
 
