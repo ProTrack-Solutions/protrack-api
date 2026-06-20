@@ -56,13 +56,13 @@ func (h *Handler) CreateProductCategory(c *gin.Context) {
 		return
 	}
 
-	category, err := h.service.CreateProductCategory(c.Request.Context(), userId, companyId, req)
+	err = h.service.CreateProductCategory(c.Request.Context(), userId, companyId, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"category": category})
+	c.JSON(http.StatusCreated, gin.H{"category": "success"})
 }
 
 func (h *Handler) DeleteProductCategory(c *gin.Context) {

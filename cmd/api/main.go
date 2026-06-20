@@ -82,19 +82,19 @@ func main() {
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",
+			"http://localhost:3000",
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
 		},
 		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization","Accept",
+			"Origin", "Content-Type", "Authorization", "Accept", "Page", "PerPage",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
 		},
 		AllowCredentials: true,
-		MaxAge: 0,
+		MaxAge:           0,
 	}))
 
 	r.HandleMethodNotAllowed = true
@@ -157,7 +157,7 @@ func main() {
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
-	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService,companiesService, whatsapp)
+	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService, whatsapp)
 	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
 	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
 	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
@@ -212,7 +212,6 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
-
 
 	worker.StartOverdueMonitor(salesService)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
