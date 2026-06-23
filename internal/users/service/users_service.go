@@ -11,13 +11,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/validate"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/config"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
+	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/repository"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
 )
 
 type RepositoryInterface interface {
