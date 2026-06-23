@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/http/middleware"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 

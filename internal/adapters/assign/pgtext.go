@@ -1,7 +1,7 @@
 package assign
 
 import (
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 

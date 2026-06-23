@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
