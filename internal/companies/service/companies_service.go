@@ -3,13 +3,13 @@ package service
 import (
 	"context"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/validate"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/repository"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	usersRepo "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/repository"
+	"github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	usersRepo "github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"

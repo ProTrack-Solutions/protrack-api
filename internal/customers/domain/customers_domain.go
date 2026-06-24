@@ -3,9 +3,10 @@ package domain
 import (
 	"time"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain/enums"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/google/uuid"
 )
 
@@ -128,6 +129,10 @@ type CustomerResponse struct {
 	CreatedAt           time.Time    `json:"created_at"`
 	UpdatedAt           time.Time    `json:"updated_at"`
 	DeletedAt           time.Time    `json:"deleted_at"`
+}
+
+type CustomerPaginatedResponse struct {
+	globalDomain.PaginatedResponse[CustomerResponse]
 }
 
 func ApplyUpdateCustomerParams(req UpdateCustomerRequest, arg *db.UpdateCustomerParams) {

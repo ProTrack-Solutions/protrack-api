@@ -123,3 +123,15 @@ SET balance_due = $2,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $1
     AND deleted_at IS NULL;
+-- name: ListCustomersPaginate :many
+SELECT *
+FROM customers
+WHERE company_id = $1
+    AND deleted_at IS NULL
+ORDER BY created_at DESC
+LIMIT $2
+OFFSET $3;
+-- name: CountCustomersByCompany :one
+SELECT COUNT(*) FROM customers
+WHERE company_id = $1
+    AND deleted_at IS NULL;

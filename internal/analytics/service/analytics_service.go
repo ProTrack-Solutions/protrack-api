@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/analytics/domain"
-	productService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
-	productCategoriesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/service"
-	saleItemsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/analytics/domain"
+	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
+	productCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
+	saleItemsService "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/service"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )

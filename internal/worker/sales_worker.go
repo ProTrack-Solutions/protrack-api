@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/rs/zerolog/log"
 )
 

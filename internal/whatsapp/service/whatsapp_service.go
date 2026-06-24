@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/config"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/domain"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
