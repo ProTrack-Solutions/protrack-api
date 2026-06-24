@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	analyticsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/analytics/service"
-	paymentHistoryService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/service"
-	productService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/domain"
-	saleService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/service"
+	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
+	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
+	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/reports"
+	"github.com/ProTrack-Solutions/protrack-api/internal/reports/domain"
+	saleService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )

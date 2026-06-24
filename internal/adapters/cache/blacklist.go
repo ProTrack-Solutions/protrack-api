@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	redis_connection "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/redis"
+	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
 	"github.com/redis/go-redis/v9"
 )
 

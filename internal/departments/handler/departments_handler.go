@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/departments/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )

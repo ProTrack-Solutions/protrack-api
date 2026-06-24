@@ -3,11 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	globalDomain "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
