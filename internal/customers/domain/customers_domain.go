@@ -6,6 +6,7 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/google/uuid"
 )
