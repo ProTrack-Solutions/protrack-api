@@ -7,6 +7,8 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -24,6 +26,8 @@ type RepositoryInterface interface {
 	CountCustomers(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyId pgtype.UUID) (db.GetCustomersPerformanceSummaryRow, error)
 	UpdateCustomerBalance(ctx context.Context, arg db.UpdateCustomerBalanceParams) error
+	ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.Customer, error)
+	CountCustomersByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -381,4 +385,60 @@ func (s *Service) GetCustomersPerformanceSummary(ctx context.Context, companyId 
 	}
 
 	return percentage, nil
+}
+
+func (s *Service) ListCustomersPaginated(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.CustomerPaginatedResponse, error) {
+	total, err := s.repo.CountCustomersByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.CustomerPaginatedResponse{}, err
+	}
+
+	customers, err := s.repo.ListCustomersPaginate(ctx, db.ListCustomersPaginateParams{
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+		Limit:     pagination.PerPage,
+		Offset:    (pagination.Page - 1) * pagination.PerPage,
+	})
+	if err != nil {
+		return domain.CustomerPaginatedResponse{}, err
+	}
+
+	var response []domain.CustomerResponse
+
+	for _, customer := range customers {
+		response = append(response, domain.CustomerResponse{
+			ID:                  pgconv.PgUUIDToUUID(customer.ID),
+			CompanyID:           pgconv.PgUUIDToUUID(customer.CompanyID),
+			FullName:            customer.FullName,
+			BirthDate:           pgconv.PgDateToString(customer.BirthDate),
+			Cpf:                 customer.Cpf,
+			Rg:                  pgconv.ParsePgTextToString(customer.Rg),
+			MaritalStatus:       pgconv.ParsePgTextToString(customer.MaritalStatus),
+			Gender:              enums.Gender(customer.Gender.(string)),
+			Whatsapp:            pgconv.ParsePgTextToString(customer.Whatsapp),
+			MobilePhone:         pgconv.ParsePgTextToString(customer.MobilePhone),
+			HomePhone:           pgconv.ParsePgTextToString(customer.HomePhone),
+			Email:               customer.Email,
+			AddressStreet:       pgconv.ParsePgTextToString(customer.AddressStreet),
+			AddressNumber:       pgconv.ParsePgTextToString(customer.AddressNumber),
+			AddressComplement:   pgconv.ParsePgTextToString(customer.AddressComplement),
+			AddressNeighborhood: pgconv.ParsePgTextToString(customer.AddressNeighborhood),
+			AddressCity:         pgconv.ParsePgTextToString(customer.AddressCity),
+			AddressState:        pgconv.ParsePgTextToString(customer.AddressState),
+			AddressZipcode:      pgconv.ParsePgTextToString(customer.AddressZipcode),
+			AddressCountry:      pgconv.ParsePgTextToString(customer.AddressCountry),
+			BalanceDue:          pgconv.PgNumericToFloat64(customer.BalanceDue),
+			CreatedBy:           pgconv.PgUUIDToUUID(customer.CreatedBy),
+			UpdatedBy:           pgconv.PgUUIDToUUID(customer.UpdatedBy),
+			DeletedBy:           pgconv.PgUUIDToUUID(customer.DeletedBy),
+			CreatedAt:           pgconv.PgTimestamptzToTime(customer.CreatedAt),
+			UpdatedAt:           pgconv.PgTimestamptzToTime(customer.UpdatedAt),
+			DeletedAt:           pgconv.PgTimestamptzToTime(customer.DeletedAt),
+		})
+	}
+
+	paginationResponse := globalDomain.NewPaginatedResponse(response, total, pagination)
+
+	return domain.CustomerPaginatedResponse{
+		PaginatedResponse: paginationResponse,
+	}, nil
 }

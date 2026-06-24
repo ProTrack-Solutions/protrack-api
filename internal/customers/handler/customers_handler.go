@@ -7,6 +7,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -138,13 +139,19 @@ func (h *Handler) ListCustomers(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	customers, err := h.service.ListCustomers(c.Request.Context(), companyId)
+	var pagination globalDomain.PaginationParams
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	customers, err := h.service.ListCustomersPaginated(c.Request.Context(), companyId, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"customers": customers})
+	c.JSON(http.StatusOK, customers)
 }
 
 func (h *Handler) UpdateBalanceDueCustomer(c *gin.Context) {
