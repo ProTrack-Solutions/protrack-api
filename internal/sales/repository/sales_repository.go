@@ -107,3 +107,11 @@ func (r *Repository) ListSalesWithDetailsPendingOverdue(ctx context.Context, com
 func (r *Repository) GetPendingSalesDetailedReport(ctx context.Context, arg db.GetPendingSalesDetailedReportParams) ([]db.GetPendingSalesDetailedReportRow, error) {
 	return r.queries().GetPendingSalesDetailedReport(ctx, arg)
 }
+
+func (r *Repository) ListSalesWithDetailsPaginate(ctx context.Context, arg db.ListSalesWithDetailsPaginateParams) ([]db.ListSalesWithDetailsPaginateRow, error) {
+	return r.queries().ListSalesWithDetailsPaginate(ctx, arg)
+}
+
+func (r *Repository) CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	return r.queries().CountSalesByCompany(ctx, companyId)
+}

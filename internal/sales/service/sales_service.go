@@ -14,6 +14,7 @@ import (
 	customerDomain "github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	productCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
 	saleItemDomain "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/domain"
@@ -45,6 +46,8 @@ type RepositoryInterface interface {
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]db.ListSalesWithDetailsRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]db.ListSalesWithDetailsPendingOverdueRow, error)
 	GetPendingSalesDetailedReport(ctx context.Context, arg db.GetPendingSalesDetailedReportParams) ([]db.GetPendingSalesDetailedReportRow, error)
+	ListSalesWithDetailsPaginate(ctx context.Context, arg db.ListSalesWithDetailsPaginateParams) ([]db.ListSalesWithDetailsPaginateRow, error)
+	CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -56,7 +59,7 @@ type Service struct {
 	accountsReceivableService *accountsReceivableService.Service
 	productService            *productService.Service
 	productCategoriesService  *productCategoriesService.Service
-	companiesService *companiesService.Service
+	companiesService          *companiesService.Service
 	whatsApp                  *whatsapp.Whatsapp
 }
 
@@ -97,18 +100,36 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 
 	txRepo := s.repo.WithTx(tx)
 
+	log.Info().Interface("request", req).Msg("Teste request")
+
+	var status string
+	var subTotal float64
+	var totalAmount float64
+	var discount float64
+
+	for _, item := range req.Items {
+		product, err := s.productService.GetProductByIdTx(ctx, tx, item.ProductID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+
+		subTotal = float64(item.Quantity) * product.SalePrice
+	}
+
+	totalAmount = subTotal * (1 - (req.DiscountAmount / 100))
+
 	// 1. Definição do Status e Atualização de Saldo Devedor
 	if req.PaymentMethod == "installments" {
 		if err := s.customerService.UpdateCustomerBalanceAddTx(ctx, tx, req.CustomerID, customerDomain.UpdateBalanceDueCustomerRequest{
-			BalanceDue: req.Subtotal,
+			BalanceDue: subTotal,
 			Prohibited: req.Prohibited,
 			UpdatedBy:  userId,
 		}); err != nil {
 			return uuid.Nil, err
 		}
-		req.Status = "pending"
+		status = "pending"
 	} else {
-		req.Status = "paid"
+		status = "paid"
 	}
 
 	dueDaysVal := 0
@@ -125,11 +146,11 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		CustomerID:        pgconv.ParseUUIDToPgType(req.CustomerID),
 		CompanyID:         pgconv.ParseUUIDToPgType(companyId),
 		DiscountAmount:    pgconv.Float64ToPgNumeric(req.DiscountAmount),
-		Subtotal:          pgconv.Float64ToPgNumeric(req.Subtotal),
-		TotalAmount:       pgconv.Float64ToPgNumeric(req.TotalAmount),
+		Subtotal:          pgconv.Float64ToPgNumeric(subTotal),
+		TotalAmount:       pgconv.Float64ToPgNumeric(totalAmount),
 		DueDays:           pgconv.OptionalIntToPgInt4(dueDaysVal),
 		PaymentMethod:     req.PaymentMethod,
-		Status:            req.Status,
+		Status:            status,
 		CreatedBy:         pgconv.ParseUUIDToPgType(userId),
 		InstallmentsCount: installments,
 		DownPayment:       pgconv.Float64ToPgNumeric(req.Prohibited),
@@ -140,7 +161,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 
 	if req.PaymentMethod == "installments" {
 
-		amountToParcel := req.TotalAmount - req.Prohibited
+		amountToParcel := totalAmount - req.Prohibited
 		installmentValue := amountToParcel / float64(req.InstallmentsCount)
 		dataBase := time.Now()
 
@@ -183,13 +204,25 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 
 	for _, itemReq := range req.Items {
-		itemReq.SaleID = pgconv.PgUUIDToUUID(id)
 
-		percentageItem := (itemReq.UnitPrice / req.TotalAmount) * 100
+		product, err := s.productService.GetProductByIdTx(ctx, tx, itemReq.ProductID)
+		if err != nil {
+			return uuid.Nil, err
+		}
 
-		itemReq.Discount = req.DiscountAmount * (percentageItem / 100)
+		saleID := pgconv.PgUUIDToUUID(id)
 
-		if err := s.saleItemsService.CreateSaleItemInTx(ctx, tx, saleItemDomain.CreateSaleItemRequest(itemReq), companyId); err != nil {
+		percentageItem := (product.SalePrice / totalAmount) * 100
+
+		discount = req.DiscountAmount * (percentageItem / 100)
+
+		if err := s.saleItemsService.CreateSaleItemInTx(ctx, tx, saleItemDomain.CreateSaleItemRequest{
+			SaleID:    saleID,
+			ProductID: itemReq.ProductID,
+			Quantity:  itemReq.Quantity,
+			UnitPrice: product.SalePrice,
+			Discount:  discount,
+		}, companyId); err != nil {
 			return uuid.Nil, err
 		}
 	}
@@ -460,8 +493,6 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 
 	repoTx := s.repo.WithTx(tx)
 
-	
-
 	response, err := repoTx.UpdateOverdueSalesAndAccounts(ctx)
 	if err != nil {
 		return err
@@ -494,7 +525,7 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 
 		targetNumber := customer.Whatsapp
 
-		if err := s.whatsApp.SendWhatsAppMessage(targetNumber, msg,instanceName); err != nil {
+		if err := s.whatsApp.SendWhatsAppMessage(targetNumber, msg, instanceName); err != nil {
 			log.Error().Err(err).Str("sale_id", data.SaleID.String()).Msg("Erro ao enviar WhatsApp de vencimento")
 		}
 	}
@@ -746,7 +777,7 @@ func (s *Service) GetTop5RealProfitItem(ctx context.Context, companyId uuid.UUID
 	limit := 5
 
 	if len(response) < 5 {
-		limit = (len(response))
+		limit = len(response)
 	}
 
 	return response[:limit], nil
@@ -948,4 +979,117 @@ func (s *Service) GetPendingSalesDetailedReport(ctx context.Context, companyId u
 		})
 	}
 	return response, nil
+}
+
+func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.SaleResponsePaginate, error) {
+	total, err := s.repo.CountSalesByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
+
+	rows, err := s.repo.ListSalesWithDetailsPaginate(ctx, db.ListSalesWithDetailsPaginateParams{
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+		Limit:     pagination.PerPage,
+		Offset:    (pagination.Page - 1) * pagination.PerPage,
+	})
+
+	var response []domain.ListSalesWithInstallmentsResponse
+	var totalInvoiced float64
+	var totalPending float64
+	var salesCanceled int64
+
+	salesMap := make(map[uuid.UUID]*domain.ListSalesWithInstallmentsResponse)
+	var orderedIds []uuid.UUID
+
+	for _, row := range rows {
+		saleId := pgconv.PgUUIDToUUID(row.SaleID)
+
+		if _, exists := salesMap[saleId]; !exists {
+
+			if row.SaleStatus == "paid" {
+				totalInvoiced += pgconv.PgNumericToFloat64(row.TotalAmount)
+			}
+
+			if pgconv.ParsePgTextToString(row.InstallmentStatus) == "pending" {
+				totalPending += pgconv.PgNumericToFloat64(row.InstallmentBalance)
+			}
+
+			if row.SaleStatus == "canceled" {
+				salesCanceled += 1
+			}
+
+			salesMap[saleId] = &domain.ListSalesWithInstallmentsResponse{
+				Sale: domain.ListSalesResponse{
+					SaleID:                 saleId,
+					SaleAt:                 pgconv.PgTimestamptzToTime(row.SaleAt),
+					Subtotal:               pgconv.PgNumericToFloat64(row.Subtotal),
+					DiscountAmount:         pgconv.PgNumericToFloat64(row.DiscountAmount),
+					TotalAmount:            pgconv.PgNumericToFloat64(row.TotalAmount),
+					InstallmentsCount:      row.InstallmentsCount,
+					PaymentMethod:          row.PaymentMethod,
+					SaleStatus:             row.SaleStatus,
+					CustomerID:             pgconv.PgUUIDToUUID(row.CustomerID),
+					CustomerName:           row.CustomerName,
+					InstallmentTotalAmount: pgconv.PgNumericToFloat64(row.InstallmentBalance),
+					DownPayment:            pgconv.PgNumericToFloat64(row.DownPayment),
+				},
+				Products:      []domain.ListProductResponse{},
+				AccReceivable: []domain.ListAccReceivableResponse{},
+			}
+			orderedIds = append(orderedIds, saleId)
+		}
+		itemId := pgconv.PgUUIDToUUID(row.SaleItemID)
+		isProductNew := true
+
+		for _, p := range salesMap[saleId].Products {
+			if p.SaleItemID == itemId {
+				isProductNew = false
+				break
+			}
+		}
+		if isProductNew && row.ProductID.Valid {
+			salesMap[saleId].Products = append(salesMap[saleId].Products, domain.ListProductResponse{
+				SaleItemID:   pgconv.PgUUIDToUUID(row.SaleItemID),
+				ProductID:    pgconv.PgUUIDToUUID(row.ProductID),
+				Quantity:     row.Quantity,
+				UnitPrice:    pgconv.PgNumericToFloat64(row.UnitPrice),
+				ItemDiscount: pgconv.PgNumericToFloat64(row.ItemDiscount),
+				ProductName:  row.ProductName,
+			})
+		}
+
+		instId := pgconv.PgUUIDToUUID(row.InstallmentID)
+		isInstNew := true
+
+		for _, i := range salesMap[saleId].AccReceivable {
+			if i.InstallmentID == instId {
+				isInstNew = false
+				break
+			}
+		}
+		if isInstNew && row.InstallmentID.Valid {
+			salesMap[saleId].AccReceivable = append(salesMap[saleId].AccReceivable, domain.ListAccReceivableResponse{
+				InstallmentID:      pgconv.PgUUIDToUUID(row.InstallmentID),
+				InstallmentBalance: pgconv.PgNumericToFloat64(row.InstallmentBalance),
+				DueDate:            pgconv.PgDateToString(row.DueDate),
+				InstallmentNumber:  pgconv.PgInt4ToInt(row.InstallmentNumber),
+				InstallmentStatus:  pgconv.ParsePgTextToString(row.InstallmentStatus),
+			})
+		}
+
+	}
+
+	for _, id := range orderedIds {
+		response = append(response, *salesMap[id])
+	}
+
+	paginationResponse := globalDomain.NewPaginatedResponse(response, total, pagination)
+
+	return domain.SaleResponsePaginate{
+		PaginatedResponse: paginationResponse,
+		SalesCount:        total,
+		TotalInvoiced:     totalInvoiced,
+		TotalPending:      totalPending,
+		SalesCanceled:     salesCanceled,
+	}, nil
 }
