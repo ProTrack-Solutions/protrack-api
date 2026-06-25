@@ -40,6 +40,19 @@ func (q *Queries) CountSales(ctx context.Context, companyID pgtype.UUID) (int64,
 	return count, err
 }
 
+const countSalesByCompany = `-- name: CountSalesByCompany :one
+SELECT COUNT(*) FROM sales
+WHERE company_id = $1
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSalesByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSale = `-- name: CreateSale :one
 INSERT INTO sales (
         customer_id,
@@ -704,6 +717,122 @@ func (q *Queries) ListSalesWithDetails(ctx context.Context, companyID pgtype.UUI
 	items := []ListSalesWithDetailsRow{}
 	for rows.Next() {
 		var i ListSalesWithDetailsRow
+		if err := rows.Scan(
+			&i.SaleID,
+			&i.SaleAt,
+			&i.Subtotal,
+			&i.DiscountAmount,
+			&i.TotalAmount,
+			&i.InstallmentsCount,
+			&i.PaymentMethod,
+			&i.SaleStatus,
+			&i.DownPayment,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.SaleItemID,
+			&i.ProductID,
+			&i.Quantity,
+			&i.UnitPrice,
+			&i.ItemDiscount,
+			&i.ProductName,
+			&i.InstallmentID,
+			&i.InstallmentTotalAmount,
+			&i.InstallmentBalance,
+			&i.DueDate,
+			&i.InstallmentNumber,
+			&i.InstallmentStatus,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSalesWithDetailsPaginate = `-- name: ListSalesWithDetailsPaginate :many
+SELECT -- Dados da venda
+    s.id AS sale_id,
+    s.sale_at,
+    s.subtotal,
+    s.discount_amount,
+    s.total_amount,
+    s.installments_count,
+    s.payment_method,
+    s.status AS sale_status,
+    s.down_payment,
+    -- Dados do cliente
+    c.id AS customer_id,
+    c.full_name AS customer_name,
+    -- Dados dos produtos (itens da venda)
+    si.id AS sale_item_id,
+    si.product_id,
+    si.quantity,
+    si.unit_price,
+    si.discount AS item_discount,
+    p.name AS product_name,
+    -- Parcelas (accounts_receivable)
+    ar.id AS installment_id,
+    ar.total_amount AS installment_total_amount,
+    ar.balance AS installment_balance,
+    ar.due_date,
+    ar.installment_number,
+    ar.status AS installment_status
+FROM sales s
+    INNER JOIN customers c ON s.customer_id = c.id
+    INNER JOIN sale_items si ON s.id = si.sale_id
+    INNER JOIN products p ON si.product_id = p.id
+    LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
+WHERE s.company_id = $1 
+    AND s.deleted_at IS NULL
+ORDER BY p.created_at DESC
+LIMIT $2
+OFFSET $3
+`
+
+type ListSalesWithDetailsPaginateParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
+}
+
+type ListSalesWithDetailsPaginateRow struct {
+	SaleID                 pgtype.UUID        `json:"sale_id"`
+	SaleAt                 pgtype.Timestamptz `json:"sale_at"`
+	Subtotal               pgtype.Numeric     `json:"subtotal"`
+	DiscountAmount         pgtype.Numeric     `json:"discount_amount"`
+	TotalAmount            pgtype.Numeric     `json:"total_amount"`
+	InstallmentsCount      int32              `json:"installments_count"`
+	PaymentMethod          interface{}        `json:"payment_method"`
+	SaleStatus             interface{}        `json:"sale_status"`
+	DownPayment            pgtype.Numeric     `json:"down_payment"`
+	CustomerID             pgtype.UUID        `json:"customer_id"`
+	CustomerName           string             `json:"customer_name"`
+	SaleItemID             pgtype.UUID        `json:"sale_item_id"`
+	ProductID              pgtype.UUID        `json:"product_id"`
+	Quantity               int32              `json:"quantity"`
+	UnitPrice              pgtype.Numeric     `json:"unit_price"`
+	ItemDiscount           pgtype.Numeric     `json:"item_discount"`
+	ProductName            string             `json:"product_name"`
+	InstallmentID          pgtype.UUID        `json:"installment_id"`
+	InstallmentTotalAmount pgtype.Numeric     `json:"installment_total_amount"`
+	InstallmentBalance     pgtype.Numeric     `json:"installment_balance"`
+	DueDate                pgtype.Date        `json:"due_date"`
+	InstallmentNumber      pgtype.Int4        `json:"installment_number"`
+	InstallmentStatus      pgtype.Text        `json:"installment_status"`
+}
+
+func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error) {
+	rows, err := q.db.Query(ctx, listSalesWithDetailsPaginate, arg.CompanyID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSalesWithDetailsPaginateRow{}
+	for rows.Next() {
+		var i ListSalesWithDetailsPaginateRow
 		if err := rows.Scan(
 			&i.SaleID,
 			&i.SaleAt,

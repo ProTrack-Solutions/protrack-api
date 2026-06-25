@@ -17,6 +17,7 @@ type Querier interface {
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CreateAccountReceivable(ctx context.Context, arg CreateAccountReceivableParams) error
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error
 	CreateBillPayable(ctx context.Context, arg CreateBillPayableParams) error
@@ -108,6 +109,7 @@ type Querier interface {
 	ListSales(ctx context.Context, companyID pgtype.UUID) ([]ListSalesRow, error)
 	ListSalesByCompanyAndStatus(ctx context.Context, arg ListSalesByCompanyAndStatusParams) ([]ListSalesByCompanyAndStatusRow, error)
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsRow, error)
+	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
