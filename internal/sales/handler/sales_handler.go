@@ -5,6 +5,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/gin-gonic/gin"
@@ -338,13 +339,19 @@ func (h *Handler) ListSalesWithDetails(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	sales, err := h.service.ListSalesWithDetails(c.Request.Context(), companyId)
+	var pagination globalDomain.PaginationParams
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	sales, err := h.service.ListSalesWithDetailsPaginate(c.Request.Context(), companyId, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"sales_completed": sales})
+	c.JSON(http.StatusOK, sales)
 }
 
 func (h *Handler) ListSalesWithDetailsPendingOverdue(c *gin.Context) {

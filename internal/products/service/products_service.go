@@ -32,6 +32,7 @@ type RepositoryInterface interface {
 	ListProductBuCategoryIdAndDate(ctx context.Context, arg db.ListProductsByCategoryAndDateParams) ([]db.ListProductsByCategoryAndDateRow, error)
 	ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	WithTx(tx db.DBTX) *repository.Repository
 }
 
 type Service struct {
@@ -114,6 +115,34 @@ func (s *Service) GetProductByBarcode(ctx context.Context, barcode string) (doma
 
 func (s *Service) GetProductById(ctx context.Context, id uuid.UUID) (domain.ProductResponse, error) {
 	product, err := s.repo.GetProductById(ctx, pgconv.ParseUUIDToPgType(id))
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	return domain.ProductResponse{
+		ID:          pgconv.PgUUIDToUUID(product.ID),
+		CompanyID:   pgconv.PgUUIDToUUID(product.CompanyID),
+		CategoryID:  pgconv.PgUUIDToUUID(product.CategoryID),
+		Name:        product.Name,
+		Description: pgconv.ParsePgTextToString(product.Description),
+		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
+		Quantity:    product.Quantity,
+		Size:        pgconv.ParsePgTextToString(product.Size),
+		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
+		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
+		CreatedBy:   pgconv.PgUUIDToUUID(product.CreatedBy),
+		UpdatedBy:   pgconv.PgUUIDToUUID(product.UpdatedBy),
+		DeletedBy:   pgconv.PgUUIDToUUID(product.DeletedBy),
+		CreatedAt:   pgconv.PgTimestamptzToTime(product.CreatedAt),
+		UpdatedAt:   pgconv.PgTimestamptzToTime(product.UpdatedAt),
+		DeletedAt:   pgconv.PgTimestamptzToTime(product.DeletedAt),
+	}, nil
+}
+
+func (s *Service) GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID) (domain.ProductResponse, error) {
+	txRepo := s.repo.WithTx(tx)
+
+	product, err := txRepo.GetProductById(ctx, pgconv.ParseUUIDToPgType(id))
 	if err != nil {
 		return domain.ProductResponse{}, err
 	}
