@@ -113,7 +113,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 			return uuid.Nil, err
 		}
 
-		subTotal = float64(item.Quantity) * product.SalePrice
+		subTotal += float64(item.Quantity) * product.SalePrice
 	}
 
 	totalAmount = subTotal * (1 - (req.DiscountAmount / 100))

@@ -119,7 +119,7 @@ func (h *Handler) ListProductCategoryByCompanyId(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"categories": categories})
+	c.JSON(http.StatusOK, categories)
 }
 
 func (h *Handler) SetProductCategoryStatus(c *gin.Context) {
