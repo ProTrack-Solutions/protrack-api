@@ -29,6 +29,15 @@ func NewHandler(
 	}
 }
 
+// NewPayment godoc
+// @Summary      Registra um novo pagamento
+// @Tags         payments
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        payment body domain.CreatePaymentRequest true "Pagamento"
+// @Success      201
+// @Router       /payments [post]
 func (h *Handler) NewPayment(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

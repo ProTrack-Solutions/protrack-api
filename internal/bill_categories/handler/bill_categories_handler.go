@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateBillCategories godoc
+// @Summary      Cria uma categoria de conta
+// @Tags         bill-categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        category body domain.CreateBillCategoriesRequest true "Categoria"
+// @Success      201
+// @Router       /bill-categories [post]
 func (h *Handler) CreateBillCategories(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -51,6 +60,14 @@ func (h *Handler) CreateBillCategories(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// DeleteBillCategories godoc
+// @Summary      Remove uma categoria de conta
+// @Tags         bill-categories
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da categoria"
+// @Success      204
+// @Router       /bill-categories/{id} [delete]
 func (h *Handler) DeleteBillCategories(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -68,6 +85,14 @@ func (h *Handler) DeleteBillCategories(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetBillCategoriesById godoc
+// @Summary      Busca categoria de conta por ID
+// @Tags         bill-categories
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da categoria"
+// @Success      200 {object} domain.BillCategoryResponse
+// @Router       /bill-categories/{id} [get]
 func (h *Handler) GetBillCategoriesById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -86,6 +111,13 @@ func (h *Handler) GetBillCategoriesById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bill_categories": billCategory})
 }
 
+// ListBillCategories godoc
+// @Summary      Lista categorias de conta da empresa
+// @Tags         bill-categories
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.BillCategoryResponse
+// @Router       /bill-categories [get]
 func (h *Handler) ListBillCategories(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -104,6 +136,13 @@ func (h *Handler) ListBillCategories(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bill_categories": billCategories})
 }
 
+// ListBillCategoriesActive godoc
+// @Summary      Lista categorias de conta ativas
+// @Tags         bill-categories
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.BillCategoryResponse
+// @Router       /bill-categories/active [get]
 func (h *Handler) ListBillCategoriesActive(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -122,6 +161,16 @@ func (h *Handler) ListBillCategoriesActive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bill_categories": billCategories})
 }
 
+// ToggleBillCategoriesActive godoc
+// @Summary      Ativa ou desativa uma categoria de conta
+// @Tags         bill-categories
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da categoria"
+// @Param        toggle body domain.ToggleBillCategoriesActiveRequest true "Status"
+// @Success      200
+// @Router       /bill-categories/toggle/{id} [put]
 func (h *Handler) ToggleBillCategoriesActive(c *gin.Context) {
 	idStr := c.Param("id")
 
