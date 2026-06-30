@@ -314,7 +314,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		UpdatedBy:   currentProduct.UpdatedBy,
 	}
 
-	domain.ApplyUpdateProductCategoryParams(req, &arg)
+	domain.ApplyUpdateProductParams(req, &arg)
 
 	product, err := s.repo.UpdateProduct(ctx, arg)
 	if err != nil {
