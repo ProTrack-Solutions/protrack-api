@@ -28,6 +28,17 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// GenerateReports godoc
+// @Summary      Gera relatório em Excel
+// @Tags         reports
+// @Produce      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security     BearerAuth
+// @Param        type query string true "Tipo do relatório"
+// @Param        start_date query string true "Data inicial"
+// @Param        end_date query string true "Data final"
+// @Param        format query string false "Formato (xlsx)"
+// @Success      200 {file} file
+// @Router       /reports [get]
 func (h *Handler) GenerateReports(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

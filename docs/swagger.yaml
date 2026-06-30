@@ -1,0 +1,3640 @@
+basePath: /api/v1
+definitions:
+  github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse:
+    properties:
+      balance:
+        type: number
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer_id:
+        type: string
+      deleted_at:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      installment_number:
+        type: integer
+      sale_id:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+      total_installments:
+        type: integer
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.GetTotalPendingAndOverdueResponse:
+    properties:
+      total_overdue:
+        type: number
+      total_pending:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginRequest:
+    properties:
+      aud:
+        type: string
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - aud
+    - email
+    - password
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse:
+    properties:
+      access_token:
+        description: Token de acesso
+        type: string
+      expires_in:
+        description: Tempo de expiração em segundos
+        type: integer
+      has_company:
+        type: boolean
+      refresh_token:
+        description: Token de renovação
+        type: string
+      token_type:
+        description: Tipo do token (Bearer)
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      deleted_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.CreateBillCategoriesRequest:
+    properties:
+      company_id:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.ToggleBillCategoriesActiveRequest:
+    properties:
+      id:
+        type: string
+      is_active:
+        type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse:
+    properties:
+      amount:
+        type: number
+      amount_paid:
+        type: number
+      category_id:
+        type: string
+      company_id:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      payment_date:
+        type: string
+      payment_method_id:
+        type: string
+      scheduled_date:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      vendor_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.CreateBillPayableRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      notes:
+        type: string
+      payment_method_id:
+        type: string
+      status:
+        type: string
+      vendor_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableSummaryResponse:
+    properties:
+      general_status:
+        type: string
+      total_overdue:
+        type: number
+      total_quantity:
+        type: integer
+      total_scheduled:
+        type: number
+      total_to_pay:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.PayBillRequest:
+    properties:
+      amount_paid:
+        type: number
+      company_id:
+        type: string
+      id:
+        type: string
+      payment_date:
+        type: string
+      payment_method_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ScheduleBillRequest:
+    properties:
+      company_id:
+        type: string
+      id:
+        type: string
+      scheduled_date:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.UpdateBillPayableRequest:
+    properties:
+      amount:
+        type: number
+      category_id:
+        type: string
+      company_id:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      payment_method_id:
+        type: string
+      status: {}
+      vendor_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.CashFlowSummaryResponse:
+    properties:
+      net_balance:
+        type: number
+      total_inflow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowHistoryProjectionsResponse:
+    properties:
+      accumulated_balance:
+        type: number
+      date:
+        type: string
+      total_inflow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowPeriodResponse:
+    properties:
+      mount:
+        type: string
+      total_inflow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse:
+    properties:
+      name_category:
+        type: string
+      percentage_in_flow:
+        type: number
+      total_inflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashOutFlowByCategoryResponse:
+    properties:
+      name_category:
+        type: string
+      percentage_in_flow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      document:
+        type: string
+      document_type:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      status: {}
+      trade_name:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      created_by:
+        type: string
+      deleted_by:
+        type: string
+      document:
+        type: string
+      document_type:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      status: {}
+      timezone:
+        type: string
+      trade_name:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.SetCompanyStatusParams:
+    properties:
+      id:
+        type: string
+      status: {}
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.UpdateCompanyRequest:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      document:
+        type: string
+      document_type:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      phone:
+        type: string
+      status: {}
+      timezone:
+        type: string
+      trade_name:
+        type: string
+      updated_by:
+        type: string
+      website:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CreateCustomersRequest:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      balance_due:
+        type: number
+      birth_date:
+        type: string
+      company_id:
+        type: string
+      cpf:
+        type: string
+      created_by:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      gender:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender'
+      home_phone:
+        type: string
+      marital_status:
+        type: string
+      mobile_phone:
+        type: string
+      rg:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerPaginatedResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerResponse:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      balance_due:
+        type: number
+      birth_date:
+        type: string
+      company_id:
+        type: string
+      cpf:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      gender:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender'
+      home_phone:
+        type: string
+      id:
+        type: string
+      marital_status:
+        type: string
+      mobile_phone:
+        type: string
+      rg:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.UpdateBalanceDueCustomerRequest:
+    properties:
+      balance_due:
+        type: number
+      id:
+        type: string
+      prohibited:
+        type: number
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.UpdateCustomerRequest:
+    properties:
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_country:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      balance_due:
+        type: number
+      birth_date:
+        type: string
+      cpf:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      gender:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender'
+      home_phone:
+        type: string
+      id:
+        type: string
+      marital_status:
+        type: string
+      mobile_phone:
+        type: string
+      rg:
+        type: string
+      updated_by:
+        type: string
+      whatsapp:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams:
+    properties:
+      company_id:
+        type: string
+      created_by:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.DepartmentResponse:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.SetStatusDepartmentParams:
+    properties:
+      Status:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status'
+      id:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.UpdateDepartmentParams:
+    properties:
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender:
+    enum:
+    - MALE
+    - FEMALE
+    - OTHER
+    - NOT_SAY
+    type: string
+    x-enum-varnames:
+    - GenderMale
+    - GenderFemale
+    - GenderOther
+    - GenderNotSay
+  github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod:
+    enum:
+    - cash
+    - credit_card
+    - debit_card
+    - pix
+    - bank_transfer
+    - installments
+    - other
+    type: string
+    x-enum-varnames:
+    - PaymentMethodCash
+    - PaymentMethodCreditCard
+    - PaymentMethodDebitCard
+    - PaymentMethodPix
+    - PaymentMethodBankTransfer
+    - PaymentMethodInstallments
+    - PaymentMethodOther
+  github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status:
+    enum:
+    - ACTIVE
+    - INACTIVE
+    - DELETED
+    type: string
+    x-enum-varnames:
+    - StatusActive
+    - StatusInactive
+    - StatusDeleted
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest:
+    properties:
+      amount_paid:
+        type: number
+      company_id:
+        type: string
+      customer_id:
+        type: string
+      notes:
+        type: string
+      payment_method_id:
+        type: string
+      sale_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.PaymentHistoryResponse:
+    properties:
+      amount_paid:
+        type: number
+      company_id:
+        type: string
+      customer_id:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      payment_date:
+        type: string
+      payment_method_id:
+        type: string
+      sale_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.CreatePaymentMethodRequest:
+    properties:
+      company_id:
+        type: string
+      name:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.GetPaymentMethodsStatsResponse:
+    properties:
+      payment_method:
+        type: string
+      percentage_method:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.PaymentMethodResponse:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      type: {}
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.TogglePaymentMethodActiveRequest:
+    properties:
+      id:
+        type: string
+      is_active:
+        type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_payments_domain.CreatePaymentRequest:
+    properties:
+      amount_paid:
+        type: number
+      customer_id:
+        type: string
+      notes:
+        type: string
+      payment_method_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.CreateProductCategoryRequest:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.ProductCategoryResponse:
+    properties:
+      color:
+        type: string
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status'
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.SetProductCategoryStatusRequest:
+    properties:
+      id:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.UpdateProductCategoryRequest:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateProductRequest:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      company_id:
+        type: string
+      cost_price:
+        type: number
+      created_by:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      size:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ListProductsByCompanyRow:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      category_name:
+        type: string
+      company_id:
+        type: string
+      cost_price:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      size:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductPaginatedResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ListProductsByCompanyRow'
+        type: array
+      itens_in_stock:
+        type: integer
+      low_itens_in_stock:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+      total_value_in_stock:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      company_id:
+        type: string
+      cost_price:
+        type: number
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      size:
+        type: string
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateProductRequest:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      cost_price:
+        type: number
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      size:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleItemRequest:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleRequest:
+    properties:
+      customer_id:
+        type: string
+      discount_amount:
+        type: number
+      due_days:
+        type: integer
+      installments_count:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleItemRequest'
+        type: array
+      payment_method:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod'
+      prohibited:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetPerformanceMonthResponse:
+    properties:
+      mount:
+        type: string
+      real_profit:
+        type: number
+      total_sale:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetTop5RealProfitItemResponse:
+    properties:
+      product_name:
+        type: string
+      product_real_profit:
+        type: number
+      total_sale:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetTotalInvestmentCategoryResponse:
+    properties:
+      amount:
+        type: integer
+      category_name:
+        type: string
+      stock_turnover:
+        type: number
+      total_investment:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListAccReceivableResponse:
+    properties:
+      due_date:
+        type: string
+      installment_balance:
+        type: number
+      installment_id:
+        type: string
+      installment_number:
+        type: integer
+      installment_status:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListProductResponse:
+    properties:
+      item_discount:
+        type: number
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      sale_item_id:
+        type: string
+      unit_price:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse:
+    properties:
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      discount_amount:
+        type: number
+      down_payments:
+        type: number
+      installment_total_amount:
+        type: number
+      installments_count:
+        type: integer
+      payment_method: {}
+      sale_at:
+        type: string
+      sale_id:
+        type: string
+      sale_status: {}
+      subtotal:
+        type: number
+      total_amount:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesWithInstallmentsResponse:
+    properties:
+      installment:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListAccReceivableResponse'
+        type: array
+      products:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListProductResponse'
+        type: array
+      sale:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.MarginDistributionResponse:
+    properties:
+      count:
+        type: integer
+      label:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SaleResponsePaginate:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesWithInstallmentsResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      sales_canceled:
+        type: integer
+      sales_count:
+        type: integer
+      total_invoiced:
+        type: number
+      total_pages:
+        type: integer
+      total_pending:
+        type: number
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleStatusRequest:
+    properties:
+      company_id:
+        type: string
+      id:
+        type: string
+      status: {}
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      department_id:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      password_hash:
+        type: string
+      role:
+        type: string
+      status: {}
+      updated_by:
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams:
+    properties:
+      id:
+        type: string
+      password_hash:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest:
+    properties:
+      department_id:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+      status: {}
+      updated_by:
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      deleted_at:
+        type: string
+      deleted_by:
+        type: string
+      department_id:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      last_login_at:
+        type: string
+      name:
+        type: string
+      role:
+        type: string
+      status: {}
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.CreateVendorsRequest:
+    properties:
+      address_line_1:
+        type: string
+      address_line_2:
+        type: string
+      city:
+        type: string
+      company_id:
+        type: string
+      country:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+      tax_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.ToggleVendorsActiveParams:
+    properties:
+      is_active:
+        type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.UpdateVendorsRequest:
+    properties:
+      address_line_1:
+        type: string
+      address_line_2:
+        type: string
+      city:
+        type: string
+      country:
+        type: string
+      email:
+        type: string
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+      tax_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.VendorResponse:
+    properties:
+      address_line_1:
+        type: string
+      address_line_2:
+        type: string
+      city:
+        type: string
+      company_id:
+        type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      name:
+        type: string
+      neighborhood:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      postal_code:
+        type: string
+      state:
+        type: string
+      tax_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: suporte@protrack.com
+    name: Suporte ProTrack
+  description: API de gerenciamento financeiro e comercial ProTrack Solutions.
+  termsOfService: http://swagger.io/terms/
+  title: ProTrack API
+  version: "1.0"
+paths:
+  /{id}:
+    delete:
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um usuário
+      tags:
+      - users
+    get:
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca usuário por ID
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza um usuário
+      tags:
+      - users
+  /accounts-receivable:
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: customerId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse'
+      security:
+      - BearerAuth: []
+      summary: Resumo da dívida do cliente
+      tags:
+      - accounts-receivable
+  /accounts-receivable/customer/{customerId}:
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: customerId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Contas a receber pendentes por cliente
+      tags:
+      - accounts-receivable
+  /accounts-receivable/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista contas a receber em atraso
+      tags:
+      - accounts-receivable
+  /accounts-receivable/sale/{saleId}:
+    get:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Contas a receber por venda
+      tags:
+      - accounts-receivable
+  /accounts-receivable/total-overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total em atraso da empresa
+      tags:
+      - accounts-receivable
+  /accounts-receivable/total-pending:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total em aberto da empresa
+      tags:
+      - accounts-receivable
+  /accounts-receivable/total-pending-overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.GetTotalPendingAndOverdueResponse'
+      security:
+      - BearerAuth: []
+      summary: Total pendente e em atraso da empresa
+      tags:
+      - accounts-receivable
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Credenciais
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse'
+      summary: Autentica um usuário
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh token
+        in: body
+        name: refresh
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse'
+      summary: Renova o token de acesso
+      tags:
+      - auth
+  /bill-categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista categorias de conta da empresa
+      tags:
+      - bill-categories
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Categoria
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.CreateBillCategoriesRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Cria uma categoria de conta
+      tags:
+      - bill-categories
+  /bill-categories/{id}:
+    delete:
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove uma categoria de conta
+      tags:
+      - bill-categories
+    get:
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca categoria de conta por ID
+      tags:
+      - bill-categories
+  /bill-categories/active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista categorias de conta ativas
+      tags:
+      - bill-categories
+  /bill-categories/toggle/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: toggle
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.ToggleBillCategoriesActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Ativa ou desativa uma categoria de conta
+      tags:
+      - bill-categories
+  /bills_payable:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Conta a pagar
+        in: body
+        name: bill
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.CreateBillPayableRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Cria uma conta a pagar
+      tags:
+      - bills-payable
+  /bills_payable/{id}:
+    get:
+      parameters:
+      - description: ID da conta
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca conta a pagar por ID
+      tags:
+      - bills-payable
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da conta
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Conta a pagar
+        in: body
+        name: bill
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.UpdateBillPayableRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza uma conta a pagar
+      tags:
+      - bills-payable
+  /bills_payable/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista contas a pagar da empresa
+      tags:
+      - bills-payable
+  /bills_payable/overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista contas a pagar em atraso
+      tags:
+      - bills-payable
+  /bills_payable/pay/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da conta
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Pagamento
+        in: body
+        name: payment
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.PayBillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Registra pagamento de uma conta
+      tags:
+      - bills-payable
+  /bills_payable/schedule/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da conta
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Agendamento
+        in: body
+        name: schedule
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ScheduleBillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Agenda pagamento de uma conta
+      tags:
+      - bills-payable
+  /bills_payable/status/{status}:
+    get:
+      parameters:
+      - description: Status da conta
+        in: path
+        name: status
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista contas a pagar por status
+      tags:
+      - bills-payable
+  /bills_payable/summary:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableSummaryResponse'
+      security:
+      - BearerAuth: []
+      summary: Resumo das contas a pagar
+      tags:
+      - bills-payable
+  /cash-flow/history-projection:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowHistoryProjectionsResponse'
+      security:
+      - BearerAuth: []
+      summary: Histórico e projeções do fluxo de caixa
+      tags:
+      - cash-flow
+  /cash-flow/inflow-category:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Entradas de caixa por categoria
+      tags:
+      - cash-flow
+  /cash-flow/outflow-category:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashOutFlowByCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Saídas de caixa por categoria
+      tags:
+      - cash-flow
+  /cash-flow/summary:
+    get:
+      parameters:
+      - description: Data inicial
+        in: query
+        name: start_at
+        required: true
+        type: string
+      - description: Data final
+        in: query
+        name: end_at
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.CashFlowSummaryResponse'
+      security:
+      - BearerAuth: []
+      summary: Resumo do fluxo de caixa
+      tags:
+      - cash-flow
+  /cash-flow/summary-month:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowPeriodResponse'
+      security:
+      - BearerAuth: []
+      summary: Fluxo de caixa do período mensal
+      tags:
+      - cash-flow
+  /companies:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista todas as empresas
+      tags:
+      - companies
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria uma empresa
+      tags:
+      - companies
+  /companies/{id}:
+    delete:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove uma empresa
+      tags:
+      - companies
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca empresa por ID
+      tags:
+      - companies
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Empresa
+        in: body
+        name: company
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.UpdateCompanyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza uma empresa
+      tags:
+      - companies
+  /companies/document/{document}:
+    get:
+      parameters:
+      - description: Documento (CNPJ/CPF)
+        in: path
+        name: document
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca empresa por documento
+      tags:
+      - companies
+  /companies/set/:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.SetCompanyStatusParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Altera o status de uma empresa
+      tags:
+      - companies
+  /customers:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cliente
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CreateCustomersRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria um cliente
+      tags:
+      - customers
+  /customers/{id}:
+    delete:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um cliente
+      tags:
+      - customers
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca cliente por ID
+      tags:
+      - customers
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Cliente
+        in: body
+        name: customer
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.UpdateCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza um cliente
+      tags:
+      - customers
+  /customers/balanceDue/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Saldo
+        in: body
+        name: balance
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.UpdateBalanceDueCustomerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza saldo devedor do cliente
+      tags:
+      - customers
+  /customers/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Conta clientes da empresa
+      tags:
+      - customers
+  /customers/cpf/{cpf}:
+    get:
+      parameters:
+      - description: CPF
+        in: path
+        name: cpf
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca cliente por CPF
+      tags:
+      - customers
+  /customers/list:
+    get:
+      parameters:
+      - description: Página
+        in: header
+        name: Page
+        type: integer
+      - description: Itens por página
+        in: header
+        name: PerPage
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerPaginatedResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista clientes da empresa com paginação
+      tags:
+      - customers
+  /customers/percentage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: float64
+              type: number
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo de performance dos clientes
+      tags:
+      - customers
+  /departments:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Departamento
+        in: body
+        name: department
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.DepartmentResponse'
+      summary: Cria um departamento
+      tags:
+      - departments
+  /departments/{id}:
+    delete:
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Remove um departamento
+      tags:
+      - departments
+    get:
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.DepartmentResponse'
+      summary: Busca departamento por ID
+      tags:
+      - departments
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Departamento
+        in: body
+        name: department
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.UpdateDepartmentParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.DepartmentResponse'
+      summary: Atualiza um departamento
+      tags:
+      - departments
+  /departments/list/{id}:
+    get:
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.DepartmentResponse'
+            type: array
+      summary: Lista departamentos por empresa
+      tags:
+      - departments
+  /departments/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.SetStatusDepartmentParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      summary: Altera o status de um departamento
+      tags:
+      - departments
+  /logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Encerra a sessão do usuário
+      tags:
+      - auth
+  /me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retorna o usuário autenticado
+      tags:
+      - auth
+  /payment-history:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.PaymentHistoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista histórico de pagamentos da empresa
+      tags:
+      - payment-history
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Pagamento
+        in: body
+        name: payment
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Registra um pagamento no histórico
+      tags:
+      - payment-history
+  /payment-history/customer/{customerId}:
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: customerId
+        required: true
+        type: string
+      - description: Data inicial
+        in: query
+        name: start_date
+        type: string
+      - description: Data final
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.PaymentHistoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Histórico de pagamentos por cliente
+      tags:
+      - payment-history
+  /payment-history/sale/{saleId}:
+    get:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      - description: Data inicial
+        in: query
+        name: start_date
+        type: string
+      - description: Data final
+        in: query
+        name: end_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.PaymentHistoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Histórico de pagamentos por venda
+      tags:
+      - payment-history
+  /payment-history/total:
+    get:
+      parameters:
+      - description: Data inicial
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final
+        in: query
+        name: end_date
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total recebido em um período
+      tags:
+      - payment-history
+  /payment-methods:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.PaymentMethodResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista métodos de pagamento da empresa
+      tags:
+      - payment-methods
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Método de pagamento
+        in: body
+        name: method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.CreatePaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Cria um método de pagamento
+      tags:
+      - payment-methods
+  /payment-methods/{id}:
+    get:
+      parameters:
+      - description: ID do método
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.PaymentMethodResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca método de pagamento por ID
+      tags:
+      - payment-methods
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do método
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: toggle
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.TogglePaymentMethodActiveRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Ativa ou desativa um método de pagamento
+      tags:
+      - payment-methods
+  /payment-methods/is-active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.PaymentMethodResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista métodos de pagamento ativos
+      tags:
+      - payment-methods
+  /payment-methods/stats:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payment_methods_domain.GetPaymentMethodsStatsResponse'
+      security:
+      - BearerAuth: []
+      summary: Estatísticas dos métodos de pagamento
+      tags:
+      - payment-methods
+  /payments:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Pagamento
+        in: body
+        name: payment
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_payments_domain.CreatePaymentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Registra um novo pagamento
+      tags:
+      - payments
+  /product:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Produto
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+      security:
+      - BearerAuth: []
+      summary: Cria um produto
+      tags:
+      - products
+  /product/{id}:
+    delete:
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um produto
+      tags:
+      - products
+    get:
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca produto por ID
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Produto
+        in: body
+        name: product
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateProductRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza um produto
+      tags:
+      - products
+  /product/barcode/{barcode}:
+    get:
+      parameters:
+      - description: Código de barras
+        in: path
+        name: barcode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca produto por código de barras
+      tags:
+      - products
+  /product/category/{categoryId}:
+    get:
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista produtos por categoria
+      tags:
+      - products
+  /product/company:
+    get:
+      parameters:
+      - description: Página
+        in: header
+        name: Page
+        type: integer
+      - description: Itens por página
+        in: header
+        name: PerPage
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductPaginatedResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista produtos da empresa com paginação
+      tags:
+      - products
+  /product/cost-total:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Custo total do estoque
+      tags:
+      - products
+  /product/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Conta produtos da empresa
+      tags:
+      - products
+  /product/percentage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: float64
+              type: number
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo de performance dos produtos
+      tags:
+      - products
+  /product/top-products:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Top 5 produtos mais vendidos
+      tags:
+      - products
+  /products-categories:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Categoria
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.CreateProductCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria uma categoria de produto
+      tags:
+      - products-categories
+  /products-categories/{id}:
+    delete:
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove uma categoria de produto
+      tags:
+      - products-categories
+    get:
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.ProductCategoryResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca categoria de produto por ID
+      tags:
+      - products-categories
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Categoria
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.UpdateProductCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.ProductCategoryResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza uma categoria de produto
+      tags:
+      - products-categories
+  /products-categories/list/company:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.ProductCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista categorias de produto da empresa
+      tags:
+      - products-categories
+  /products-categories/status/:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.SetProductCategoryStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Altera o status de uma categoria de produto
+      tags:
+      - products-categories
+  /reports:
+    get:
+      parameters:
+      - description: Tipo do relatório
+        in: query
+        name: type
+        required: true
+        type: string
+      - description: Data inicial
+        in: query
+        name: start_date
+        required: true
+        type: string
+      - description: Data final
+        in: query
+        name: end_date
+        required: true
+        type: string
+      - description: Formato (xlsx)
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: Gera relatório em Excel
+      tags:
+      - reports
+  /sale-items/{id}:
+    delete:
+      parameters:
+      - description: ID do item
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um item de venda
+      tags:
+      - sale-items
+  /sale-items/sale/{saleId}:
+    delete:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove todos os itens de uma venda
+      tags:
+      - sale-items
+  /sales:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Venda
+        in: body
+        name: sale
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria uma venda
+      tags:
+      - sales
+  /sales/{id}:
+    delete:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove uma venda
+      tags:
+      - sales
+    get:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca venda por ID
+      tags:
+      - sales
+  /sales/{id}/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da venda
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza o status de uma venda
+      tags:
+      - sales
+  /sales/complete:
+    get:
+      parameters:
+      - description: Página
+        in: header
+        name: Page
+        type: integer
+      - description: Itens por página
+        in: header
+        name: PerPage
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SaleResponsePaginate'
+      security:
+      - BearerAuth: []
+      summary: Lista vendas com detalhes paginadas
+      tags:
+      - sales
+  /sales/complete/pending-overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesWithInstallmentsResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista vendas pendentes e em atraso com detalhes
+      tags:
+      - sales
+  /sales/count:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Conta vendas da empresa
+      tags:
+      - sales
+  /sales/count/pending-overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: int64
+              type: integer
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Conta vendas pendentes e em atraso
+      tags:
+      - sales
+  /sales/investment-categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetTotalInvestmentCategoryResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Investimento total por categoria
+      tags:
+      - sales
+  /sales/list/:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista vendas da empresa
+      tags:
+      - sales
+  /sales/list/company:
+    get:
+      parameters:
+      - description: Status da venda
+        in: query
+        name: status
+        type: string
+      - description: ID do cliente
+        in: query
+        name: customer_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista vendas por empresa e status
+      tags:
+      - sales
+  /sales/margin-distribution:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.MarginDistributionResponse'
+      security:
+      - BearerAuth: []
+      summary: Distribuição de margem de lucro
+      tags:
+      - sales
+  /sales/percentage:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              format: float64
+              type: number
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Resumo de performance das vendas
+      tags:
+      - sales
+  /sales/performance-mounts:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetPerformanceMonthResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Performance mensal de vendas
+      tags:
+      - sales
+  /sales/real-profit:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lucro real por item
+      tags:
+      - sales
+  /sales/top5-products:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetTop5RealProfitItemResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Top 5 produtos por lucro real
+      tags:
+      - sales
+  /sales/total-amount:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total geral de vendas
+      tags:
+      - sales
+  /sales/total-overdue:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total de vendas em atraso
+      tags:
+      - sales
+  /sales/total-pending:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Total de vendas pendentes
+      tags:
+      - sales
+  /users:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+            type: array
+      summary: Lista todos os usuários
+      tags:
+      - users
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+      summary: Cria um usuário
+      tags:
+      - users
+  /users/email/{email}:
+    get:
+      parameters:
+      - description: E-mail
+        in: path
+        name: email
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+      summary: Busca usuário por e-mail
+      tags:
+      - users
+  /users/password:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Senha
+        in: body
+        name: password
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      summary: Atualiza a senha do usuário
+      tags:
+      - users
+  /vendors:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Fornecedor
+        in: body
+        name: vendor
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.CreateVendorsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Cria um fornecedor
+      tags:
+      - vendors
+  /vendors/{id}:
+    get:
+      parameters:
+      - description: ID do fornecedor
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.VendorResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca fornecedor por ID
+      tags:
+      - vendors
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do fornecedor
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fornecedor
+        in: body
+        name: vendor
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.UpdateVendorsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza um fornecedor
+      tags:
+      - vendors
+  /vendors/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.VendorResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista fornecedores da empresa
+      tags:
+      - vendors
+  /vendors/list/is-active:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.VendorResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista fornecedores ativos
+      tags:
+      - vendors
+  /vendors/toggle/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do fornecedor
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status
+        in: body
+        name: toggle
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_vendors_domain.ToggleVendorsActiveParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Ativa ou desativa um fornecedor
+      tags:
+      - vendors
+  /whatsapp/instance/create:
+    post:
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria instância WhatsApp e retorna QR Code
+      tags:
+      - whatsapp
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
