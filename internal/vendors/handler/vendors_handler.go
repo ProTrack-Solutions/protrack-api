@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateVendors godoc
+// @Summary      Cria um fornecedor
+// @Tags         vendors
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        vendor body domain.CreateVendorsRequest true "Fornecedor"
+// @Success      201
+// @Router       /vendors [post]
 func (h *Handler) CreateVendors(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -52,6 +61,14 @@ func (h *Handler) CreateVendors(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// GetVendorsById godoc
+// @Summary      Busca fornecedor por ID
+// @Tags         vendors
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do fornecedor"
+// @Success      200 {object} domain.VendorResponse
+// @Router       /vendors/{id} [get]
 func (h *Handler) GetVendorsById(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -83,6 +100,13 @@ func (h *Handler) GetVendorsById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"vendor": vendor})
 }
 
+// ListVendors godoc
+// @Summary      Lista fornecedores da empresa
+// @Tags         vendors
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.VendorResponse
+// @Router       /vendors/list [get]
 func (h *Handler) ListVendors(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -101,6 +125,13 @@ func (h *Handler) ListVendors(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"vendors": vendors})
 }
 
+// ListVendorsIsActive godoc
+// @Summary      Lista fornecedores ativos
+// @Tags         vendors
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.VendorResponse
+// @Router       /vendors/list/is-active [get]
 func (h *Handler) ListVendorsIsActive(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -119,6 +150,16 @@ func (h *Handler) ListVendorsIsActive(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"vendors_active": vendors})
 }
 
+// ToggleVendorsActive godoc
+// @Summary      Ativa ou desativa um fornecedor
+// @Tags         vendors
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do fornecedor"
+// @Param        toggle body domain.ToggleVendorsActiveParams true "Status"
+// @Success      200
+// @Router       /vendors/toggle/{id} [put]
 func (h *Handler) ToggleVendorsActive(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -143,6 +184,16 @@ func (h *Handler) ToggleVendorsActive(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// UpdateVendors godoc
+// @Summary      Atualiza um fornecedor
+// @Tags         vendors
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do fornecedor"
+// @Param        vendor body domain.UpdateVendorsRequest true "Fornecedor"
+// @Success      200
+// @Router       /vendors/{id} [put]
 func (h *Handler) UpdateVendors(c *gin.Context) {
 	idStr := c.Param("id")
 

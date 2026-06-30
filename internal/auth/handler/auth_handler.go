@@ -28,6 +28,14 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// Login godoc
+// @Summary      Autentica um usuário
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials body domain.LoginRequest true "Credenciais"
+// @Success      200 {object} domain.LoginResponse
+// @Router       /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req domain.LoginRequest
 
@@ -67,6 +75,14 @@ func (h *Handler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// RefreshToken godoc
+// @Summary      Renova o token de acesso
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        refresh body object true "Refresh token" SchemaExample({"refresh_token": "string"})
+// @Success      200 {object} domain.LoginResponse
+// @Router       /auth/refresh [post]
 func (h *Handler) RefreshToken(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token" binding:"required"`
@@ -122,6 +138,13 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 	user, err := h.service.
 } */
 
+// GetUserFromContext godoc
+// @Summary      Retorna o usuário autenticado
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]interface{}
+// @Router       /me [get]
 func (h *Handler) GetUserFromContext(c *gin.Context) {
 	idAny, exists := c.Get("sub")
 	if !exists {
@@ -150,6 +173,13 @@ func (h *Handler) GetUserFromContext(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
+// Logout godoc
+// @Summary      Encerra a sessão do usuário
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]string
+// @Router       /logout [post]
 func (h *Handler) Logout(c *gin.Context) {
 	authHeader := c.GetHeader("Authorization")
 	var accessToken string

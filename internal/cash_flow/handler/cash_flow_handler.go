@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CashFlowSummary godoc
+// @Summary      Resumo do fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Param        start_at query string true "Data inicial"
+// @Param        end_at query string true "Data final"
+// @Success      200 {object} domain.CashFlowSummaryResponse
+// @Router       /cash-flow/summary [get]
 func (h *Handler) CashFlowSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -50,6 +59,13 @@ func (h *Handler) CashFlowSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_flow_summary": summary})
 }
 
+// GetCashFlowHistoryProjections godoc
+// @Summary      Histórico e projeções do fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowHistoryProjectionsResponse
+// @Router       /cash-flow/history-projection [get]
 func (h *Handler) GetCashFlowHistoryProjections(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -68,6 +84,13 @@ func (h *Handler) GetCashFlowHistoryProjections(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_flow_history": cashFlow})
 }
 
+// GetCashInFlowByCategory godoc
+// @Summary      Entradas de caixa por categoria
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetCashInFlowByCategoryResponse
+// @Router       /cash-flow/inflow-category [get]
 func (h *Handler) GetCashInFlowByCategory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -86,6 +109,13 @@ func (h *Handler) GetCashInFlowByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_inflow_categories": cashFlowCategories})
 }
 
+// GetCashOutFlowByCategory godoc
+// @Summary      Saídas de caixa por categoria
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetCashOutFlowByCategoryResponse
+// @Router       /cash-flow/outflow-category [get]
 func (h *Handler) GetCashOutFlowByCategory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -104,6 +134,13 @@ func (h *Handler) GetCashOutFlowByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_outflow_categories": cashFlowCategories})
 }
 
+// GetCashFlowPeriod godoc
+// @Summary      Fluxo de caixa do período mensal
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowPeriodResponse
+// @Router       /cash-flow/summary-month [get]
 func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

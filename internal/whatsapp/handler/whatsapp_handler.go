@@ -24,6 +24,13 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateInstance godoc
+// @Summary      Cria instância WhatsApp e retorna QR Code
+// @Tags         whatsapp
+// @Produce      json
+// @Security     BearerAuth
+// @Success      201 {object} map[string]interface{}
+// @Router       /whatsapp/instance/create [post]
 func (h *Handler) CreateInstance(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreatePaymentHistory godoc
+// @Summary      Registra um pagamento no histórico
+// @Tags         payment-history
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        payment body domain.CreatePaymentHistoryRequest true "Pagamento"
+// @Success      201
+// @Router       /payment-history [post]
 func (h *Handler) CreatePaymentHistory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -67,6 +76,16 @@ func (h *Handler) CreatePaymentHistory(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// GetPaymentsByCustomer godoc
+// @Summary      Histórico de pagamentos por cliente
+// @Tags         payment-history
+// @Produce      json
+// @Security     BearerAuth
+// @Param        customerId path string true "ID do cliente"
+// @Param        start_date query string false "Data inicial"
+// @Param        end_date query string false "Data final"
+// @Success      200 {array} domain.PaymentHistoryResponse
+// @Router       /payment-history/customer/{customerId} [get]
 func (h *Handler) GetPaymentsByCustomer(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -104,6 +123,16 @@ func (h *Handler) GetPaymentsByCustomer(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"payments_history": paymentsHistory})
 }
 
+// GetPaymentsBySale godoc
+// @Summary      Histórico de pagamentos por venda
+// @Tags         payment-history
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Param        start_date query string false "Data inicial"
+// @Param        end_date query string false "Data final"
+// @Success      200 {array} domain.PaymentHistoryResponse
+// @Router       /payment-history/sale/{saleId} [get]
 func (h *Handler) GetPaymentsBySale(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -141,6 +170,15 @@ func (h *Handler) GetPaymentsBySale(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"payments_history": paymentsHistory})
 }
 
+// GetTotalReceivedByPeriod godoc
+// @Summary      Total recebido em um período
+// @Tags         payment-history
+// @Produce      json
+// @Security     BearerAuth
+// @Param        start_date query string true "Data inicial"
+// @Param        end_date query string true "Data final"
+// @Success      200 {object} map[string]string
+// @Router       /payment-history/total [get]
 func (h *Handler) GetTotalReceivedByPeriod(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -169,6 +207,13 @@ func (h *Handler) GetTotalReceivedByPeriod(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"total_payment_period": total})
 }
 
+// ListPaymentHistory godoc
+// @Summary      Lista histórico de pagamentos da empresa
+// @Tags         payment-history
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.PaymentHistoryResponse
+// @Router       /payment-history [get]
 func (h *Handler) ListPaymentHistory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
