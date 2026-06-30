@@ -162,7 +162,7 @@ type ProductPaginatedResponse struct {
 	LowItensInStock   int32   `json:"low_itens_in_stock"`
 }
 
-func ApplyUpdateProductCategoryParams(
+func ApplyUpdateProductParams(
 	req UpdateProductRequest,
 	arg *db.UpdateProductParams,
 ) {
