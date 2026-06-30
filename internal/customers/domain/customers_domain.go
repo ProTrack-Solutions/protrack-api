@@ -157,6 +157,27 @@ func ApplyUpdateCustomerParams(req UpdateCustomerRequest, arg *db.UpdateCustomer
 		arg.MaritalStatus = pgconv.ParseStringToPgText(req.MaritalStatus)
 	}
 
+	if req.Gender != "" {
+		// Convertido para string caso o seu pgconv espere uma string pura
+		arg.Gender = pgconv.ParseStringToPgText(string(req.Gender))
+	}
+
+	if req.Whatsapp != "" {
+		arg.Whatsapp = pgconv.ParseStringToPgText(req.Whatsapp)
+	}
+
+	if req.MobilePhone != "" {
+		arg.MobilePhone = pgconv.ParseStringToPgText(req.MobilePhone)
+	}
+
+	if req.HomePhone != "" {
+		arg.HomePhone = pgconv.ParseStringToPgText(req.HomePhone)
+	}
+
+	if req.Email != "" {
+		arg.Email = req.Email
+	}
+
 	if req.Whatsapp != "" {
 		arg.Whatsapp = pgconv.ParseStringToPgText(req.Whatsapp)
 	}
