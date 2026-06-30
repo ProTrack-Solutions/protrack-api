@@ -74,8 +74,26 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+
+	_ "github.com/ProTrack-Solutions/protrack-api/docs"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title           ProTrack API
+// @version         1.0
+// @description     API de gerenciamento financeiro e comercial ProTrack Solutions.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Suporte ProTrack
+// @contact.email  suporte@protrack.com
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
@@ -105,6 +123,8 @@ func main() {
 		}
 		c.Next()
 	})
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	logger.InitLogger("development")
 

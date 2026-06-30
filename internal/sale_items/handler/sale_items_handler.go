@@ -24,6 +24,14 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// DeleteItemsBySale godoc
+// @Summary      Remove todos os itens de uma venda
+// @Tags         sale-items
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Success      204
+// @Router       /sale-items/sale/{saleId} [delete]
 func (h *Handler) DeleteItemsBySale(c *gin.Context) {
 	saleIdStr := c.Param("saleId")
 
@@ -40,6 +48,14 @@ func (h *Handler) DeleteItemsBySale(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// DeleteSaleItem godoc
+// @Summary      Remove um item de venda
+// @Tags         sale-items
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do item"
+// @Success      204
+// @Router       /sale-items/{id} [delete]
 func (h *Handler) DeleteSaleItem(c *gin.Context) {
 	IdStr := c.Param("id")
 
