@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -15,6 +16,7 @@ import (
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	productCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
 	saleItemDomain "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/domain"
@@ -48,6 +50,7 @@ type RepositoryInterface interface {
 	GetPendingSalesDetailedReport(ctx context.Context, arg db.GetPendingSalesDetailedReportParams) ([]db.GetPendingSalesDetailedReportRow, error)
 	ListSalesWithDetailsPaginate(ctx context.Context, arg db.ListSalesWithDetailsPaginateParams) ([]db.ListSalesWithDetailsPaginateRow, error)
 	CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	UpdateSale(ctx context.Context, arg db.UpdateSaleParams) error
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -1092,4 +1095,120 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		TotalPending:      totalPending,
 		SalesCanceled:     salesCanceled,
 	}, nil
+}
+
+func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uuid.UUID, saleId uuid.UUID, req domain.UpdateSaleParams) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	txRepo := s.repo.WithTx(tx)
+
+	if req.PaymentMethod != enums.PaymentMethodInstallments {
+		return errors.New("Não é possivel atualiar esse venda")
+	}
+
+	currentSale, err := s.repo.GetSaleById(ctx, db.GetSaleByIdParams{
+		ID:        pgconv.ParseUUIDToPgType(saleId),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+	if err != nil {
+		return err
+	}
+
+	targetTime := time.Now().Add(2 * time.Hour)
+
+	if currentSale.CreatedAt.Valid && !currentSale.CreatedAt.Time.Before(targetTime) {
+		return errors.New("A venda so pode ser atualizada até 2 horas depois de ser realizada")
+	}
+
+	arg := db.UpdateSaleParams{
+		DiscountAmount:    currentSale.DiscountAmount,
+		InstallmentsCount: currentSale.InstallmentsCount,
+		DownPayment:       currentSale.DownPayment,
+		DueDays:           currentSale.DueDays,
+		PaymentMethod:     currentSale.PaymentMethod,
+	}
+
+	domain.ApplyUpdateSaleParams(req, &arg)
+
+	totalAmount := pgconv.PgNumericToFloat64(currentSale.Subtotal) * (1 - (pgconv.PgNumericToFloat64(arg.DiscountAmount) / 100))
+	var status string
+
+	if arg.PaymentMethod == enums.PaymentMethodInstallments {
+		installmentValue := (totalAmount - pgconv.PgNumericToFloat64(arg.DownPayment)) / float64(arg.InstallmentsCount)
+		status = "pending"
+
+		dataBase := time.Now()
+		for i := 0; i < int(arg.InstallmentsCount); i++ {
+			var maturity time.Time
+
+			if dataBase.Day() >= int(req.DueDays) {
+				maturity = time.Date(
+					dataBase.Year(),
+					dataBase.Month()+time.Month(i+1),
+					int(req.DueDays),
+					0, 0, 0, 0,
+					dataBase.Location(),
+				)
+			} else {
+				maturity = time.Date(
+					dataBase.Year(),
+					dataBase.Month()+time.Month(i),
+					int(req.DueDays),
+					0, 0, 0, 0,
+					dataBase.Location(),
+				)
+			}
+
+			err = s.accountsReceivableService.CreateAccountReceivable(ctx, tx, userId, companyId, accountsReceivableDomain.CreateAccountReceivableRequest{
+				CustomerID:        pgconv.PgUUIDToUUID(currentSale.CustomerID),
+				SaleID:            saleId,
+				TotalAmount:       installmentValue,
+				Balance:           installmentValue,
+				DueDate:           maturity.Format("2006-01-02"),
+				InstallmentNumber: int64(i),
+				TotalInstallments: int64(arg.InstallmentsCount),
+			})
+			if err != nil {
+				return err
+			}
+
+		}
+
+		err = s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, pgconv.PgUUIDToUUID(currentSale.CustomerID), customerDomain.UpdateBalanceDueCustomerRequest{
+			BalanceDue: totalAmount,
+			Prohibited: pgconv.PgNumericToFloat64(arg.DownPayment),
+			UpdatedBy:  userId,
+		})
+		if err != nil {
+			return err
+		}
+
+	}
+
+	err = txRepo.UpdateSale(ctx, db.UpdateSaleParams{
+		DiscountAmount:    arg.DiscountAmount,
+		Subtotal:          currentSale.Subtotal,
+		TotalAmount:       pgconv.Float64ToPgNumeric(totalAmount),
+		InstallmentsCount: arg.InstallmentsCount,
+		DownPayment:       arg.DownPayment,
+		DueDays:           arg.DueDays,
+		PaymentMethod:     arg.PaymentMethod,
+		UpdatedBy:         pgconv.ParseUUIDToPgType(userId),
+		Status:            status,
+		ID:                pgconv.ParseUUIDToPgType(saleId),
+		CompanyID:         pgconv.ParseUUIDToPgType(companyId),
+	})
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
 }

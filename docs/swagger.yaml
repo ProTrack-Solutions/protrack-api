@@ -518,8 +518,6 @@ definitions:
     properties:
       balance_due:
         type: number
-      id:
-        type: string
       prohibited:
         type: number
       updated_by:
@@ -1095,6 +1093,19 @@ definitions:
         type: number
       total_rows:
         type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams:
+    properties:
+      discount_amount:
+        type: number
+      due_days:
+        type: integer
+      installments_count:
+        type: integer
+      payment_method:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod'
+      prohibited:
+        type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleStatusRequest:
     properties:
@@ -3163,6 +3174,32 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza o status de uma venda
+      tags:
+      - sales
+  /sales/{saleId}:
+    put:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      - description: Data
+        in: body
+        name: Sale
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams'
+      security:
+      - BearerAuth: []
+      summary: Atualizar dados da venda
       tags:
       - sales
   /sales/complete:
