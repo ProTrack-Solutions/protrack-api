@@ -72,7 +72,6 @@ type DeleteCustomerRequest struct {
 }
 
 type UpdateBalanceDueCustomerRequest struct {
-	ID         uuid.UUID `json:"id"`
 	BalanceDue float64   `json:"balance_due"`
 	Prohibited float64   `json:"prohibited"`
 	UpdatedBy  uuid.UUID `json:"updated_by"`

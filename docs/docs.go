@@ -3406,6 +3406,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/sales/{saleId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Atualizar dados da venda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "saleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data",
+                        "name": "Sale",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "produces": [
@@ -4636,9 +4678,6 @@ const docTemplate = `{
                 "balance_due": {
                     "type": "number"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "prohibited": {
                     "type": "number"
                 },
@@ -5504,6 +5543,26 @@ const docTemplate = `{
                 },
                 "total_rows": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams": {
+            "type": "object",
+            "properties": {
+                "discount_amount": {
+                    "type": "number"
+                },
+                "due_days": {
+                    "type": "integer"
+                },
+                "installments_count": {
+                    "type": "integer"
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod"
+                },
+                "prohibited": {
+                    "type": "number"
                 }
             }
         },
