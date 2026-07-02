@@ -23,6 +23,7 @@ type RepositoryInterface interface {
 	UpdateAccountReceivableBalance(ctx context.Context, arg db.UpdateAccountReceivableBalanceParams) (pgtype.UUID, error)
 	GetTotalOpenAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOpenAmountByCompanyRow, error)
 	GetTotalOverdueAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOverdueAmountByCompanyRow, error)
+	DeleteAccountReceivableBySaleID(ctx context.Context, arg db.DeleteAccountsReceivableBySaleIdParams) error
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -386,4 +387,13 @@ func (s *Service) GetTotalOverdueAmountByCompany(ctx context.Context, companyId 
 	}
 
 	return pgconv.PgNumericToFloat64(total.TotalOverdue), nil
+}
+
+func (s *Service) DeleteAccountReceivableBySaleIDTx(ctx context.Context, tx db.DBTX, saleId uuid.UUID, companyId uuid.UUID) error {
+	repoTx := db.New(tx)
+
+	return repoTx.DeleteAccountsReceivableBySaleId(ctx, db.DeleteAccountsReceivableBySaleIdParams{
+		SaleID:    pgconv.ParseUUIDToPgType(saleId),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
 }

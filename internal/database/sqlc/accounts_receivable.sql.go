@@ -56,6 +56,22 @@ func (q *Queries) CreateAccountReceivable(ctx context.Context, arg CreateAccount
 	return err
 }
 
+const deleteAccountsReceivableBySaleId = `-- name: DeleteAccountsReceivableBySaleId :exec
+DELETE FROM accounts_receivable 
+WHERE sale_id = $1 
+    AND company_id = $2
+`
+
+type DeleteAccountsReceivableBySaleIdParams struct {
+	SaleID    pgtype.UUID `json:"sale_id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error {
+	_, err := q.db.Exec(ctx, deleteAccountsReceivableBySaleId, arg.SaleID, arg.CompanyID)
+	return err
+}
+
 const getCustomerDebtSummary = `-- name: GetCustomerDebtSummary :one
 SELECT COUNT(id)::int AS total_count,
     COALESCE(SUM(balance), 0)::numeric AS total_balance,
