@@ -1138,11 +1138,18 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 	var status string
 
 	if arg.PaymentMethod == enums.PaymentMethodInstallments {
+
+		if currentSale.InstallmentsCount < arg.InstallmentsCount || currentSale.InstallmentsCount > arg.InstallmentsCount {
+			err = s.accountsReceivableService.DeleteAccountReceivableBySaleIDTx(ctx, tx, saleId, companyId)
+			if err != nil {
+				return err
+			}
+		}
 		installmentValue := (totalAmount - pgconv.PgNumericToFloat64(arg.DownPayment)) / float64(arg.InstallmentsCount)
 		status = "pending"
 
 		dataBase := time.Now()
-		for i := 0; i < int(arg.InstallmentsCount); i++ {
+		for i := 1; i < int(arg.InstallmentsCount); i++ {
 			var maturity time.Time
 
 			if dataBase.Day() >= int(req.DueDays) {
@@ -1178,15 +1185,15 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 
 		}
 
-		err = s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, pgconv.PgUUIDToUUID(currentSale.CustomerID), customerDomain.UpdateBalanceDueCustomerRequest{
-			BalanceDue: totalAmount,
-			Prohibited: pgconv.PgNumericToFloat64(arg.DownPayment),
-			UpdatedBy:  userId,
-		})
-		if err != nil {
-			return err
-		}
+	}
 
+	err = s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, pgconv.PgUUIDToUUID(currentSale.CustomerID), customerDomain.UpdateBalanceDueCustomerRequest{
+		BalanceDue: totalAmount,
+		Prohibited: pgconv.PgNumericToFloat64(arg.DownPayment),
+		UpdatedBy:  userId,
+	})
+	if err != nil {
+		return err
 	}
 
 	err = txRepo.UpdateSale(ctx, db.UpdateSaleParams{

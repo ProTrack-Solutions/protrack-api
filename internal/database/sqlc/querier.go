@@ -33,6 +33,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
+	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
 	DeleteBillCategories(ctx context.Context, id pgtype.UUID) error
 	DeleteCompany(ctx context.Context, arg DeleteCompanyParams) error
 	DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error

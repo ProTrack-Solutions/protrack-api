@@ -316,7 +316,7 @@ FROM sales s
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
 WHERE s.company_id = $1 
     AND s.deleted_at IS NULL
-ORDER BY p.created_at DESC
+ORDER BY p.created_at DESC, ar.installment_number ASC
 LIMIT $2
 OFFSET $3;
 -- name: CountSalesByCompany :one
