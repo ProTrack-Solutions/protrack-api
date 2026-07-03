@@ -316,10 +316,24 @@ FROM sales s
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
 WHERE s.company_id = $1 
     AND s.deleted_at IS NULL
-ORDER BY p.created_at DESC
+ORDER BY p.created_at DESC, ar.installment_number ASC
 LIMIT $2
 OFFSET $3;
 -- name: CountSalesByCompany :one
 SELECT COUNT(*) FROM sales
 WHERE company_id = $1
     AND deleted_at IS NULL;
+-- name: UpdateSale :exec
+UPDATE sales
+SET discount_amount = $1,
+    subtotal = $2,
+    total_amount = $3,
+    installments_count = $4,
+    down_payment = $5,
+    due_days = $6,
+    payment_method = $7,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $8,
+    status = $9
+WHERE id = $10
+    AND company_id = $11;

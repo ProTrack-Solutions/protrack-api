@@ -158,3 +158,28 @@ func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"cash_flow_month": cashFlowMonth})
 }
+
+// GetCashFlow godoc
+// @Summary      Fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowResponse
+// @Router       /cash-flow [get]
+func (h *Handler) GetCashFlow(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	cashFlow, err := h.service.GetCashFlow(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, cashFlow)
+}

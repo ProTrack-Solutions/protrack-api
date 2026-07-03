@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"time"
 
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 
@@ -210,6 +212,14 @@ type SaleResponsePaginate struct {
 	SalesCanceled int64   `json:"sales_canceled"`
 }
 
+type UpdateSaleParams struct {
+	DiscountAmount    float64             `json:"discount_amount"`
+	DueDays           int32               `json:"due_days"`
+	PaymentMethod     enums.PaymentMethod `json:"payment_method"`
+	InstallmentsCount int32               `json:"installments_count"`
+	Prohibited        float64             `json:"prohibited"`
+}
+
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 	if req.CustomerID == uuid.Nil {
 		return errors.New("customer_id is required")
@@ -228,4 +238,29 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 
 	}
 	return nil
+}
+
+func ApplyUpdateSaleParams(
+	req UpdateSaleParams,
+	arg *db.UpdateSaleParams,
+) {
+	if req.PaymentMethod != "" {
+		arg.PaymentMethod = req.PaymentMethod
+	}
+
+	if req.DiscountAmount != 0 {
+		arg.DiscountAmount = pgconv.Float64ToPgNumeric(req.DiscountAmount)
+	}
+
+	if req.DueDays != 0 {
+		arg.DueDays = pgconv.IntToPgInt4(int(req.DueDays))
+	}
+
+	if req.InstallmentsCount != 0 {
+		arg.InstallmentsCount = req.InstallmentsCount
+	}
+
+	if req.Prohibited != 0 {
+		arg.DownPayment = pgconv.Float64ToPgNumeric(req.Prohibited)
+	}
 }

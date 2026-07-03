@@ -243,6 +243,15 @@ definitions:
       total_outflow:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse:
+    properties:
+      date:
+        type: string
+      total_inflow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse:
     properties:
       name_category:
@@ -518,8 +527,6 @@ definitions:
     properties:
       balance_due:
         type: number
-      id:
-        type: string
       prohibited:
         type: number
       updated_by:
@@ -1096,6 +1103,19 @@ definitions:
       total_rows:
         type: integer
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams:
+    properties:
+      discount_amount:
+        type: number
+      due_days:
+        type: integer
+      installments_count:
+        type: integer
+      payment_method:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod'
+      prohibited:
+        type: number
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleStatusRequest:
     properties:
       company_id:
@@ -1640,7 +1660,7 @@ paths:
       summary: Ativa ou desativa uma categoria de conta
       tags:
       - bill-categories
-  /bills_payable:
+  /bills-payable:
     post:
       consumes:
       - application/json
@@ -1661,7 +1681,7 @@ paths:
       summary: Cria uma conta a pagar
       tags:
       - bills-payable
-  /bills_payable/{id}:
+  /bills-payable/{id}:
     get:
       parameters:
       - description: ID da conta
@@ -1706,7 +1726,7 @@ paths:
       summary: Atualiza uma conta a pagar
       tags:
       - bills-payable
-  /bills_payable/list:
+  /bills-payable/list:
     get:
       produces:
       - application/json
@@ -1722,7 +1742,7 @@ paths:
       summary: Lista contas a pagar da empresa
       tags:
       - bills-payable
-  /bills_payable/overdue:
+  /bills-payable/overdue:
     get:
       produces:
       - application/json
@@ -1738,7 +1758,7 @@ paths:
       summary: Lista contas a pagar em atraso
       tags:
       - bills-payable
-  /bills_payable/pay/{id}:
+  /bills-payable/pay/{id}:
     put:
       consumes:
       - application/json
@@ -1764,7 +1784,7 @@ paths:
       summary: Registra pagamento de uma conta
       tags:
       - bills-payable
-  /bills_payable/schedule/{id}:
+  /bills-payable/schedule/{id}:
     put:
       consumes:
       - application/json
@@ -1790,7 +1810,7 @@ paths:
       summary: Agenda pagamento de uma conta
       tags:
       - bills-payable
-  /bills_payable/status/{status}:
+  /bills-payable/status/{status}:
     get:
       parameters:
       - description: Status da conta
@@ -1812,7 +1832,7 @@ paths:
       summary: Lista contas a pagar por status
       tags:
       - bills-payable
-  /bills_payable/summary:
+  /bills-payable/summary:
     get:
       produces:
       - application/json
@@ -1826,6 +1846,20 @@ paths:
       summary: Resumo das contas a pagar
       tags:
       - bills-payable
+  /cash-flow:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse'
+      security:
+      - BearerAuth: []
+      summary: Fluxo de caixa
+      tags:
+      - cash-flow
   /cash-flow/history-projection:
     get:
       produces:
@@ -3163,6 +3197,32 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza o status de uma venda
+      tags:
+      - sales
+  /sales/{saleId}:
+    put:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      - description: Data
+        in: body
+        name: Sale
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams'
+      security:
+      - BearerAuth: []
+      summary: Atualizar dados da venda
       tags:
       - sales
   /sales/complete:

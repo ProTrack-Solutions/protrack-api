@@ -485,7 +485,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable": {
+        "/bills-payable": {
             "post": {
                 "security": [
                     {
@@ -520,7 +520,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/list": {
+        "/bills-payable/list": {
             "get": {
                 "security": [
                     {
@@ -547,7 +547,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/overdue": {
+        "/bills-payable/overdue": {
             "get": {
                 "security": [
                     {
@@ -574,7 +574,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/pay/{id}": {
+        "/bills-payable/pay/{id}": {
             "put": {
                 "security": [
                     {
@@ -616,7 +616,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/schedule/{id}": {
+        "/bills-payable/schedule/{id}": {
             "put": {
                 "security": [
                     {
@@ -658,7 +658,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/status/{status}": {
+        "/bills-payable/status/{status}": {
             "get": {
                 "security": [
                     {
@@ -694,7 +694,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/summary": {
+        "/bills-payable/summary": {
             "get": {
                 "security": [
                     {
@@ -718,7 +718,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/{id}": {
+        "/bills-payable/{id}": {
             "get": {
                 "security": [
                     {
@@ -787,6 +787,30 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/cash-flow": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-flow"
+                ],
+                "summary": "Fluxo de caixa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse"
+                        }
                     }
                 }
             }
@@ -3406,6 +3430,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/sales/{saleId}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Atualizar dados da venda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "saleId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Data",
+                        "name": "Sale",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams"
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "produces": [
@@ -4221,6 +4287,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "total_inflow": {
+                    "type": "number"
+                },
+                "total_outflow": {
+                    "type": "number"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse": {
             "type": "object",
             "properties": {
@@ -4635,9 +4715,6 @@ const docTemplate = `{
             "properties": {
                 "balance_due": {
                     "type": "number"
-                },
-                "id": {
-                    "type": "string"
                 },
                 "prohibited": {
                     "type": "number"
@@ -5504,6 +5581,26 @@ const docTemplate = `{
                 },
                 "total_rows": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams": {
+            "type": "object",
+            "properties": {
+                "discount_amount": {
+                    "type": "number"
+                },
+                "due_days": {
+                    "type": "integer"
+                },
+                "installments_count": {
+                    "type": "integer"
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod"
+                },
+                "prohibited": {
+                    "type": "number"
                 }
             }
         },

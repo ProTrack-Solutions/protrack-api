@@ -193,5 +193,5 @@ func (h *Handler) GetPaymentMethodsStats(c *gin.Context) {
 
 	}
 
-	c.JSON(http.StatusOK, gin.H{"payment_method_stats": row})
+	c.JSON(http.StatusOK, row)
 }

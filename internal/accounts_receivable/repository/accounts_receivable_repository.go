@@ -58,3 +58,7 @@ func (r *Repository) GetTotalOpenAmountByCompany(ctx context.Context, companyId 
 func (r *Repository) GetTotalOverdueAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOverdueAmountByCompanyRow, error) {
 	return r.queries().GetTotalOverdueAmountByCompany(ctx, companyId)
 }
+
+func (r *Repository) DeleteAccountReceivableBySaleID(ctx context.Context, arg db.DeleteAccountsReceivableBySaleIdParams) error {
+	return r.queries().DeleteAccountsReceivableBySaleId(ctx, arg)
+}

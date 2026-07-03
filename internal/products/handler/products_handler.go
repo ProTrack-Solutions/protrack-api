@@ -347,5 +347,5 @@ func (h *Handler) GetTop5BestSellingProducts(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"top_products": products})
+	c.JSON(http.StatusOK, products)
 }
