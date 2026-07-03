@@ -33,7 +33,7 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 // @Security     BearerAuth
 // @Param        bill body domain.CreateBillPayableRequest true "Conta a pagar"
 // @Success      201
-// @Router       /bills_payable [post]
+// @Router       /bills-payable [post]
 func (h *Handler) CreateBillPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -65,7 +65,7 @@ func (h *Handler) CreateBillPayable(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        id path string true "ID da conta"
 // @Success      200 {object} domain.BillsPayableResponse
-// @Router       /bills_payable/{id} [get]
+// @Router       /bills-payable/{id} [get]
 func (h *Handler) GetBillsPayableById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -105,7 +105,7 @@ func (h *Handler) GetBillsPayableById(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        status path string true "Status da conta"
 // @Success      200 {array} domain.BillsPayableResponse
-// @Router       /bills_payable/status/{status} [get]
+// @Router       /bills-payable/status/{status} [get]
 func (h *Handler) GetBillsByStatus(c *gin.Context) {
 	status := c.GetString("status")
 
@@ -138,7 +138,7 @@ func (h *Handler) GetBillsByStatus(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200 {array} domain.BillsPayableResponse
-// @Router       /bills_payable/overdue [get]
+// @Router       /bills-payable/overdue [get]
 func (h *Handler) GetOverdueBills(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -163,7 +163,7 @@ func (h *Handler) GetOverdueBills(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200 {array} domain.BillsPayableResponse
-// @Router       /bills_payable/list [get]
+// @Router       /bills-payable/list [get]
 func (h *Handler) ListBillsPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -191,7 +191,7 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 // @Param        id path string true "ID da conta"
 // @Param        payment body domain.PayBillRequest true "Pagamento"
 // @Success      200
-// @Router       /bills_payable/pay/{id} [put]
+// @Router       /bills-payable/pay/{id} [put]
 func (h *Handler) PayBill(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -236,7 +236,7 @@ func (h *Handler) PayBill(c *gin.Context) {
 // @Param        id path string true "ID da conta"
 // @Param        schedule body domain.ScheduleBillRequest true "Agendamento"
 // @Success      200
-// @Router       /bills_payable/schedule/{id} [put]
+// @Router       /bills-payable/schedule/{id} [put]
 func (h *Handler) ScheduleBill(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -282,7 +282,7 @@ func (h *Handler) ScheduleBill(c *gin.Context) {
 // @Param        id path string true "ID da conta"
 // @Param        bill body domain.UpdateBillPayableRequest true "Conta a pagar"
 // @Success      200
-// @Router       /bills_payable/{id} [put]
+// @Router       /bills-payable/{id} [put]
 func (h *Handler) UpdateBillPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -325,7 +325,7 @@ func (h *Handler) UpdateBillPayable(c *gin.Context) {
 // @Produce      json
 // @Security     BearerAuth
 // @Success      200 {object} domain.GetBillsPayableSummaryResponse
-// @Router       /bills_payable/summary [get]
+// @Router       /bills-payable/summary [get]
 func (h *Handler) GetBillsPayableSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

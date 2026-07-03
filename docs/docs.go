@@ -485,7 +485,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable": {
+        "/bills-payable": {
             "post": {
                 "security": [
                     {
@@ -520,7 +520,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/list": {
+        "/bills-payable/list": {
             "get": {
                 "security": [
                     {
@@ -547,7 +547,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/overdue": {
+        "/bills-payable/overdue": {
             "get": {
                 "security": [
                     {
@@ -574,7 +574,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/pay/{id}": {
+        "/bills-payable/pay/{id}": {
             "put": {
                 "security": [
                     {
@@ -616,7 +616,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/schedule/{id}": {
+        "/bills-payable/schedule/{id}": {
             "put": {
                 "security": [
                     {
@@ -658,7 +658,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/status/{status}": {
+        "/bills-payable/status/{status}": {
             "get": {
                 "security": [
                     {
@@ -694,7 +694,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/summary": {
+        "/bills-payable/summary": {
             "get": {
                 "security": [
                     {
@@ -718,7 +718,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/bills_payable/{id}": {
+        "/bills-payable/{id}": {
             "get": {
                 "security": [
                     {
@@ -787,6 +787,30 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/cash-flow": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-flow"
+                ],
+                "summary": "Fluxo de caixa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse"
+                        }
                     }
                 }
             }
@@ -4253,6 +4277,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "mount": {
+                    "type": "string"
+                },
+                "total_inflow": {
+                    "type": "number"
+                },
+                "total_outflow": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse": {
+            "type": "object",
+            "properties": {
+                "date": {
                     "type": "string"
                 },
                 "total_inflow": {

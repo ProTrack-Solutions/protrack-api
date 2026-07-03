@@ -243,6 +243,15 @@ definitions:
       total_outflow:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse:
+    properties:
+      date:
+        type: string
+      total_inflow:
+        type: number
+      total_outflow:
+        type: number
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse:
     properties:
       name_category:
@@ -1651,7 +1660,7 @@ paths:
       summary: Ativa ou desativa uma categoria de conta
       tags:
       - bill-categories
-  /bills_payable:
+  /bills-payable:
     post:
       consumes:
       - application/json
@@ -1672,7 +1681,7 @@ paths:
       summary: Cria uma conta a pagar
       tags:
       - bills-payable
-  /bills_payable/{id}:
+  /bills-payable/{id}:
     get:
       parameters:
       - description: ID da conta
@@ -1717,7 +1726,7 @@ paths:
       summary: Atualiza uma conta a pagar
       tags:
       - bills-payable
-  /bills_payable/list:
+  /bills-payable/list:
     get:
       produces:
       - application/json
@@ -1733,7 +1742,7 @@ paths:
       summary: Lista contas a pagar da empresa
       tags:
       - bills-payable
-  /bills_payable/overdue:
+  /bills-payable/overdue:
     get:
       produces:
       - application/json
@@ -1749,7 +1758,7 @@ paths:
       summary: Lista contas a pagar em atraso
       tags:
       - bills-payable
-  /bills_payable/pay/{id}:
+  /bills-payable/pay/{id}:
     put:
       consumes:
       - application/json
@@ -1775,7 +1784,7 @@ paths:
       summary: Registra pagamento de uma conta
       tags:
       - bills-payable
-  /bills_payable/schedule/{id}:
+  /bills-payable/schedule/{id}:
     put:
       consumes:
       - application/json
@@ -1801,7 +1810,7 @@ paths:
       summary: Agenda pagamento de uma conta
       tags:
       - bills-payable
-  /bills_payable/status/{status}:
+  /bills-payable/status/{status}:
     get:
       parameters:
       - description: Status da conta
@@ -1823,7 +1832,7 @@ paths:
       summary: Lista contas a pagar por status
       tags:
       - bills-payable
-  /bills_payable/summary:
+  /bills-payable/summary:
     get:
       produces:
       - application/json
@@ -1837,6 +1846,20 @@ paths:
       summary: Resumo das contas a pagar
       tags:
       - bills-payable
+  /cash-flow:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashFlowResponse'
+      security:
+      - BearerAuth: []
+      summary: Fluxo de caixa
+      tags:
+      - cash-flow
   /cash-flow/history-projection:
     get:
       produces:
