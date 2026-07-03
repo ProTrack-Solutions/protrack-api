@@ -115,3 +115,7 @@ func (r *Repository) ListSalesWithDetailsPaginate(ctx context.Context, arg db.Li
 func (r *Repository) CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
 	return r.queries().CountSalesByCompany(ctx, companyId)
 }
+
+func (r *Repository) UpdateSale(ctx context.Context, arg db.UpdateSaleParams) error {
+	return r.queries().UpdateSale(ctx, arg)
+}

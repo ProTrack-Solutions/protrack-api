@@ -75,3 +75,7 @@ WHERE company_id = $1
     AND status != 'paid'
     AND deleted_at IS NULL
 GROUP BY company_id;
+-- name: DeleteAccountsReceivableBySaleId :exec
+DELETE FROM accounts_receivable 
+WHERE sale_id = $1 
+    AND company_id = $2;

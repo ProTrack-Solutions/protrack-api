@@ -787,7 +787,7 @@ FROM sales s
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
 WHERE s.company_id = $1 
     AND s.deleted_at IS NULL
-ORDER BY p.created_at DESC
+ORDER BY p.created_at DESC, ar.installment_number ASC
 LIMIT $2
 OFFSET $3
 `
@@ -1023,6 +1023,53 @@ func (q *Queries) UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]Up
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSale = `-- name: UpdateSale :exec
+UPDATE sales
+SET discount_amount = $1,
+    subtotal = $2,
+    total_amount = $3,
+    installments_count = $4,
+    down_payment = $5,
+    due_days = $6,
+    payment_method = $7,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $8,
+    status = $9
+WHERE id = $10
+    AND company_id = $11
+`
+
+type UpdateSaleParams struct {
+	DiscountAmount    pgtype.Numeric `json:"discount_amount"`
+	Subtotal          pgtype.Numeric `json:"subtotal"`
+	TotalAmount       pgtype.Numeric `json:"total_amount"`
+	InstallmentsCount int32          `json:"installments_count"`
+	DownPayment       pgtype.Numeric `json:"down_payment"`
+	DueDays           pgtype.Int4    `json:"due_days"`
+	PaymentMethod     interface{}    `json:"payment_method"`
+	UpdatedBy         pgtype.UUID    `json:"updated_by"`
+	Status            interface{}    `json:"status"`
+	ID                pgtype.UUID    `json:"id"`
+	CompanyID         pgtype.UUID    `json:"company_id"`
+}
+
+func (q *Queries) UpdateSale(ctx context.Context, arg UpdateSaleParams) error {
+	_, err := q.db.Exec(ctx, updateSale,
+		arg.DiscountAmount,
+		arg.Subtotal,
+		arg.TotalAmount,
+		arg.InstallmentsCount,
+		arg.DownPayment,
+		arg.DueDays,
+		arg.PaymentMethod,
+		arg.UpdatedBy,
+		arg.Status,
+		arg.ID,
+		arg.CompanyID,
+	)
+	return err
 }
 
 const updateSaleStatus = `-- name: UpdateSaleStatus :exec

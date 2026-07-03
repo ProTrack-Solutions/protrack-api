@@ -342,7 +342,7 @@ func (h *Handler) GetTotalAmountSummary(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"total_amount": totalAmount})
+	c.JSON(http.StatusOK, totalAmount)
 }
 
 // GetTotalAmountIsPending godoc
@@ -528,7 +528,7 @@ func (h *Handler) GetTop5RealProfitItem(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"top5_products": topProducts})
+	c.JSON(http.StatusOK, topProducts)
 }
 
 // GetPerformanceMonth godoc
@@ -604,4 +604,59 @@ func (h *Handler) MarginDistribution(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"margin_distribution": distribution})
+}
+
+// MarginDistribution godoc
+// @Summary      Atualizar dados da venda
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Param        Sale body domain.UpdateSaleParams true "Data"
+// @Success      200 {object} domain.UpdateSaleParams
+// @Router       /sales/{saleId} [put]
+func (h *Handler) UpdateSale(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	userIdAny, exists := c.Get("sub")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "sub is null"})
+		return
+	}
+
+	userIdStr := userIdAny.(string)
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id is null"})
+		return
+	}
+
+	saleIdStr := c.Param("saleId")
+
+	saleId, err := uuid.Parse(saleIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req domain.UpdateSaleParams
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.service.UpdateSale(c.Request.Context(), userId, companyId, saleId, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "success"})
 }
