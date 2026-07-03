@@ -342,7 +342,7 @@ func (h *Handler) GetTotalAmountSummary(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"total_amount": totalAmount})
+	c.JSON(http.StatusOK, totalAmount)
 }
 
 // GetTotalAmountIsPending godoc
@@ -528,7 +528,7 @@ func (h *Handler) GetTop5RealProfitItem(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"top5_products": topProducts})
+	c.JSON(http.StatusOK, topProducts)
 }
 
 // GetPerformanceMonth godoc

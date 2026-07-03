@@ -6,7 +6,7 @@ import (
 )
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
-	billsPayable := r.Group("/bills_payable").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	billsPayable := r.Group("/bills-payable").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
 		billsPayable.POST("", h.CreateBillPayable)
 		billsPayable.GET("/:id", h.GetBillsPayableById)
