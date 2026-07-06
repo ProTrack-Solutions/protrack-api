@@ -224,6 +224,16 @@ type UpdateSaleParams struct {
 type GetInventoryTurnoverResponse struct {
 	InventoryTurnover float64 `json:"inventory_turnover"`
 }
+type UpdateOverdueSalesResponse struct {
+	IDSale       uuid.UUID `json:"id_sale"`
+	IDCustomer   uuid.UUID `json:"id_customer"`
+	CustomerName string    `json:"customer_name"`
+	PhoneNumber  string    `json:"phone_number"`
+	Value        float64   `json:"value"`
+	DueDate      time.Time `json:"due_date"`
+	InstanceName string
+	Message      string
+}
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 	if req.CustomerID == uuid.Nil {
