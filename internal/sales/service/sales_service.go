@@ -452,9 +452,12 @@ func (s *Service) GetTotalAmountSummary(ctx context.Context, companyId uuid.UUID
 		return domain.GetTotalAmountSummaryRow{}, err
 	}
 
+	growthPercentage := (res.LastMonthSt / res.CurrentMonthSt) * 100
+
 	return domain.GetTotalAmountSummaryRow{
-		CurrentMonthSt: res.CurrentMonthSt,
-		LastMonthSt:    res.LastMonthSt,
+		CurrentMonthSt:   res.CurrentMonthSt,
+		LastMonthSt:      res.LastMonthSt,
+		GrowthPercentage: math.Round(growthPercentage),
 	}, nil
 }
 
@@ -872,8 +875,7 @@ func (s *Service) GetTotalInvestmentCategory(ctx context.Context, companyId uuid
 		mediaStock := (catQuantity + finalStock) / 2
 
 		var stockTurnover float64
-		log.Info().Int("catQuantity", catQuantity)
-		log.Info().Int("mediaStock", mediaStock)
+
 		if catQuantity > 0 {
 			stockTurnover = float64(catQuantity) / float64(mediaStock)
 		}
@@ -1218,4 +1220,41 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 		return err
 	}
 	return nil
+}
+
+func (s *Service) GetInventoryTurnover(ctx context.Context, companyID uuid.UUID) (domain.GetInventoryTurnoverResponse, error) {
+	products, err := s.productService.ListProductsByCompany(ctx, companyID)
+	if err != nil {
+		return domain.GetInventoryTurnoverResponse{}, err
+	}
+
+	productsSales, err := s.saleItemsService.ListItemsByCompany(ctx, companyID)
+	if err != nil {
+		return domain.GetInventoryTurnoverResponse{}, err
+	}
+
+	var totalStockProducts float64
+	var totalStockProductsSale float64
+
+	productMap := make(map[uuid.UUID]float64)
+	for _, product := range products {
+		totalStockProducts += product.CostPrice * float64(product.Quantity)
+		productMap[product.ID] = product.CostPrice
+	}
+
+	for _, saleItem := range productsSales {
+		product, exists := productMap[saleItem.ProductID]
+		if !exists {
+			continue
+		}
+
+		totalStockProductsSale += product * float64(saleItem.Quantity)
+	}
+
+	var stockTurnover float64
+	if totalStockProducts > 0 {
+		stockTurnover = (totalStockProductsSale / totalStockProducts) * 100
+	}
+
+	return domain.GetInventoryTurnoverResponse{InventoryTurnover: stockTurnover}, nil
 }

@@ -102,8 +102,9 @@ type GetSalesPerformanceSummaryRow struct {
 }
 
 type GetTotalAmountSummaryRow struct {
-	CurrentMonthSt float64 `json:"current_month_st"`
-	LastMonthSt    float64 `json:"last_month_st"`
+	CurrentMonthSt   float64 `json:"current_month_st"`
+	LastMonthSt      float64 `json:"last_month_st"`
+	GrowthPercentage float64 `json:"growth_percentage"`
 }
 
 type GetTotalAmountByStatusRequest struct {
@@ -218,6 +219,10 @@ type UpdateSaleParams struct {
 	PaymentMethod     enums.PaymentMethod `json:"payment_method"`
 	InstallmentsCount int32               `json:"installments_count"`
 	Prohibited        float64             `json:"prohibited"`
+}
+
+type GetInventoryTurnoverResponse struct {
+	InventoryTurnover float64 `json:"inventory_turnover"`
 }
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {

@@ -3219,6 +3219,30 @@ const docTemplate = `{
                 }
             }
         },
+        "/sales/stock-turnover": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Busca o giro de estoque da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetInventoryTurnoverResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sales/top5-products": {
             "get": {
                 "security": [
@@ -5389,6 +5413,14 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.PaymentMethod"
                 },
                 "prohibited": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetInventoryTurnoverResponse": {
+            "type": "object",
+            "properties": {
+                "inventory_turnover": {
                     "type": "number"
                 }
             }
