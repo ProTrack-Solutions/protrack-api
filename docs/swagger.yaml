@@ -978,6 +978,11 @@ definitions:
       prohibited:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetInventoryTurnoverResponse:
+    properties:
+      inventory_turnover:
+        type: number
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetPerformanceMonthResponse:
     properties:
       mount:
@@ -3416,6 +3421,20 @@ paths:
       security:
       - BearerAuth: []
       summary: Lucro real por item
+      tags:
+      - sales
+  /sales/stock-turnover:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetInventoryTurnoverResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca o giro de estoque da empresa
       tags:
       - sales
   /sales/top5-products:
