@@ -489,10 +489,10 @@ func (s *Service) GetTotalAmountIsOverdue(ctx context.Context, req domain.GetTot
 	return total, nil
 }
 
-func (s *Service) UpdateOverdueSales(ctx context.Context) error {
+func (s *Service) UpdateOverdueSales(ctx context.Context) ([]domain.UpdateOverdueSalesResponse, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return []domain.UpdateOverdueSalesResponse{}, err
 	}
 
 	defer tx.Rollback(ctx)
@@ -501,13 +501,15 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 
 	response, err := repoTx.UpdateOverdueSalesAndAccounts(ctx)
 	if err != nil {
-		return err
+		return []domain.UpdateOverdueSalesResponse{}, err
 	}
+
+	salesResponse := make(map[uuid.UUID]domain.UpdateOverdueSalesResponse)
 
 	for _, data := range response {
 		customer, err := s.customerService.GetCustomerByIdTx(ctx, tx, pgconv.PgUUIDToUUID(data.CustomerID))
 		if err != nil {
-			return err
+			return []domain.UpdateOverdueSalesResponse{}, err
 		}
 
 		sale, err := repoTx.GetSaleByIdJust(ctx, data.SaleID)
@@ -516,11 +518,9 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 			continue
 		}
 
-		log.Info().Msgf("CompanyID %s", data.CompanyID)
-
 		company, err := s.companiesService.GetCompanyByIDTx(ctx, tx, pgconv.PgUUIDToUUID(data.CompanyID))
 		if err != nil {
-			return fmt.Errorf("failed to retrieve company: %w", err)
+			return []domain.UpdateOverdueSalesResponse{}, fmt.Errorf("failed to retrieve company: %w", err)
 		}
 
 		instanceName := fmt.Sprintf("%s-%s", company.Name, data.CompanyID.String())
@@ -529,14 +529,29 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 			"Informamos que a sua parcela com vencimento no dia %d venceu hoje.\n"+
 			"Pedimos que entre em contato para realizar a regularização.", sale.DueDays.Int32)
 
-		targetNumber := customer.Whatsapp
-
-		if err := s.whatsApp.SendWhatsAppMessage(targetNumber, msg, instanceName); err != nil {
-			log.Error().Err(err).Str("sale_id", data.SaleID.String()).Msg("Erro ao enviar WhatsApp de vencimento")
+		salesResponse[pgconv.PgUUIDToUUID(data.SaleID)] = domain.UpdateOverdueSalesResponse{
+			IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
+			IDCustomer:   pgconv.PgUUIDToUUID(data.CustomerID),
+			CustomerName: sale.CustomerName,
+			PhoneNumber:  customer.Whatsapp,
+			Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
+			DueDate:      pgconv.PgTimestamptzToTime(sale.CreatedAt),
+			// DICA: Adicione os campos abaixo na sua struct "UpdateOverdueSalesResponse" do domain
+			// para que o Worker consiga ler a mensagem e a instância correspondente na hora de postar na fila!
+			InstanceName: instanceName,
+			Message:      msg,
 		}
+
+		log.Info().Msgf("CompanyID %s", data.CompanyID)
+
 	}
 
-	return tx.Commit(ctx)
+	var finalResult []domain.UpdateOverdueSalesResponse
+	for _, value := range salesResponse {
+		finalResult = append(finalResult, value)
+	}
+
+	return finalResult, tx.Commit(ctx)
 }
 
 func (s *Service) ContSalesPendingAndOverdue(ctx context.Context, companyId uuid.UUID) (int64, error) {
@@ -1256,5 +1271,5 @@ func (s *Service) GetInventoryTurnover(ctx context.Context, companyID uuid.UUID)
 		stockTurnover = (totalStockProductsSale / totalStockProducts) * 100
 	}
 
-	return domain.GetInventoryTurnoverResponse{InventoryTurnover: stockTurnover}, nil
+	return domain.GetInventoryTurnoverResponse{InventoryTurnover: math.Round(stockTurnover*100) / 100}, nil
 }

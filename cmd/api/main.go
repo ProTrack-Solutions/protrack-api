@@ -52,6 +52,7 @@ import (
 	productsCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/handler"
 	productsCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/repository"
 	productsCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/rabbitmq"
 	reportsHandler "github.com/ProTrack-Solutions/protrack-api/internal/reports/handler"
 	reportsService "github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	saleItemsHandler "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/handler"
@@ -145,6 +146,12 @@ func main() {
 	}
 	defer redis.Close()
 
+	_, ch, err := rabbitmq.InitializeRabbitMQ(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to opem channel to rabbitmq")
+	}
+	defer ch.Close()
+
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
@@ -233,7 +240,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	worker.StartOverdueMonitor(salesService)
+	worker.StartOverdueMonitor(salesService, ch)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
 
 	srv := &http.Server{
