@@ -30,6 +30,7 @@ import (
 	companiesRepository "github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/consumers"
 	customersHandler "github.com/ProTrack-Solutions/protrack-api/internal/customers/handler"
 	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
@@ -77,6 +78,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	_ "github.com/ProTrack-Solutions/protrack-api/docs"
+	annoucementsHandler "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/handler"
+	annountmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/repository"
+	annountmentsService "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -173,6 +177,7 @@ func main() {
 	paymentHistoryRepository := paymentHistoryRepository.NewRepository(db.Pool)
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
+	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
@@ -194,6 +199,7 @@ func main() {
 	analyticsService := analyticsService.NewService(productsService, saleItemsService)
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	whatsappService := whatsappService.NewService(cfg, companiesService)
+	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
@@ -214,6 +220,7 @@ func main() {
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
+	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -235,6 +242,7 @@ func main() {
 	reportsHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
 	whatsappHandler.RegisterRoute(api)
+	annoucementsHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -242,6 +250,7 @@ func main() {
 
 	worker.StartOverdueMonitor(salesService, ch)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
+	consumers.StartWhatsAppConsumer(ch, whatsapp)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ApiPort,

@@ -70,7 +70,7 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Wha
 
 				// Nack com 'requeue=true' faz a mensagem voltar para o topo da fila para tentar novamente
 				// Dica: No futuro você pode acoplar uma DLQ aqui para evitar loops infinitos de erro
-				d.Nack(false, true)
+				d.Nack(false, false)
 			} else {
 				log.Info().Str("sale_id", event.IDSale.String()).Msg("WhatsApp enviado com sucesso!")
 

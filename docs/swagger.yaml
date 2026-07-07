@@ -40,6 +40,72 @@ definitions:
       total_pending:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest:
+    properties:
+      content:
+        example: O sistema ficará instável das 02h às 04h.
+        type: string
+      expires_at:
+        example: "2026-07-08T12:00:00Z"
+        type: string
+      starts_at:
+        example: "2026-07-07T12:00:00Z"
+        type: string
+      title:
+        example: Manutenção Programada
+        maxLength: 150
+        type: string
+      type:
+        enum:
+        - info
+        - warning
+        - success
+        - maintenance
+        example: info
+        type: string
+    required:
+    - content
+    - title
+    - type
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsPaginateResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      is_active:
+        type: boolean
+      starts_at:
+        type: string
+      title:
+        type: string
+      type:
+        enum:
+        - info
+        - warning
+        - success
+        - maintenance
+        example: info
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginRequest:
     properties:
       aud:
@@ -632,6 +698,21 @@ definitions:
         type: string
       updated_by:
         type: string
+    type: object
+  ? github_com_ProTrack-Solutions_protrack-api_internal_domain.PaginatedResponse-github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain_ListAnnoucementsPaginateResponse
+  : properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsPaginateResponse'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender:
     enum:
@@ -1508,6 +1589,122 @@ paths:
       summary: Total pendente e em atraso da empresa
       tags:
       - accounts-receivable
+  /announcements:
+    get:
+      description: Retorna a lista de avisos ativos baseada nos parâmetros de paginação
+        enviados via Header
+      parameters:
+      - description: 'Número da página (padrão: 1)'
+        in: header
+        name: page
+        type: integer
+      - description: 'Quantidade de registros por página (padrão: 10)'
+        in: header
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Lista paginada de avisos
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain.PaginatedResponse-github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain_ListAnnoucementsPaginateResponse'
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno no servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os avisos da empresa
+      tags:
+      - announcements
+    post:
+      consumes:
+      - application/json
+      description: Cria um comunicado/aviso para a empresa vinculada ao usuário autenticado
+      parameters:
+      - description: Payload de criação do aviso
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{"message": "success"}'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Erro de validação no JSON ou UUID inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autorizado se o company_id ou sub estiverem ausentes
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno no servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria um novo aviso
+      tags:
+      - announcements
+  /announcements/{id}:
+    delete:
+      description: Desativa um aviso específico utilizando o ID enviado como parâmetro
+        de rota
+      parameters:
+      - description: ID do aviso (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content (Aviso removido com sucesso)
+        "400":
+          description: ID inválido informado na rota
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno no servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove um aviso (Soft Delete)
+      tags:
+      - announcements
   /auth/login:
     post:
       consumes:
