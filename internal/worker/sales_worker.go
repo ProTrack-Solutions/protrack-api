@@ -15,14 +15,6 @@ func StartOverdueMonitor(saleService *service.Service, amqpChan *amqp.Channel) {
 
 	go func() {
 		runUpdate := func() {
-			/* ctx := context.Background()
-			err := saleService.UpdateOverdueSales(ctx)
-			if err != nil {
-				log.Error().Err(err).Msg("Erro ao atualizar vendas vencidas")
-			} else {
-				log.Info().Msg("Rotina de monitoramento: Status de vendas atualizado com sucesso.")
-			} */
-
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 			defer cancel()
 
@@ -62,6 +54,7 @@ func StartOverdueMonitor(saleService *service.Service, amqpChan *amqp.Channel) {
 				if err != nil {
 					log.Error().Err(err).Str("sale_id", sale.IDSale.String()).Msg("Falha ao enviar para o RabbitMQ")
 				}
+
 			}
 
 			log.Info().Int("total_enviado", len(sales)).Msg("Eventos de inadimplência gerados com sucesso.")

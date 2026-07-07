@@ -223,6 +223,185 @@
                 }
             }
         },
+        "/announcements": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista de avisos ativos baseada nos parâmetros de paginação enviados via Header",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Lista os avisos da empresa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Número da página (padrão: 1)",
+                        "name": "page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade de registros por página (padrão: 10)",
+                        "name": "per_page",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Lista paginada de avisos",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain.PaginatedResponse-github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain_ListAnnoucementsPaginateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um comunicado/aviso para a empresa vinculada ao usuário autenticado",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Cria um novo aviso",
+                "parameters": [
+                    {
+                        "description": "Payload de criação do aviso",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{\"message\": \"success\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de validação no JSON ou UUID inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado se o company_id ou sub estiverem ausentes",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/announcements/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Desativa um aviso específico utilizando o ID enviado como parâmetro de rota",
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Remove um aviso (Soft Delete)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do aviso (UUID)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content (Aviso removido com sucesso)"
+                    },
+                    "400": {
+                        "description": "ID inválido informado na rota",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -3997,6 +4176,99 @@
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest": {
+            "type": "object",
+            "required": [
+                "content",
+                "title",
+                "type"
+            ],
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "O sistema ficará instável das 02h às 04h."
+                },
+                "expires_at": {
+                    "type": "string",
+                    "example": "2026-07-08T12:00:00Z"
+                },
+                "starts_at": {
+                    "type": "string",
+                    "example": "2026-07-07T12:00:00Z"
+                },
+                "title": {
+                    "type": "string",
+                    "maxLength": 150,
+                    "example": "Manutenção Programada"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "info",
+                        "warning",
+                        "success",
+                        "maintenance"
+                    ],
+                    "example": "info"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsPaginateResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "info",
+                        "warning",
+                        "success",
+                        "maintenance"
+                    ],
+                    "example": "info"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginRequest": {
             "type": "object",
             "required": [
@@ -4893,6 +5165,29 @@
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_domain.PaginatedResponse-github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain_ListAnnoucementsPaginateResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsPaginateResponse"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
                 }
             }
         },

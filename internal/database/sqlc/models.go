@@ -5,8 +5,55 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AnnouncementType string
+
+const (
+	AnnouncementTypeInfo        AnnouncementType = "info"
+	AnnouncementTypeWarning     AnnouncementType = "warning"
+	AnnouncementTypeSuccess     AnnouncementType = "success"
+	AnnouncementTypeMaintenance AnnouncementType = "maintenance"
+)
+
+func (e *AnnouncementType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AnnouncementType(s)
+	case string:
+		*e = AnnouncementType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AnnouncementType: %T", src)
+	}
+	return nil
+}
+
+type NullAnnouncementType struct {
+	AnnouncementType AnnouncementType `json:"announcement_type"`
+	Valid            bool             `json:"valid"` // Valid is true if AnnouncementType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAnnouncementType) Scan(value interface{}) error {
+	if value == nil {
+		ns.AnnouncementType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AnnouncementType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAnnouncementType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AnnouncementType), nil
+}
 
 type AccountsReceivable struct {
 	ID                pgtype.UUID        `json:"id"`
@@ -24,6 +71,23 @@ type AccountsReceivable struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type Announcement struct {
+	ID        pgtype.UUID        `json:"id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	Title     string             `json:"title"`
+	Content   string             `json:"content"`
+	Type      AnnouncementType   `json:"type"`
+	StartsAt  pgtype.Timestamptz `json:"starts_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	IsActive  bool               `json:"is_active"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	UpdatedBy pgtype.UUID        `json:"updated_by"`
+	DeletedBy pgtype.UUID        `json:"deleted_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type BillCategory struct {
