@@ -29,9 +29,9 @@ jobs:
 
       # 4. Roda o Linter oficial da comunidade Go
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.12.2
+          version: latest
 
       # 5. Executa os testes unitários com detecção de concorrência e cobertura
       - name: Run Tests
