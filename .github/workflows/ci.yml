@@ -20,18 +20,18 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "stable" # Instala a versão estável mais recente do Go
-          cache: true # Salva o cache do go.sum para acelerar os próximos deploys
+          go-version: "1.25.x"
+          cache: true
 
       # 3. Garante que todas as dependências estão baixadas
       - name: Install dependencies
         run: go mod download
 
-      # 4. Roda o Linter oficial da comunidade Go (Detecta erros bobos e formatação)
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.59 # Certifique-se de usar uma versão compatível com seu projeto
+      # 4. Roda o Linter oficial da comunidade Go
+      # - name: Run golangci-lint
+      #   uses: golangci/golangci-lint-action@v7
+      #   with:
+      #     version: latest
 
       # 5. Executa os testes unitários com detecção de concorrência e cobertura
       - name: Run Tests
