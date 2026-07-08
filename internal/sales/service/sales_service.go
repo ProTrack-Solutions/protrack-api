@@ -23,6 +23,7 @@ import (
 	saleItemsService "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -452,9 +453,12 @@ func (s *Service) GetTotalAmountSummary(ctx context.Context, companyId uuid.UUID
 		return domain.GetTotalAmountSummaryRow{}, err
 	}
 
+	growthPercentage := (res.LastMonthSt / res.CurrentMonthSt) * 100
+
 	return domain.GetTotalAmountSummaryRow{
-		CurrentMonthSt: res.CurrentMonthSt,
-		LastMonthSt:    res.LastMonthSt,
+		CurrentMonthSt:   res.CurrentMonthSt,
+		LastMonthSt:      res.LastMonthSt,
+		GrowthPercentage: math.Round(growthPercentage),
 	}, nil
 }
 
@@ -486,10 +490,10 @@ func (s *Service) GetTotalAmountIsOverdue(ctx context.Context, req domain.GetTot
 	return total, nil
 }
 
-func (s *Service) UpdateOverdueSales(ctx context.Context) error {
+func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesResult, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return domain.OverdueSalesResult{}, err
 	}
 
 	defer tx.Rollback(ctx)
@@ -498,13 +502,17 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 
 	response, err := repoTx.UpdateOverdueSalesAndAccounts(ctx)
 	if err != nil {
-		return err
+		return domain.OverdueSalesResult{}, err
 	}
+
+	var whatsAppEvents []events.WhatsApp
+	// agrupa contagem de vendas vencidas por empresa
+	companyCounts := make(map[uuid.UUID]int)
 
 	for _, data := range response {
 		customer, err := s.customerService.GetCustomerByIdTx(ctx, tx, pgconv.PgUUIDToUUID(data.CustomerID))
 		if err != nil {
-			return err
+			return domain.OverdueSalesResult{}, err
 		}
 
 		sale, err := repoTx.GetSaleByIdJust(ctx, data.SaleID)
@@ -513,27 +521,53 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) error {
 			continue
 		}
 
-		log.Info().Msgf("CompanyID %s", data.CompanyID)
-
 		company, err := s.companiesService.GetCompanyByIDTx(ctx, tx, pgconv.PgUUIDToUUID(data.CompanyID))
 		if err != nil {
-			return fmt.Errorf("failed to retrieve company: %w", err)
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve company: %w", err)
 		}
 
-		instanceName := fmt.Sprintf("%s-%s", company.Name, data.CompanyID.String())
+		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
+		instanceName := fmt.Sprintf("%s-%s", company.Name, companyID.String())
 
 		msg := fmt.Sprintf("⚠️ *Aviso de Vencimento*\n\n"+
 			"Informamos que a sua parcela com vencimento no dia %d venceu hoje.\n"+
 			"Pedimos que entre em contato para realizar a regularização.", sale.DueDays.Int32)
 
-		targetNumber := customer.Whatsapp
+		whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
+			IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
+			CompanyID:    companyID,
+			CustomerName: sale.CustomerName,
+			PhoneNumber:  customer.Whatsapp,
+			Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
+			DueDate:      pgconv.PgTimestamptzToTime(sale.CreatedAt),
+			InstanceName: instanceName,
+			Message:      msg,
+		})
 
-		if err := s.whatsApp.SendWhatsAppMessage(targetNumber, msg, instanceName); err != nil {
-			log.Error().Err(err).Str("sale_id", data.SaleID.String()).Msg("Erro ao enviar WhatsApp de vencimento")
-		}
+		companyCounts[companyID]++
+
+		log.Info().Msgf("CompanyID %s", data.CompanyID)
+
 	}
 
-	return tx.Commit(ctx)
+	var announcementEvents []events.Announcement
+	now := time.Now()
+	for companyID, total := range companyCounts {
+		announcementEvents = append(announcementEvents, events.Announcement{
+			CompanyID:     companyID,
+			Title:         "Vencimento de vendas",
+			Message:       fmt.Sprintf("%d venda(s) da sua empresa venceram hoje.", total),
+			Type:          "info",
+			TotalVencidas: total,
+			StartsAt:      now,
+			ExpiresAt:     now.Add(24 * time.Hour),
+		})
+	}
+
+	return domain.OverdueSalesResult{
+		WhatsAppEvents:     whatsAppEvents,
+		AnnouncementEvents: announcementEvents,
+	}, tx.Commit(ctx)
 }
 
 func (s *Service) ContSalesPendingAndOverdue(ctx context.Context, companyId uuid.UUID) (int64, error) {
@@ -872,8 +906,7 @@ func (s *Service) GetTotalInvestmentCategory(ctx context.Context, companyId uuid
 		mediaStock := (catQuantity + finalStock) / 2
 
 		var stockTurnover float64
-		log.Info().Int("catQuantity", catQuantity)
-		log.Info().Int("mediaStock", mediaStock)
+
 		if catQuantity > 0 {
 			stockTurnover = float64(catQuantity) / float64(mediaStock)
 		}
@@ -1218,4 +1251,41 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 		return err
 	}
 	return nil
+}
+
+func (s *Service) GetInventoryTurnover(ctx context.Context, companyID uuid.UUID) (domain.GetInventoryTurnoverResponse, error) {
+	products, err := s.productService.ListProductsByCompany(ctx, companyID)
+	if err != nil {
+		return domain.GetInventoryTurnoverResponse{}, err
+	}
+
+	productsSales, err := s.saleItemsService.ListItemsByCompany(ctx, companyID)
+	if err != nil {
+		return domain.GetInventoryTurnoverResponse{}, err
+	}
+
+	var totalStockProducts float64
+	var totalStockProductsSale float64
+
+	productMap := make(map[uuid.UUID]float64)
+	for _, product := range products {
+		totalStockProducts += product.CostPrice * float64(product.Quantity)
+		productMap[product.ID] = product.CostPrice
+	}
+
+	for _, saleItem := range productsSales {
+		product, exists := productMap[saleItem.ProductID]
+		if !exists {
+			continue
+		}
+
+		totalStockProductsSale += product * float64(saleItem.Quantity)
+	}
+
+	var stockTurnover float64
+	if totalStockProducts > 0 {
+		stockTurnover = (totalStockProductsSale / totalStockProducts) * 100
+	}
+
+	return domain.GetInventoryTurnoverResponse{InventoryTurnover: math.Round(stockTurnover*100) / 100}, nil
 }

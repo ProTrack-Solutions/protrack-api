@@ -30,6 +30,7 @@ import (
 	companiesRepository "github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/consumers"
 	customersHandler "github.com/ProTrack-Solutions/protrack-api/internal/customers/handler"
 	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
@@ -52,6 +53,7 @@ import (
 	productsCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/handler"
 	productsCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/repository"
 	productsCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/rabbitmq"
 	reportsHandler "github.com/ProTrack-Solutions/protrack-api/internal/reports/handler"
 	reportsService "github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	saleItemsHandler "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/handler"
@@ -76,6 +78,9 @@ import (
 	"github.com/rs/zerolog/log"
 
 	_ "github.com/ProTrack-Solutions/protrack-api/docs"
+	annoucementsHandler "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/handler"
+	annountmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/repository"
+	annountmentsService "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -145,6 +150,12 @@ func main() {
 	}
 	defer redis.Close()
 
+	_, ch, err := rabbitmq.InitializeRabbitMQ(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to opem channel to rabbitmq")
+	}
+	defer ch.Close()
+
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
@@ -166,6 +177,7 @@ func main() {
 	paymentHistoryRepository := paymentHistoryRepository.NewRepository(db.Pool)
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
+	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
@@ -187,6 +199,7 @@ func main() {
 	analyticsService := analyticsService.NewService(productsService, saleItemsService)
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	whatsappService := whatsappService.NewService(cfg, companiesService)
+	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
@@ -207,6 +220,7 @@ func main() {
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
+	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -228,13 +242,16 @@ func main() {
 	reportsHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
 	whatsappHandler.RegisterRoute(api)
+	annoucementsHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	worker.StartOverdueMonitor(salesService)
+	worker.StartOverdueMonitor(salesService, ch)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
+	consumers.StartWhatsAppConsumer(ch, whatsapp)
+	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ApiPort,
