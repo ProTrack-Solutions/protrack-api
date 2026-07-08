@@ -46,6 +46,13 @@ func (s *Service) CreateAnnoucements(ctx context.Context, userId uuid.UUID, comp
 }
 
 func (s *Service) ListAnnoucements(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.ListAnnoucementsPaginateResponse, error) {
+	if pagination.Page < 1 {
+		pagination.Page = 1
+	}
+	if pagination.PerPage < 1 {
+		pagination.PerPage = 10
+	}
+
 	total, err := s.repo.CountAnnoucementsByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return domain.ListAnnoucementsPaginateResponse{}, err
