@@ -5,30 +5,28 @@ import (
 	"fmt"
 	"time"
 
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
+
 	"github.com/google/uuid"
 )
 
 type CreateSaleRequest struct {
 	CustomerID        uuid.UUID               `json:"customer_id"`
-	CompanyID         uuid.UUID               `json:"company_id"`
 	DiscountAmount    float64                 `json:"discount_amount"`
-	Subtotal          float64                 `json:"subtotal"`
-	TotalAmount       float64                 `json:"total_amount"`
 	DueDays           int32                   `json:"due_days"`
-	CreatedBy         uuid.UUID               `json:"created_by"`
-	PaymentMethod     interface{}             `json:"payment_method"`
+	PaymentMethod     enums.PaymentMethod     `json:"payment_method"`
 	InstallmentsCount int32                   `json:"installments_count"`
-	Status            interface{}             `json:"status"`
 	Items             []CreateSaleItemRequest `json:"items"`
-	Prohibited        float64                 `json:"prohibited"` // valor não parcelado (ex.: entrada)
+	Prohibited        float64                 `json:"prohibited"`
 }
 
 type CreateSaleItemRequest struct {
-	SaleID    uuid.UUID `json:"sale_id"`
 	ProductID uuid.UUID `json:"product_id"`
 	Quantity  int32     `json:"quantity"`
-	UnitPrice float64   `json:"unit_price"`
-	Discount  float64   `json:"discount"`
 }
 
 type DeleteSaleRequest struct {
@@ -105,8 +103,9 @@ type GetSalesPerformanceSummaryRow struct {
 }
 
 type GetTotalAmountSummaryRow struct {
-	CurrentMonthSt float64 `json:"current_month_st"`
-	LastMonthSt    float64 `json:"last_month_st"`
+	CurrentMonthSt   float64 `json:"current_month_st"`
+	LastMonthSt      float64 `json:"last_month_st"`
+	GrowthPercentage float64 `json:"growth_percentage"`
 }
 
 type GetTotalAmountByStatusRequest struct {
@@ -207,6 +206,41 @@ type GetPendingSalesDetailedReportResponse struct {
 	InstallmentStatus      string      `json:"installment_status"`
 }
 
+type SaleResponsePaginate struct {
+	globalDomain.PaginatedResponse[ListSalesWithInstallmentsResponse]
+	SalesCount    int64   `json:"sales_count"`
+	TotalInvoiced float64 `json:"total_invoiced"`
+	TotalPending  float64 `json:"total_pending"`
+	SalesCanceled int64   `json:"sales_canceled"`
+}
+
+type UpdateSaleParams struct {
+	DiscountAmount    float64             `json:"discount_amount"`
+	DueDays           int32               `json:"due_days"`
+	PaymentMethod     enums.PaymentMethod `json:"payment_method"`
+	InstallmentsCount int32               `json:"installments_count"`
+	Prohibited        float64             `json:"prohibited"`
+}
+
+type GetInventoryTurnoverResponse struct {
+	InventoryTurnover float64 `json:"inventory_turnover"`
+}
+type UpdateOverdueSalesResponse struct {
+	IDSale       uuid.UUID `json:"id_sale"`
+	IDCustomer   uuid.UUID `json:"id_customer"`
+	CustomerName string    `json:"customer_name"`
+	PhoneNumber  string    `json:"phone_number"`
+	Value        float64   `json:"value"`
+	DueDate      time.Time `json:"due_date"`
+	InstanceName string
+	Message      string
+}
+
+type OverdueSalesResult struct {
+	WhatsAppEvents     []events.WhatsApp
+	AnnouncementEvents []events.Announcement
+}
+
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 	if req.CustomerID == uuid.Nil {
 		return errors.New("customer_id is required")
@@ -214,9 +248,7 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 	if len(req.Items) == 0 {
 		return errors.New("the sale must have at least one item")
 	}
-	if req.DiscountAmount < 0 || req.Subtotal < 0 || req.TotalAmount < 0 {
-		return errors.New("values cannot be negative")
-	}
+
 	for i, item := range req.Items {
 		if item.ProductID == uuid.Nil {
 			return fmt.Errorf("item[%d]: product_id is required", i)
@@ -224,9 +256,32 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 		if item.Quantity <= 0 {
 			return fmt.Errorf("item[%d]: quantity must be greater than zero", i)
 		}
-		if item.UnitPrice < 0 || item.Discount < 0 {
-			return fmt.Errorf("item[%d]: unit_price and discount cannot be negative", i)
-		}
+
 	}
 	return nil
+}
+
+func ApplyUpdateSaleParams(
+	req UpdateSaleParams,
+	arg *db.UpdateSaleParams,
+) {
+	if req.PaymentMethod != "" {
+		arg.PaymentMethod = req.PaymentMethod
+	}
+
+	if req.DiscountAmount != 0 {
+		arg.DiscountAmount = pgconv.Float64ToPgNumeric(req.DiscountAmount)
+	}
+
+	if req.DueDays != 0 {
+		arg.DueDays = pgconv.IntToPgInt4(int(req.DueDays))
+	}
+
+	if req.InstallmentsCount != 0 {
+		arg.InstallmentsCount = req.InstallmentsCount
+	}
+
+	if req.Prohibited != 0 {
+		arg.DownPayment = pgconv.Float64ToPgNumeric(req.Prohibited)
+	}
 }

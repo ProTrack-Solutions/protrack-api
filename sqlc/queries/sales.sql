@@ -281,3 +281,59 @@ WHERE s.company_id = $1
 ORDER BY s.sale_at DESC,
     si.id,
     ar.installment_number;
+-- name: ListSalesWithDetailsPaginate :many
+SELECT -- Dados da venda
+    s.id AS sale_id,
+    s.sale_at,
+    s.subtotal,
+    s.discount_amount,
+    s.total_amount,
+    s.installments_count,
+    s.payment_method,
+    s.status AS sale_status,
+    s.down_payment,
+    -- Dados do cliente
+    c.id AS customer_id,
+    c.full_name AS customer_name,
+    -- Dados dos produtos (itens da venda)
+    si.id AS sale_item_id,
+    si.product_id,
+    si.quantity,
+    si.unit_price,
+    si.discount AS item_discount,
+    p.name AS product_name,
+    -- Parcelas (accounts_receivable)
+    ar.id AS installment_id,
+    ar.total_amount AS installment_total_amount,
+    ar.balance AS installment_balance,
+    ar.due_date,
+    ar.installment_number,
+    ar.status AS installment_status
+FROM sales s
+    INNER JOIN customers c ON s.customer_id = c.id
+    INNER JOIN sale_items si ON s.id = si.sale_id
+    INNER JOIN products p ON si.product_id = p.id
+    LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
+WHERE s.company_id = $1 
+    AND s.deleted_at IS NULL
+ORDER BY p.created_at DESC, ar.installment_number ASC
+LIMIT $2
+OFFSET $3;
+-- name: CountSalesByCompany :one
+SELECT COUNT(*) FROM sales
+WHERE company_id = $1
+    AND deleted_at IS NULL;
+-- name: UpdateSale :exec
+UPDATE sales
+SET discount_amount = $1,
+    subtotal = $2,
+    total_amount = $3,
+    installments_count = $4,
+    down_payment = $5,
+    due_days = $6,
+    payment_method = $7,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $8,
+    status = $9
+WHERE id = $10
+    AND company_id = $11;

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -106,4 +106,16 @@ func (r *Repository) ListSalesWithDetailsPendingOverdue(ctx context.Context, com
 
 func (r *Repository) GetPendingSalesDetailedReport(ctx context.Context, arg db.GetPendingSalesDetailedReportParams) ([]db.GetPendingSalesDetailedReportRow, error) {
 	return r.queries().GetPendingSalesDetailedReport(ctx, arg)
+}
+
+func (r *Repository) ListSalesWithDetailsPaginate(ctx context.Context, arg db.ListSalesWithDetailsPaginateParams) ([]db.ListSalesWithDetailsPaginateRow, error) {
+	return r.queries().ListSalesWithDetailsPaginate(ctx, arg)
+}
+
+func (r *Repository) CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	return r.queries().CountSalesByCompany(ctx, companyId)
+}
+
+func (r *Repository) UpdateSale(ctx context.Context, arg db.UpdateSaleParams) error {
+	return r.queries().UpdateSale(ctx, arg)
 }

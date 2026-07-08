@@ -3,8 +3,9 @@ package domain
 import (
 	"time"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/google/uuid"
 )
 
@@ -154,7 +155,14 @@ type ListProductsByCategoryAndDateResponse struct {
 	CategoryName string    `json:"category_name"`
 }
 
-func ApplyUpdateProductCategoryParams(
+type ProductPaginatedResponse struct {
+	globalDomain.PaginatedResponse[ListProductsByCompanyRow]
+	TotalValueInStock float64 `json:"total_value_in_stock"`
+	ItensInStock      int32   `json:"itens_in_stock"`
+	LowItensInStock   int32   `json:"low_itens_in_stock"`
+}
+
+func ApplyUpdateProductParams(
 	req UpdateProductRequest,
 	arg *db.UpdateProductParams,
 ) {

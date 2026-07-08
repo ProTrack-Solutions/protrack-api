@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateCompany godoc
+// @Summary      Cria uma empresa
+// @Tags         companies
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        company body domain.CreateCompanyParams true "Empresa"
+// @Success      201 {object} domain.CompanyResponse
+// @Router       /companies [post]
 func (h *Handler) CreateCompany(c *gin.Context) {
 	idStr := c.GetString("sub")
 	if idStr == "" {
@@ -56,6 +65,14 @@ func (h *Handler) CreateCompany(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"company": company})
 }
 
+// DeleteCompany godoc
+// @Summary      Remove uma empresa
+// @Tags         companies
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da empresa"
+// @Success      204
+// @Router       /companies/{id} [delete]
 func (h *Handler) DeleteCompany(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -76,6 +93,14 @@ func (h *Handler) DeleteCompany(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetCompanyByDocument godoc
+// @Summary      Busca empresa por documento
+// @Tags         companies
+// @Produce      json
+// @Security     BearerAuth
+// @Param        document path string true "Documento (CNPJ/CPF)"
+// @Success      200 {object} domain.CompanyResponse
+// @Router       /companies/document/{document} [get]
 func (h *Handler) GetCompanyByDocument(c *gin.Context) {
 	document := c.Param("document")
 
@@ -88,6 +113,14 @@ func (h *Handler) GetCompanyByDocument(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"company": company})
 }
 
+// GetCompanyByID godoc
+// @Summary      Busca empresa por ID
+// @Tags         companies
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da empresa"
+// @Success      200 {object} domain.CompanyResponse
+// @Router       /companies/{id} [get]
 func (h *Handler) GetCompanyByID(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -106,6 +139,13 @@ func (h *Handler) GetCompanyByID(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"company": company})
 }
 
+// ListCompanies godoc
+// @Summary      Lista todas as empresas
+// @Tags         companies
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.CompanyResponse
+// @Router       /companies [get]
 func (h *Handler) ListCompanies(c *gin.Context) {
 	companies, err := h.service.ListCompanies(c.Request.Context())
 	if err != nil {
@@ -116,6 +156,15 @@ func (h *Handler) ListCompanies(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"companies": companies})
 }
 
+// SetCompanyStatus godoc
+// @Summary      Altera o status de uma empresa
+// @Tags         companies
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status body domain.SetCompanyStatusParams true "Status"
+// @Success      200 {object} map[string]int64
+// @Router       /companies/set/ [post]
 func (h *Handler) SetCompanyStatus(c *gin.Context) {
 	var req domain.SetCompanyStatusParams
 
@@ -133,6 +182,16 @@ func (h *Handler) SetCompanyStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"count": count})
 }
 
+// UpdateCompany godoc
+// @Summary      Atualiza uma empresa
+// @Tags         companies
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da empresa"
+// @Param        company body domain.UpdateCompanyRequest true "Empresa"
+// @Success      200 {object} domain.CompanyResponse
+// @Router       /companies/{id} [put]
 func (h *Handler) UpdateCompany(c *gin.Context) {
 	idStr := c.Param("id")
 

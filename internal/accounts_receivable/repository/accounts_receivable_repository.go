@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -57,4 +57,8 @@ func (r *Repository) GetTotalOpenAmountByCompany(ctx context.Context, companyId 
 
 func (r *Repository) GetTotalOverdueAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOverdueAmountByCompanyRow, error) {
 	return r.queries().GetTotalOverdueAmountByCompany(ctx, companyId)
+}
+
+func (r *Repository) DeleteAccountReceivableBySaleID(ctx context.Context, arg db.DeleteAccountsReceivableBySaleIdParams) error {
+	return r.queries().DeleteAccountsReceivableBySaleId(ctx, arg)
 }

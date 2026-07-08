@@ -4,10 +4,10 @@ import (
 	"context"
 	"time"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/repository"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	"github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/repository"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -208,6 +208,49 @@ func (s *Service) GetCashFlowPeriod(ctx context.Context, companyId uuid.UUID) ([
 
 		response = append(response, domain.GetCashFlowPeriodResponse{
 			Month:        dateString,
+			TotalInflow:  totalInFlow,
+			TotalOutflow: totalOutFlow,
+		})
+
+	}
+
+	return response, nil
+}
+
+func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domain.GetCashFlowResponse, error) {
+	dayBase := time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)
+
+	var response []domain.GetCashFlowResponse
+
+	var accumulatedBalance float64
+
+	for i := 6; i >= 0; i-- {
+		startAt := dayBase.AddDate(0, -i, 0)
+
+		endAt := startAt.AddDate(0, 1, 0).Add(-time.Nanosecond)
+
+		totalInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+		})
+		if err != nil {
+			return []domain.GetCashFlowResponse{}, err
+		}
+
+		totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+			CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+			PaymentDate:   pgconv.StringToPgDate(startAt.GoString()),
+			PaymentDate_2: pgconv.StringToPgDate(endAt.GoString()),
+		})
+		if err != nil {
+			return []domain.GetCashFlowResponse{}, err
+		}
+
+		accumulatedBalance += totalInFlow - totalOutFlow
+
+		response = append(response, domain.GetCashFlowResponse{
+			Date:         startAt.Format("01/01/2006"),
 			TotalInflow:  totalInFlow,
 			TotalOutflow: totalOutFlow,
 		})

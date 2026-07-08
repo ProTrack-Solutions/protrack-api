@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/reports"
+	"github.com/ProTrack-Solutions/protrack-api/internal/reports/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -28,6 +28,17 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// GenerateReports godoc
+// @Summary      Gera relatório em Excel
+// @Tags         reports
+// @Produce      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+// @Security     BearerAuth
+// @Param        type query string true "Tipo do relatório"
+// @Param        start_date query string true "Data inicial"
+// @Param        end_date query string true "Data final"
+// @Param        format query string false "Formato (xlsx)"
+// @Success      200 {file} file
+// @Router       /reports [get]
 func (h *Handler) GenerateReports(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

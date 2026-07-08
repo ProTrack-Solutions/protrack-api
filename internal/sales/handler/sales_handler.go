@@ -3,10 +3,11 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -25,6 +26,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateSale godoc
+// @Summary      Cria uma venda
+// @Tags         sales
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        sale body domain.CreateSaleRequest true "Venda"
+// @Success      201 {object} map[string]string
+// @Router       /sales [post]
 func (h *Handler) CreateSale(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -61,6 +71,14 @@ func (h *Handler) CreateSale(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
+// DeleteSale godoc
+// @Summary      Remove uma venda
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da venda"
+// @Success      204
+// @Router       /sales/{id} [delete]
 func (h *Handler) DeleteSale(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -103,6 +121,14 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetSaleById godoc
+// @Summary      Busca venda por ID
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da venda"
+// @Success      200 {object} domain.ListSalesResponse
+// @Router       /sales/{id} [get]
 func (h *Handler) GetSaleById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -134,6 +160,13 @@ func (h *Handler) GetSaleById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"sale": sale})
 }
 
+// ListSales godoc
+// @Summary      Lista vendas da empresa
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.ListSalesResponse
+// @Router       /sales/list/ [get]
 func (h *Handler) ListSales(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -151,6 +184,16 @@ func (h *Handler) ListSales(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"sales": sales})
 }
 
+// UpdateSaleStatus godoc
+// @Summary      Atualiza o status de uma venda
+// @Tags         sales
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da venda"
+// @Param        status body domain.UpdateSaleStatusRequest true "Status"
+// @Success      200
+// @Router       /sales/{id}/status [put]
 func (h *Handler) UpdateSaleStatus(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -194,6 +237,15 @@ func (h *Handler) UpdateSaleStatus(c *gin.Context) {
 	}
 }
 
+// ListSalesByCompanyAndStatus godoc
+// @Summary      Lista vendas por empresa e status
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status query string false "Status da venda"
+// @Param        customer_id query string false "ID do cliente"
+// @Success      200 {array} domain.ListSalesResponse
+// @Router       /sales/list/company [get]
 func (h *Handler) ListSalesByCompanyAndStatus(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -221,6 +273,13 @@ func (h *Handler) ListSalesByCompanyAndStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"sales": sales})
 }
 
+// CountSales godoc
+// @Summary      Conta vendas da empresa
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]int64
+// @Router       /sales/count [get]
 func (h *Handler) CountSales(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -238,6 +297,13 @@ func (h *Handler) CountSales(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"count": count})
 }
 
+// GetSalesPerformanceSummary godoc
+// @Summary      Resumo de performance das vendas
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]float64
+// @Router       /sales/percentage [get]
 func (h *Handler) GetSalesPerformanceSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -255,6 +321,13 @@ func (h *Handler) GetSalesPerformanceSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"percentage": percentage})
 }
 
+// GetTotalAmountSummary godoc
+// @Summary      Total geral de vendas
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]string
+// @Router       /sales/total-amount [get]
 func (h *Handler) GetTotalAmountSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -269,9 +342,16 @@ func (h *Handler) GetTotalAmountSummary(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"total_amount": totalAmount})
+	c.JSON(http.StatusOK, totalAmount)
 }
 
+// GetTotalAmountIsPending godoc
+// @Summary      Total de vendas pendentes
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]string
+// @Router       /sales/total-pending [get]
 func (h *Handler) GetTotalAmountIsPending(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -289,6 +369,13 @@ func (h *Handler) GetTotalAmountIsPending(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"total_pending": total})
 }
 
+// GetTotalAmountIsOverdue godoc
+// @Summary      Total de vendas em atraso
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]string
+// @Router       /sales/total-overdue [get]
 func (h *Handler) GetTotalAmountIsOverdue(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -311,6 +398,13 @@ func (h *Handler) GetTotalAmountIsOverdue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"total_overdue": total})
 }
 
+// ContSalesPendingAndOverdue godoc
+// @Summary      Conta vendas pendentes e em atraso
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]int64
+// @Router       /sales/count/pending-overdue [get]
 func (h *Handler) ContSalesPendingAndOverdue(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -329,6 +423,15 @@ func (h *Handler) ContSalesPendingAndOverdue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cont_sales": count})
 }
 
+// ListSalesWithDetails godoc
+// @Summary      Lista vendas com detalhes paginadas
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        Page header int false "Página"
+// @Param        PerPage header int false "Itens por página"
+// @Success      200 {object} domain.SaleResponsePaginate
+// @Router       /sales/complete [get]
 func (h *Handler) ListSalesWithDetails(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -338,15 +441,28 @@ func (h *Handler) ListSalesWithDetails(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	sales, err := h.service.ListSalesWithDetails(c.Request.Context(), companyId)
+	var pagination globalDomain.PaginationParams
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	sales, err := h.service.ListSalesWithDetailsPaginate(c.Request.Context(), companyId, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"sales_completed": sales})
+	c.JSON(http.StatusOK, sales)
 }
 
+// ListSalesWithDetailsPendingOverdue godoc
+// @Summary      Lista vendas pendentes e em atraso com detalhes
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.ListSalesWithInstallmentsResponse
+// @Router       /sales/complete/pending-overdue [get]
 func (h *Handler) ListSalesWithDetailsPendingOverdue(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -365,6 +481,13 @@ func (h *Handler) ListSalesWithDetailsPendingOverdue(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"sales_completed": sales})
 }
 
+// GetRealProfitItem godoc
+// @Summary      Lucro real por item
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} map[string]string
+// @Router       /sales/real-profit [get]
 func (h *Handler) GetRealProfitItem(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -383,6 +506,13 @@ func (h *Handler) GetRealProfitItem(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"real_profit": realProfit})
 }
 
+// GetTop5RealProfitItem godoc
+// @Summary      Top 5 produtos por lucro real
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetTop5RealProfitItemResponse
+// @Router       /sales/top5-products [get]
 func (h *Handler) GetTop5RealProfitItem(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -398,9 +528,16 @@ func (h *Handler) GetTop5RealProfitItem(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"top5_products": topProducts})
+	c.JSON(http.StatusOK, topProducts)
 }
 
+// GetPerformanceMonth godoc
+// @Summary      Performance mensal de vendas
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetPerformanceMonthResponse
+// @Router       /sales/performance-mounts [get]
 func (h *Handler) GetPerformanceMonth(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -419,6 +556,13 @@ func (h *Handler) GetPerformanceMonth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"performance": performance})
 }
 
+// GetTotalInvestmentCategory godoc
+// @Summary      Investimento total por categoria
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetTotalInvestmentCategoryResponse
+// @Router       /sales/investment-categories [get]
 func (h *Handler) GetTotalInvestmentCategory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -437,6 +581,13 @@ func (h *Handler) GetTotalInvestmentCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"investment_category": investmentCategory})
 }
 
+// MarginDistribution godoc
+// @Summary      Distribuição de margem de lucro
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.MarginDistributionResponse
+// @Router       /sales/margin-distribution [get]
 func (h *Handler) MarginDistribution(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -453,4 +604,84 @@ func (h *Handler) MarginDistribution(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"margin_distribution": distribution})
+}
+
+// MarginDistribution godoc
+// @Summary      Atualizar dados da venda
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Param        Sale body domain.UpdateSaleParams true "Data"
+// @Success      200 {object} domain.UpdateSaleParams
+// @Router       /sales/{saleId} [put]
+func (h *Handler) UpdateSale(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	userIdAny, exists := c.Get("sub")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "sub is null"})
+		return
+	}
+
+	userIdStr := userIdAny.(string)
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id is null"})
+		return
+	}
+
+	saleIdStr := c.Param("saleId")
+
+	saleId, err := uuid.Parse(saleIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req domain.UpdateSaleParams
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = h.service.UpdateSale(c.Request.Context(), userId, companyId, saleId, req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "success"})
+}
+
+// MarginDistribution godoc
+// @Summary      Busca o giro de estoque da empresa
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetInventoryTurnoverResponse
+// @Router       /sales/stock-turnover [get]
+func (h *Handler) GetInventoryTurnover(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	stockTurnover, err := h.service.GetInventoryTurnover(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, stockTurnover)
 }

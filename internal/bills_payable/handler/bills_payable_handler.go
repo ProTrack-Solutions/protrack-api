@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CreateBillPayable godoc
+// @Summary      Cria uma conta a pagar
+// @Tags         bills-payable
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        bill body domain.CreateBillPayableRequest true "Conta a pagar"
+// @Success      201
+// @Router       /bills-payable [post]
 func (h *Handler) CreateBillPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -49,6 +58,14 @@ func (h *Handler) CreateBillPayable(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// GetBillsPayableById godoc
+// @Summary      Busca conta a pagar por ID
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da conta"
+// @Success      200 {object} domain.BillsPayableResponse
+// @Router       /bills-payable/{id} [get]
 func (h *Handler) GetBillsPayableById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -81,6 +98,14 @@ func (h *Handler) GetBillsPayableById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bill_payable": billPayable})
 }
 
+// GetBillsByStatus godoc
+// @Summary      Lista contas a pagar por status
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status path string true "Status da conta"
+// @Success      200 {array} domain.BillsPayableResponse
+// @Router       /bills-payable/status/{status} [get]
 func (h *Handler) GetBillsByStatus(c *gin.Context) {
 	status := c.GetString("status")
 
@@ -107,6 +132,13 @@ func (h *Handler) GetBillsByStatus(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bills_payable": billsPayable})
 }
 
+// GetOverdueBills godoc
+// @Summary      Lista contas a pagar em atraso
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.BillsPayableResponse
+// @Router       /bills-payable/overdue [get]
 func (h *Handler) GetOverdueBills(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -125,6 +157,13 @@ func (h *Handler) GetOverdueBills(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bills_payable": billsPayable})
 }
 
+// ListBillsPayable godoc
+// @Summary      Lista contas a pagar da empresa
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.BillsPayableResponse
+// @Router       /bills-payable/list [get]
 func (h *Handler) ListBillsPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -143,6 +182,16 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bills_payable": billsPayable})
 }
 
+// PayBill godoc
+// @Summary      Registra pagamento de uma conta
+// @Tags         bills-payable
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da conta"
+// @Param        payment body domain.PayBillRequest true "Pagamento"
+// @Success      200
+// @Router       /bills-payable/pay/{id} [put]
 func (h *Handler) PayBill(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -178,6 +227,16 @@ func (h *Handler) PayBill(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// ScheduleBill godoc
+// @Summary      Agenda pagamento de uma conta
+// @Tags         bills-payable
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da conta"
+// @Param        schedule body domain.ScheduleBillRequest true "Agendamento"
+// @Success      200
+// @Router       /bills-payable/schedule/{id} [put]
 func (h *Handler) ScheduleBill(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -214,6 +273,16 @@ func (h *Handler) ScheduleBill(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// UpdateBillPayable godoc
+// @Summary      Atualiza uma conta a pagar
+// @Tags         bills-payable
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da conta"
+// @Param        bill body domain.UpdateBillPayableRequest true "Conta a pagar"
+// @Success      200
+// @Router       /bills-payable/{id} [put]
 func (h *Handler) UpdateBillPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -250,6 +319,13 @@ func (h *Handler) UpdateBillPayable(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
+// GetBillsPayableSummary godoc
+// @Summary      Resumo das contas a pagar
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetBillsPayableSummaryResponse
+// @Router       /bills-payable/summary [get]
 func (h *Handler) GetBillsPayableSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

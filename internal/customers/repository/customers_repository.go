@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -71,4 +71,14 @@ func (r *Repository) GetCustomersPerformanceSummary(ctx context.Context, company
 func (r *Repository) UpdateCustomerBalance(ctx context.Context, arg db.UpdateCustomerBalanceParams) error {
 	q := db.New(r.db)
 	return q.UpdateCustomerBalance(ctx, arg)
+}
+
+func (r *Repository) ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.Customer, error) {
+	q := db.New(r.db)
+	return q.ListCustomersPaginate(ctx, arg)
+}
+
+func (r *Repository) CountCustomersByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	q := db.New(r.db)
+	return q.CountCustomersByCompany(ctx, companyId)
 }
