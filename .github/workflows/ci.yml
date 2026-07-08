@@ -31,7 +31,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest # Sempre compatível com a Go mais recente suportada
+          version: v2.12.2
 
       # 5. Executa os testes unitários com detecção de concorrência e cobertura
       - name: Run Tests
