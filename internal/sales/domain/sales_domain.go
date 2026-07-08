@@ -9,6 +9,7 @@ import (
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 
 	"github.com/google/uuid"
 )
@@ -102,8 +103,9 @@ type GetSalesPerformanceSummaryRow struct {
 }
 
 type GetTotalAmountSummaryRow struct {
-	CurrentMonthSt float64 `json:"current_month_st"`
-	LastMonthSt    float64 `json:"last_month_st"`
+	CurrentMonthSt   float64 `json:"current_month_st"`
+	LastMonthSt      float64 `json:"last_month_st"`
+	GrowthPercentage float64 `json:"growth_percentage"`
 }
 
 type GetTotalAmountByStatusRequest struct {
@@ -218,6 +220,25 @@ type UpdateSaleParams struct {
 	PaymentMethod     enums.PaymentMethod `json:"payment_method"`
 	InstallmentsCount int32               `json:"installments_count"`
 	Prohibited        float64             `json:"prohibited"`
+}
+
+type GetInventoryTurnoverResponse struct {
+	InventoryTurnover float64 `json:"inventory_turnover"`
+}
+type UpdateOverdueSalesResponse struct {
+	IDSale       uuid.UUID `json:"id_sale"`
+	IDCustomer   uuid.UUID `json:"id_customer"`
+	CustomerName string    `json:"customer_name"`
+	PhoneNumber  string    `json:"phone_number"`
+	Value        float64   `json:"value"`
+	DueDate      time.Time `json:"due_date"`
+	InstanceName string
+	Message      string
+}
+
+type OverdueSalesResult struct {
+	WhatsAppEvents     []events.WhatsApp
+	AnnouncementEvents []events.Announcement
 }
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {

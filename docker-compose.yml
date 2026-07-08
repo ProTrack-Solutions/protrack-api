@@ -1,4 +1,22 @@
 services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-protrack
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: protrack
+      RABBITMQ_DEFAULT_PASS: pr0tr@ck2026
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   redis:
     image: redis:latest
     container_name: protrack-redis
@@ -56,6 +74,10 @@ services:
         condition: service_healthy
       evolution-api:
         condition: service_started
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
   evolution-api:
     container_name: evolution_api
     image: atendai/evolution-api:v2.1.1
@@ -95,3 +117,4 @@ volumes:
   postgres_data:
   redis_data:
   evolution_instances:
+  rabbitmq_data:
