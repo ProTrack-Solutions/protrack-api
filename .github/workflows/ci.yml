@@ -1,0 +1,43 @@
+name: Go Continuous Integration
+
+on:
+  push:
+    branches: ["main", "master", "dev"]
+  pull_request:
+    branches: ["main", "master", "dev"]
+
+jobs:
+  ci:
+    name: Lint, Test and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Baixa o código do repositório para a máquina do GitHub
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. Instala e configura o ambiente Go com suporte a cache automático
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "stable" # Instala a versão estável mais recente do Go
+          cache: true # Salva o cache do go.sum para acelerar os próximos deploys
+
+      # 3. Garante que todas as dependências estão baixadas
+      - name: Install dependencies
+        run: go mod download
+
+      # 4. Roda o Linter oficial da comunidade Go (Detecta erros bobos e formatação)
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59 # Certifique-se de usar uma versão compatível com seu projeto
+
+      # 5. Executa os testes unitários com detecção de concorrência e cobertura
+      - name: Run Tests
+        run: |
+          go test -v -race -covermode=atomic -coverprofile=coverage.out ./...
+
+      # 6. Tenta buildar a aplicação para garantir que compila sem erros
+      - name: Build Application
+        run: go build -v ./...
