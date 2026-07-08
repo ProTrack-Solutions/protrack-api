@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain/enums"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/repository"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products_categories/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products_categories/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -32,35 +32,18 @@ func NewService(repo *repository.Repository) *Service {
 	}
 }
 
-func (s *Service) CreateProductCategory(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateProductCategoryRequest) (domain.ProductCategoryResponse, error) {
-	category, err := s.repo.CreateProductsCategories(ctx, db.CreateProductCategoryParams{
+func (s *Service) CreateProductCategory(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateProductCategoryRequest) error {
+	_, err := s.repo.CreateProductsCategories(ctx, db.CreateProductCategoryParams{
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 		Name:      req.Name,
 		Color:     pgconv.ParseStringToPgType(req.Color),
 		CreatedBy: pgconv.ParseUUIDToPgType(userId),
 	})
 	if err != nil {
-		return domain.ProductCategoryResponse{}, err
+		return err
 	}
 
-	statusStr, ok := category.Status.(string)
-	if !ok {
-		return domain.ProductCategoryResponse{}, errors.New("status inválido")
-	}
-
-	return domain.ProductCategoryResponse{
-		ID:        pgconv.PgUUIDToUUID(category.CompanyID),
-		CompanyID: pgconv.PgUUIDToUUID(category.CompanyID),
-		Name:      category.Name,
-		Color:     pgconv.ParsePgTextToString(category.Color),
-		Status:    enums.Status(statusStr),
-		CreatedBy: pgconv.PgUUIDToUUID(category.CreatedBy),
-		UpdatedBy: pgconv.PgUUIDToUUID(category.UpdatedBy),
-		DeletedBy: pgconv.PgUUIDToUUID(category.DeletedBy),
-		CreatedAt: pgconv.PgTimestamptzToTime(category.CreatedAt),
-		UpdatedAt: pgconv.PgTimestamptzToTime(category.UpdatedAt),
-		DeletedAt: pgconv.PgTimestamptzToTime(category.DeletedAt),
-	}, nil
+	return nil
 }
 
 func (s *Service) DeleteProductCategory(ctx context.Context, req domain.DeleteProductCategoryRequest) error {

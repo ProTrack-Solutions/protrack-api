@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/http/middleware"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -26,5 +26,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		sales.GET("/performance-mounts", h.GetPerformanceMonth)
 		sales.GET("/investment-categories", h.GetTotalInvestmentCategory)
 		sales.GET("/margin-distribution", h.MarginDistribution)
+		sales.PUT("/:saleId", h.UpdateSale)
+		sales.GET("/stock-turnover", h.GetInventoryTurnover)
 	}
 }

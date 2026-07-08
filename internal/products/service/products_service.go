@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/repository"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,7 +20,7 @@ type RepositoryInterface interface {
 	GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (db.Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (db.Product, error)
 	ListProductsByCategoryId(ctx context.Context, arg db.ListProductsByCategoryIdParams) ([]db.Product, error)
-	ListProductsByCompany(ctx context.Context, categoryID pgtype.UUID) ([]db.ListProductsByCompanyRow, error)
+	ListProductsByCompany(ctx context.Context, companyId pgtype.UUID) ([]db.ListProductsByCompanyRow, error)
 	UpdateProduct(ctx context.Context, arg db.UpdateProductParams) (db.Product, error)
 	DecrementStock(ctx context.Context, arg db.DecrementStockParams) error
 	CountProducts(ctx context.Context, companyId pgtype.UUID) (int64, error)
@@ -29,6 +30,9 @@ type RepositoryInterface interface {
 	GetInventoryReport(ctx context.Context, arg db.GetInventoryReportParams) ([]db.GetInventoryReportRow, error)
 	ListProductsByDate(ctx context.Context, arg db.ListProductsByDateParams) ([]db.ListProductsByDateRow, error)
 	ListProductBuCategoryIdAndDate(ctx context.Context, arg db.ListProductsByCategoryAndDateParams) ([]db.ListProductsByCategoryAndDateRow, error)
+	ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error)
+	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	WithTx(tx db.DBTX) *repository.Repository
 }
 
 type Service struct {
@@ -135,6 +139,34 @@ func (s *Service) GetProductById(ctx context.Context, id uuid.UUID) (domain.Prod
 	}, nil
 }
 
+func (s *Service) GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID) (domain.ProductResponse, error) {
+	txRepo := s.repo.WithTx(tx)
+
+	product, err := txRepo.GetProductById(ctx, pgconv.ParseUUIDToPgType(id))
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	return domain.ProductResponse{
+		ID:          pgconv.PgUUIDToUUID(product.ID),
+		CompanyID:   pgconv.PgUUIDToUUID(product.CompanyID),
+		CategoryID:  pgconv.PgUUIDToUUID(product.CategoryID),
+		Name:        product.Name,
+		Description: pgconv.ParsePgTextToString(product.Description),
+		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
+		Quantity:    product.Quantity,
+		Size:        pgconv.ParsePgTextToString(product.Size),
+		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
+		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
+		CreatedBy:   pgconv.PgUUIDToUUID(product.CreatedBy),
+		UpdatedBy:   pgconv.PgUUIDToUUID(product.UpdatedBy),
+		DeletedBy:   pgconv.PgUUIDToUUID(product.DeletedBy),
+		CreatedAt:   pgconv.PgTimestamptzToTime(product.CreatedAt),
+		UpdatedAt:   pgconv.PgTimestamptzToTime(product.UpdatedAt),
+		DeletedAt:   pgconv.PgTimestamptzToTime(product.DeletedAt),
+	}, nil
+}
+
 func (s *Service) ListProductsByCategoryId(ctx context.Context, categoryId, companyID uuid.UUID) ([]domain.ProductResponse, error) {
 	products, err := s.repo.ListProductsByCategoryId(ctx, db.ListProductsByCategoryIdParams{
 		CategoryID: pgconv.ParseUUIDToPgType(categoryId),
@@ -203,6 +235,66 @@ func (s *Service) ListProductsByCompany(ctx context.Context, companyId uuid.UUID
 	return response, nil
 }
 
+func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.ProductPaginatedResponse, error) {
+	total, err := s.repo.CountProductsByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductPaginatedResponse{}, err
+	}
+
+	products, err := s.repo.ListProductsByCompanyPaginated(ctx, db.ListProductsByCompanyPaginatedParams{
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+		Limit:     pagination.PerPage,
+		Offset:    (pagination.Page - 1) * pagination.PerPage,
+	})
+	if err != nil {
+		return domain.ProductPaginatedResponse{}, err
+	}
+
+	var response []domain.ListProductsByCompanyRow
+
+	var totalValueInStock float64
+	var itensInStock int32
+	var lowItensInStock int32
+
+	for _, product := range products {
+
+		totalValueInStock += pgconv.PgNumericToFloat64(product.CostPrice) * float64(product.Quantity)
+		itensInStock += product.Quantity
+		if product.Quantity < 5 {
+			lowItensInStock += 1
+		}
+
+		response = append(response, domain.ListProductsByCompanyRow{
+			ID:           pgconv.PgUUIDToUUID(product.ID),
+			CompanyID:    pgconv.PgUUIDToUUID(product.CompanyID),
+			CategoryID:   pgconv.PgUUIDToUUID(product.CategoryID),
+			Name:         product.Name,
+			Description:  pgconv.ParsePgTextToString(product.Description),
+			Barcode:      pgconv.ParsePgTextToString(product.Barcode),
+			Quantity:     product.Quantity,
+			Size:         pgconv.ParsePgTextToString(product.Size),
+			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
+			SalePrice:    pgconv.PgNumericToFloat64(product.SalePrice),
+			CreatedBy:    pgconv.PgUUIDToUUID(product.CreatedBy),
+			UpdatedBy:    pgconv.PgUUIDToUUID(product.UpdatedBy),
+			DeletedBy:    pgconv.PgUUIDToUUID(product.DeletedBy),
+			CreatedAt:    pgconv.PgTimestamptzToTime(product.CreatedAt),
+			UpdatedAt:    pgconv.PgTimestamptzToTime(product.UpdatedAt),
+			DeletedAt:    pgconv.PgTimestamptzToTime(product.DeletedAt),
+			CategoryName: product.CategoryName,
+		})
+	}
+
+	paginationResponse := globalDomain.NewPaginatedResponse(response, total, pagination)
+
+	return domain.ProductPaginatedResponse{
+		PaginatedResponse: paginationResponse,
+		TotalValueInStock: totalValueInStock,
+		ItensInStock:      itensInStock,
+		LowItensInStock:   lowItensInStock,
+	}, nil
+}
+
 func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error) {
 	currentProduct, err := s.repo.GetProductById(ctx, pgconv.ParseUUIDToPgType(id))
 	if err != nil {
@@ -222,7 +314,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		UpdatedBy:   currentProduct.UpdatedBy,
 	}
 
-	domain.ApplyUpdateProductCategoryParams(req, &arg)
+	domain.ApplyUpdateProductParams(req, &arg)
 
 	product, err := s.repo.UpdateProduct(ctx, arg)
 	if err != nil {

@@ -8,93 +8,116 @@ import (
 	"syscall"
 	"time"
 
-	accountsReceivableHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/handler"
-	accountsReceivableRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/repository"
-	accountsReceivableService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/accounts_receivable/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	redis_connection "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/redis"
-	analyticsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/analytics/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	authHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/handler"
-	authService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/service"
-	billCategoriesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/handler"
-	billCategoriesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/repository"
-	billCategoriesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bill_categories/service"
-	billsPayableHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/handler"
-	billsPayableRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/repository"
-	billsPayableService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/bills_payable/service"
-	cashFlowHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/handler"
-	cashFlowRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/repository"
-	cashFlowService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/service"
-	companiesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/handler"
-	companiesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/repository"
-	companiesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/companies/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/config"
-	customersHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/handler"
-	customersRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/repository"
-	customersService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/customers/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database"
-	departmentsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/handler"
-	departmentsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/repository"
-	departmentsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/logger"
-	paymentHistoryHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/handler"
-	paymentHistoryRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/repository"
-	paymentHistoryService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_history/service"
-	paymentMethodsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/handler"
-	paymentMethodsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/repository"
-	paymentMethodsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payment_methods/service"
-	paymentsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/handler"
-	paymentsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/service"
-	productsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/handler"
-	productsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/repository"
-	productsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products/service"
-	productsCategoriesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/handler"
-	productsCategoriesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/repository"
-	productsCategoriesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/products_categories/service"
-	reportsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/handler"
-	reportsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/reports/service"
-	saleItemsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/handler"
-	saleItemsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/repository"
-	saleItemsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sale_items/service"
-	salesHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/handler"
-	salesRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/repository"
-	salesService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/sales/service"
-	usersHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/handler"
-	usersRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/repository"
-	usersService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/service"
-	vendorsHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/handler"
-	vendorsRepository "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/repository"
-	vendorsService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/vendors/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp"
-	whatsappHandler "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp/handler"
-	whatsappService "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/whatsapp/service"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/worker"
+	accountsReceivableHandler "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/handler"
+	accountsReceivableRepository "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/repository"
+	accountsReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
+	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	authHandler "github.com/ProTrack-Solutions/protrack-api/internal/auth/handler"
+	authService "github.com/ProTrack-Solutions/protrack-api/internal/auth/service"
+	billCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/handler"
+	billCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/repository"
+	billCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/service"
+	billsPayableHandler "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/handler"
+	billsPayableRepository "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/repository"
+	billsPayableService "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
+	cashFlowHandler "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/handler"
+	cashFlowRepository "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/repository"
+	cashFlowService "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/service"
+	companiesHandler "github.com/ProTrack-Solutions/protrack-api/internal/companies/handler"
+	companiesRepository "github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
+	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/consumers"
+	customersHandler "github.com/ProTrack-Solutions/protrack-api/internal/customers/handler"
+	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
+	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/database"
+	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
+	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
+	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
+	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
+	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
+	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
+	paymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_methods/handler"
+	paymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_methods/repository"
+	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/payment_methods/service"
+	paymentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/payments/handler"
+	paymentsService "github.com/ProTrack-Solutions/protrack-api/internal/payments/service"
+	productsHandler "github.com/ProTrack-Solutions/protrack-api/internal/products/handler"
+	productsRepository "github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
+	productsService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
+	productsCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/handler"
+	productsCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/repository"
+	productsCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/rabbitmq"
+	reportsHandler "github.com/ProTrack-Solutions/protrack-api/internal/reports/handler"
+	reportsService "github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
+	saleItemsHandler "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/handler"
+	saleItemsRepository "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/repository"
+	saleItemsService "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/service"
+	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
+	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
+	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	usersHandler "github.com/ProTrack-Solutions/protrack-api/internal/users/handler"
+	usersRepository "github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
+	usersService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
+	vendorsHandler "github.com/ProTrack-Solutions/protrack-api/internal/vendors/handler"
+	vendorsRepository "github.com/ProTrack-Solutions/protrack-api/internal/vendors/repository"
+	vendorsService "github.com/ProTrack-Solutions/protrack-api/internal/vendors/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
+	whatsappHandler "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/handler"
+	whatsappService "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/worker"
 	"github.com/gin-contrib/cors"
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+
+	_ "github.com/ProTrack-Solutions/protrack-api/docs"
+	annoucementsHandler "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/handler"
+	annountmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/repository"
+	annountmentsService "github.com/ProTrack-Solutions/protrack-api/internal/annoucements/service"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title           ProTrack API
+// @version         1.0
+// @description     API de gerenciamento financeiro e comercial ProTrack Solutions.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   Suporte ProTrack
+// @contact.email  suporte@protrack.com
+
+// @host      localhost:8080
+// @BasePath  /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	r.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
-			"http://localhost:5173",
+			"http://localhost:3000",
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
 		},
 		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization","Accept",
+			"Origin", "Content-Type", "Authorization", "Accept", "Page", "PerPage",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
 		},
 		AllowCredentials: true,
-		MaxAge: 0,
+		MaxAge:           0,
 	}))
 
 	r.HandleMethodNotAllowed = true
@@ -105,6 +128,8 @@ func main() {
 		}
 		c.Next()
 	})
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	logger.InitLogger("development")
 
@@ -124,6 +149,12 @@ func main() {
 		log.Fatal().Err(err).Msg("Failed to connect to redis")
 	}
 	defer redis.Close()
+
+	_, ch, err := rabbitmq.InitializeRabbitMQ(cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("Failed to opem channel to rabbitmq")
+	}
+	defer ch.Close()
 
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 
@@ -146,6 +177,7 @@ func main() {
 	paymentHistoryRepository := paymentHistoryRepository.NewRepository(db.Pool)
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
+	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
@@ -157,7 +189,7 @@ func main() {
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
-	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService,companiesService, whatsapp)
+	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService, whatsapp)
 	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
 	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
 	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
@@ -167,6 +199,7 @@ func main() {
 	analyticsService := analyticsService.NewService(productsService, saleItemsService)
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	whatsappService := whatsappService.NewService(cfg, companiesService)
+	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
@@ -187,6 +220,7 @@ func main() {
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
+	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -208,14 +242,16 @@ func main() {
 	reportsHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
 	whatsappHandler.RegisterRoute(api)
+	annoucementsHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-
-	worker.StartOverdueMonitor(salesService)
+	worker.StartOverdueMonitor(salesService, ch)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
+	consumers.StartWhatsAppConsumer(ch, whatsapp)
+	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ApiPort,

@@ -3,8 +3,8 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/departments/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/departments/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -19,6 +19,14 @@ func NewHandler(service *service.Service) *Handler {
 	}
 }
 
+// CreateDepartment godoc
+// @Summary      Cria um departamento
+// @Tags         departments
+// @Accept       json
+// @Produce      json
+// @Param        department body domain.CreateDepartmentParams true "Departamento"
+// @Success      201 {object} domain.DepartmentResponse
+// @Router       /departments [post]
 func (h *Handler) CreateDepartment(c *gin.Context) {
 	var req domain.CreateDepartmentParams
 
@@ -36,6 +44,13 @@ func (h *Handler) CreateDepartment(c *gin.Context) {
 	c.JSON(http.StatusCreated, gin.H{"department": department})
 }
 
+// DeleteDepartment godoc
+// @Summary      Remove um departamento
+// @Tags         departments
+// @Produce      json
+// @Param        id path string true "ID do departamento"
+// @Success      204
+// @Router       /departments/{id} [delete]
 func (h *Handler) DeleteDepartment(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -56,6 +71,13 @@ func (h *Handler) DeleteDepartment(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// GetDepartmentById godoc
+// @Summary      Busca departamento por ID
+// @Tags         departments
+// @Produce      json
+// @Param        id path string true "ID do departamento"
+// @Success      200 {object} domain.DepartmentResponse
+// @Router       /departments/{id} [get]
 func (h *Handler) GetDepartmentById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -74,6 +96,13 @@ func (h *Handler) GetDepartmentById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"department": department})
 }
 
+// ListDepartmentsByCompanyId godoc
+// @Summary      Lista departamentos por empresa
+// @Tags         departments
+// @Produce      json
+// @Param        id path string true "ID da empresa"
+// @Success      200 {array} domain.DepartmentResponse
+// @Router       /departments/list/{id} [get]
 func (h *Handler) ListDepartmentsByCompanyId(c *gin.Context) {
 	companyIdStr := c.Param("companyId")
 
@@ -92,6 +121,14 @@ func (h *Handler) ListDepartmentsByCompanyId(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"departments": departments})
 }
 
+// SetStatusDepartment godoc
+// @Summary      Altera o status de um departamento
+// @Tags         departments
+// @Accept       json
+// @Produce      json
+// @Param        status body domain.SetStatusDepartmentParams true "Status"
+// @Success      200 {object} map[string]int64
+// @Router       /departments/status [put]
 func (h *Handler) SetStatusDepartment(c *gin.Context) {
 	var req domain.SetStatusDepartmentParams
 
@@ -109,6 +146,15 @@ func (h *Handler) SetStatusDepartment(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"count": count})
 }
 
+// UpdateDepartment godoc
+// @Summary      Atualiza um departamento
+// @Tags         departments
+// @Accept       json
+// @Produce      json
+// @Param        id path string true "ID do departamento"
+// @Param        department body domain.UpdateDepartmentParams true "Departamento"
+// @Success      200 {object} domain.DepartmentResponse
+// @Router       /departments/{id} [put]
 func (h *Handler) UpdateDepartment(c *gin.Context) {
 	idStr := c.Param("id")
 

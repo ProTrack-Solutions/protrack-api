@@ -3,9 +3,11 @@ package domain
 import (
 	"time"
 
-	pgconv "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/pgtype"
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/domain/enums"
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/google/uuid"
 )
 
@@ -70,7 +72,6 @@ type DeleteCustomerRequest struct {
 }
 
 type UpdateBalanceDueCustomerRequest struct {
-	ID         uuid.UUID `json:"id"`
 	BalanceDue float64   `json:"balance_due"`
 	Prohibited float64   `json:"prohibited"`
 	UpdatedBy  uuid.UUID `json:"updated_by"`
@@ -130,6 +131,10 @@ type CustomerResponse struct {
 	DeletedAt           time.Time    `json:"deleted_at"`
 }
 
+type CustomerPaginatedResponse struct {
+	globalDomain.PaginatedResponse[CustomerResponse]
+}
+
 func ApplyUpdateCustomerParams(req UpdateCustomerRequest, arg *db.UpdateCustomerParams) {
 	if req.FullName != "" {
 		arg.FullName = req.FullName
@@ -149,6 +154,27 @@ func ApplyUpdateCustomerParams(req UpdateCustomerRequest, arg *db.UpdateCustomer
 
 	if req.MaritalStatus != "" {
 		arg.MaritalStatus = pgconv.ParseStringToPgText(req.MaritalStatus)
+	}
+
+	if req.Gender != "" {
+		// Convertido para string caso o seu pgconv espere uma string pura
+		arg.Gender = pgconv.ParseStringToPgText(string(req.Gender))
+	}
+
+	if req.Whatsapp != "" {
+		arg.Whatsapp = pgconv.ParseStringToPgText(req.Whatsapp)
+	}
+
+	if req.MobilePhone != "" {
+		arg.MobilePhone = pgconv.ParseStringToPgText(req.MobilePhone)
+	}
+
+	if req.HomePhone != "" {
+		arg.HomePhone = pgconv.ParseStringToPgText(req.HomePhone)
+	}
+
+	if req.Email != "" {
+		arg.Email = req.Email
 	}
 
 	if req.Whatsapp != "" {

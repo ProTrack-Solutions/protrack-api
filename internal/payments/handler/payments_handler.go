@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/payments/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/payments/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/payments/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -29,6 +29,15 @@ func NewHandler(
 	}
 }
 
+// NewPayment godoc
+// @Summary      Registra um novo pagamento
+// @Tags         payments
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        payment body domain.CreatePaymentRequest true "Pagamento"
+// @Success      201
+// @Router       /payments [post]
 func (h *Handler) NewPayment(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	db "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/database/sqlc"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -47,8 +47,8 @@ func (r *Repository) ListProductsByCategoryId(ctx context.Context, arg db.ListPr
 	return r.queries().ListProductsByCategoryId(ctx, arg)
 }
 
-func (r *Repository) ListProductsByCompany(ctx context.Context, categoryID pgtype.UUID) ([]db.ListProductsByCompanyRow, error) {
-	return r.queries().ListProductsByCompany(ctx, categoryID)
+func (r *Repository) ListProductsByCompany(ctx context.Context, companyId pgtype.UUID) ([]db.ListProductsByCompanyRow, error) {
+	return r.queries().ListProductsByCompany(ctx, companyId)
 }
 
 func (r *Repository) UpdateProduct(ctx context.Context, arg db.UpdateProductParams) (db.Product, error) {
@@ -85,4 +85,12 @@ func (r *Repository) ListProductsByDate(ctx context.Context, arg db.ListProducts
 
 func (r *Repository) ListProductBuCategoryIdAndDate(ctx context.Context, arg db.ListProductsByCategoryAndDateParams) ([]db.ListProductsByCategoryAndDateRow, error) {
 	return r.queries().ListProductsByCategoryAndDate(ctx, arg)
+}
+
+func (r *Repository) CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	return r.queries().CountProductsByCompany(ctx, companyID)
+}
+
+func (r *Repository) ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error) {
+	return r.queries().ListProductsByCompanyPaginated(ctx, arg)
 }

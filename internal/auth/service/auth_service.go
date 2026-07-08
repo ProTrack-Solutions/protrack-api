@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/domain"
-	userDomain "github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/users/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
+	userDomain "github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )

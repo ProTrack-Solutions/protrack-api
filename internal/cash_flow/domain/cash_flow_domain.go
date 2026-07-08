@@ -37,3 +37,9 @@ type GetCashFlowPeriodResponse struct {
 	TotalInflow  float64 `json:"total_inflow"`
 	TotalOutflow float64 `json:"total_outflow"`
 }
+
+type GetCashFlowResponse struct {
+	Date         string  `json:"date"`
+	TotalInflow  float64 `json:"total_inflow"`
+	TotalOutflow float64 `json:"total_outflow"`
+}

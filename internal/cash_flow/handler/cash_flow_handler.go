@@ -3,10 +3,10 @@ package handler
 import (
 	"net/http"
 
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/adapters/cache"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/auth/adapters/jwt"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/domain"
-	"github.com/GabrielFerrarez19/ProTrack-2.0/protrack-server/internal/cash_flow/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -25,6 +25,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// CashFlowSummary godoc
+// @Summary      Resumo do fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Param        start_at query string true "Data inicial"
+// @Param        end_at query string true "Data final"
+// @Success      200 {object} domain.CashFlowSummaryResponse
+// @Router       /cash-flow/summary [get]
 func (h *Handler) CashFlowSummary(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -50,6 +59,13 @@ func (h *Handler) CashFlowSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_flow_summary": summary})
 }
 
+// GetCashFlowHistoryProjections godoc
+// @Summary      Histórico e projeções do fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowHistoryProjectionsResponse
+// @Router       /cash-flow/history-projection [get]
 func (h *Handler) GetCashFlowHistoryProjections(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -68,6 +84,13 @@ func (h *Handler) GetCashFlowHistoryProjections(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_flow_history": cashFlow})
 }
 
+// GetCashInFlowByCategory godoc
+// @Summary      Entradas de caixa por categoria
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetCashInFlowByCategoryResponse
+// @Router       /cash-flow/inflow-category [get]
 func (h *Handler) GetCashInFlowByCategory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -86,6 +109,13 @@ func (h *Handler) GetCashInFlowByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_inflow_categories": cashFlowCategories})
 }
 
+// GetCashOutFlowByCategory godoc
+// @Summary      Saídas de caixa por categoria
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.GetCashOutFlowByCategoryResponse
+// @Router       /cash-flow/outflow-category [get]
 func (h *Handler) GetCashOutFlowByCategory(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -104,6 +134,13 @@ func (h *Handler) GetCashOutFlowByCategory(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"cash_outflow_categories": cashFlowCategories})
 }
 
+// GetCashFlowPeriod godoc
+// @Summary      Fluxo de caixa do período mensal
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowPeriodResponse
+// @Router       /cash-flow/summary-month [get]
 func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
@@ -120,4 +157,29 @@ func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"cash_flow_month": cashFlowMonth})
+}
+
+// GetCashFlow godoc
+// @Summary      Fluxo de caixa
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetCashFlowResponse
+// @Router       /cash-flow [get]
+func (h *Handler) GetCashFlow(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	cashFlow, err := h.service.GetCashFlow(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, cashFlow)
 }
