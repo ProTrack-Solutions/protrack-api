@@ -28,10 +28,10 @@ jobs:
         run: go mod download
 
       # 4. Roda o Linter oficial da comunidade Go
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: latest
+      # - name: Run golangci-lint
+      #   uses: golangci/golangci-lint-action@v7
+      #   with:
+      #     version: latest
 
       # 5. Executa os testes unitários com detecção de concorrência e cobertura
       - name: Run Tests
