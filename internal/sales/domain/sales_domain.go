@@ -9,6 +9,7 @@ import (
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 
 	"github.com/google/uuid"
 )
@@ -233,6 +234,11 @@ type UpdateOverdueSalesResponse struct {
 	DueDate      time.Time `json:"due_date"`
 	InstanceName string
 	Message      string
+}
+
+type OverdueSalesResult struct {
+	WhatsAppEvents     []events.WhatsApp
+	AnnouncementEvents []events.Announcement
 }
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {

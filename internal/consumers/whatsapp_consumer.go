@@ -3,7 +3,7 @@ package consumers
 import (
 	"encoding/json"
 
-	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
@@ -27,7 +27,7 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Wha
 		// 2. Faz o vinculo (Binding) da fila com a Exchange usando a tag correta
 		err = amqpChan.QueueBind(
 			q.Name,                // Nome da fila
-			"venda.vencida",       // Routing Key que ele quer escutar
+			"whatsapp.#",          // Routing Key que ele quer escutar
 			"protrack.ex.eventos", // Nome da Exchange
 			false,
 			nil,
@@ -54,7 +54,7 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Wha
 
 		// 4. Loop infinito processando as mensagens conforme elas entram na fila
 		for d := range msgs {
-			var event domain.UpdateOverdueSalesResponse
+			var event events.WhatsApp
 
 			if err := json.Unmarshal(d.Body, &event); err != nil {
 				log.Error().Err(err).Msg("Erro ao desserializar JSON da fila")
