@@ -251,6 +251,7 @@ func main() {
 	worker.StartOverdueMonitor(salesService, ch)
 	worker.StartBillPayableOverdueMonitor(billsPayableService)
 	consumers.StartWhatsAppConsumer(ch, whatsapp)
+	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ApiPort,

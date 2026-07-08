@@ -23,6 +23,7 @@ import (
 	saleItemsService "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -489,10 +490,10 @@ func (s *Service) GetTotalAmountIsOverdue(ctx context.Context, req domain.GetTot
 	return total, nil
 }
 
-func (s *Service) UpdateOverdueSales(ctx context.Context) ([]domain.UpdateOverdueSalesResponse, error) {
+func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesResult, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return []domain.UpdateOverdueSalesResponse{}, err
+		return domain.OverdueSalesResult{}, err
 	}
 
 	defer tx.Rollback(ctx)
@@ -501,15 +502,17 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) ([]domain.UpdateOverdu
 
 	response, err := repoTx.UpdateOverdueSalesAndAccounts(ctx)
 	if err != nil {
-		return []domain.UpdateOverdueSalesResponse{}, err
+		return domain.OverdueSalesResult{}, err
 	}
 
-	salesResponse := make(map[uuid.UUID]domain.UpdateOverdueSalesResponse)
+	var whatsAppEvents []events.WhatsApp
+	// agrupa contagem de vendas vencidas por empresa
+	companyCounts := make(map[uuid.UUID]int)
 
 	for _, data := range response {
 		customer, err := s.customerService.GetCustomerByIdTx(ctx, tx, pgconv.PgUUIDToUUID(data.CustomerID))
 		if err != nil {
-			return []domain.UpdateOverdueSalesResponse{}, err
+			return domain.OverdueSalesResult{}, err
 		}
 
 		sale, err := repoTx.GetSaleByIdJust(ctx, data.SaleID)
@@ -520,38 +523,51 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) ([]domain.UpdateOverdu
 
 		company, err := s.companiesService.GetCompanyByIDTx(ctx, tx, pgconv.PgUUIDToUUID(data.CompanyID))
 		if err != nil {
-			return []domain.UpdateOverdueSalesResponse{}, fmt.Errorf("failed to retrieve company: %w", err)
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve company: %w", err)
 		}
 
-		instanceName := fmt.Sprintf("%s-%s", company.Name, data.CompanyID.String())
+		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
+		instanceName := fmt.Sprintf("%s-%s", company.Name, companyID.String())
 
 		msg := fmt.Sprintf("⚠️ *Aviso de Vencimento*\n\n"+
 			"Informamos que a sua parcela com vencimento no dia %d venceu hoje.\n"+
 			"Pedimos que entre em contato para realizar a regularização.", sale.DueDays.Int32)
 
-		salesResponse[pgconv.PgUUIDToUUID(data.SaleID)] = domain.UpdateOverdueSalesResponse{
+		whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
 			IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
-			IDCustomer:   pgconv.PgUUIDToUUID(data.CustomerID),
+			CompanyID:    companyID,
 			CustomerName: sale.CustomerName,
 			PhoneNumber:  customer.Whatsapp,
 			Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
 			DueDate:      pgconv.PgTimestamptzToTime(sale.CreatedAt),
-			// DICA: Adicione os campos abaixo na sua struct "UpdateOverdueSalesResponse" do domain
-			// para que o Worker consiga ler a mensagem e a instância correspondente na hora de postar na fila!
 			InstanceName: instanceName,
 			Message:      msg,
-		}
+		})
+
+		companyCounts[companyID]++
 
 		log.Info().Msgf("CompanyID %s", data.CompanyID)
 
 	}
 
-	var finalResult []domain.UpdateOverdueSalesResponse
-	for _, value := range salesResponse {
-		finalResult = append(finalResult, value)
+	var announcementEvents []events.Announcement
+	now := time.Now()
+	for companyID, total := range companyCounts {
+		announcementEvents = append(announcementEvents, events.Announcement{
+			CompanyID:     companyID,
+			Title:         "Vencimento de vendas",
+			Message:       fmt.Sprintf("%d venda(s) da sua empresa venceram hoje.", total),
+			Type:          "info",
+			TotalVencidas: total,
+			StartsAt:      now,
+			ExpiresAt:     now.Add(24 * time.Hour),
+		})
 	}
 
-	return finalResult, tx.Commit(ctx)
+	return domain.OverdueSalesResult{
+		WhatsAppEvents:     whatsAppEvents,
+		AnnouncementEvents: announcementEvents,
+	}, tx.Commit(ctx)
 }
 
 func (s *Service) ContSalesPendingAndOverdue(ctx context.Context, companyId uuid.UUID) (int64, error) {
