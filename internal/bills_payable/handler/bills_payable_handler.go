@@ -7,6 +7,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
+	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -162,7 +163,9 @@ func (h *Handler) GetOverdueBills(c *gin.Context) {
 // @Tags         bills-payable
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200 {array} domain.BillsPayableResponse
+// @Param        page header int false "Número da página (padrão: 1)"
+// @Param        per_page header int false "Quantidade de registros por página (padrão: 10)"
+// @Success      200 {array} domain.ListBillsPayableResponse
 // @Router       /bills-payable/list [get]
 func (h *Handler) ListBillsPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
@@ -173,7 +176,14 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	billsPayable, err := h.service.ListBillsPayable(c.Request.Context(), companyId)
+	var pagination globaldomain.PaginationParams
+
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	billsPayable, err := h.service.ListBillsPayable(c.Request.Context(), companyId, pagination)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -5,6 +5,7 @@ import (
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/google/uuid"
 )
 
@@ -43,6 +44,13 @@ type ListBillsPayableRow struct {
 	VendorName        string    `json:"vendor_name"`
 	CategoryName      string    `json:"category_name"`
 	PaymentMethodName string    `json:"payment_method_name"`
+}
+
+type ListBillsPayableResponse struct {
+	globaldomain.PaginatedResponse[ListBillsPayableRow]
+	TotalPayable   float64 `json:"total_payable"`
+	TotalOverdue   float64 `json:"total_overdue"`
+	TotalScheduled float64 `json:"total_scheduled"`
 }
 
 type PayBillRequest struct {
