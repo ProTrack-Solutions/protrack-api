@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)

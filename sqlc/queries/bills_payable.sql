@@ -99,3 +99,6 @@ UPDATE bills_payable
 SET status = 'overdue'
 WHERE status = 'pending'
     AND due_date::DATE < CURRENT_DATE;
+-- name: CountBillsPayableByCompany :one
+SELECT COUNT(*) FROM bills_payable
+WHERE company_id = $1;
