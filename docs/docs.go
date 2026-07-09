@@ -713,13 +713,27 @@ const docTemplate = `{
                     "bills-payable"
                 ],
                 "summary": "Lista contas a pagar da empresa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Número da página (padrão: 1)",
+                        "name": "page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade de registros por página (padrão: 10)",
+                        "name": "per_page",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse"
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse"
                             }
                         }
                     }
@@ -4468,6 +4482,97 @@ const docTemplate = `{
                 },
                 "total_to_pay": {
                     "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableRow"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_overdue": {
+                    "type": "number"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_payable": {
+                    "type": "number"
+                },
+                "total_rows": {
+                    "type": "integer"
+                },
+                "total_scheduled": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableRow": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_paid": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "string"
+                },
+                "payment_method_name": {
+                    "type": "string"
+                },
+                "scheduled_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vendor_id": {
+                    "type": "string"
+                },
+                "vendor_name": {
+                    "type": "string"
                 }
             }
         },

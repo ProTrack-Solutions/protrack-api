@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countBillsPayableByCompany = `-- name: CountBillsPayableByCompany :one
+SELECT COUNT(*) FROM bills_payable
+WHERE company_id = $1
+`
+
+func (q *Queries) CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countBillsPayableByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createBillPayable = `-- name: CreateBillPayable :exec
 INSERT INTO bills_payable (
         company_id,
