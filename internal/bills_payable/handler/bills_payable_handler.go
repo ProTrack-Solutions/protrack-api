@@ -189,7 +189,7 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"bills_payable": billsPayable})
+	c.JSON(http.StatusOK, billsPayable)
 }
 
 // PayBill godoc
