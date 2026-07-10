@@ -15,7 +15,6 @@ type CreateBillPayableRequest struct {
 	PaymentMethodID uuid.UUID `json:"payment_method_id"`
 	Amount          float64   `json:"amount"`
 	DueDate         string    `json:"due_date"`
-	Status          string    `json:"status"`
 	Description     string    `json:"description"`
 	Notes           string    `json:"notes"`
 }
