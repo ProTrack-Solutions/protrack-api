@@ -48,7 +48,7 @@ func (s *Service) CreateBillPayable(ctx context.Context, companyId uuid.UUID, re
 		PaymentMethodID: pgconv.ParseUUIDToPgType(req.PaymentMethodID),
 		Amount:          pgconv.Float64ToPgNumeric(req.Amount),
 		DueDate:         pgconv.StringToPgDate(req.DueDate),
-		Status:          req.Status,
+		Status:          "pending",
 		Description:     pgconv.ParseStringToPgText(req.Description),
 		Notes:           pgconv.ParseStringToPgText(req.Notes),
 	})

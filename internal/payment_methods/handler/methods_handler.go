@@ -108,7 +108,7 @@ func (h *Handler) ListPaymentMethod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"payment_methods": method})
+	c.JSON(http.StatusOK, method)
 }
 
 // ListPaymentMethodIsActive godoc
@@ -133,7 +133,7 @@ func (h *Handler) ListPaymentMethodIsActive(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"payment_methods": method})
+	c.JSON(http.StatusOK, method)
 }
 
 // TogglePaymentMethodActive godoc
