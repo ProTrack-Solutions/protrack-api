@@ -133,7 +133,7 @@ func (h *Handler) ListBillCategories(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"bill_categories": billCategories})
+	c.JSON(http.StatusOK,  billCategories)
 }
 
 // ListBillCategoriesActive godoc
