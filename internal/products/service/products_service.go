@@ -32,6 +32,9 @@ type RepositoryInterface interface {
 	ListProductBuCategoryIdAndDate(ctx context.Context, arg db.ListProductsByCategoryAndDateParams) ([]db.ListProductsByCategoryAndDateRow, error)
 	ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountLowStockProductsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	GetGeneralTotalStockValue(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	GetGlobalTotalStockQuantity(ctx context.Context, companyId pgtype.UUID) (int32, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -241,6 +244,16 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 		return domain.ProductPaginatedResponse{}, err
 	}
 
+	totalValueInStock, err := s.repo.GetCostTotalStock(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductPaginatedResponse{}, err
+	}
+
+	itensInStock, err := s.repo.GetGlobalTotalStockQuantity(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductPaginatedResponse{}, err
+	}
+
 	products, err := s.repo.ListProductsByCompanyPaginated(ctx, db.ListProductsByCompanyPaginatedParams{
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 		Limit:     pagination.PerPage,
@@ -250,20 +263,14 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 		return domain.ProductPaginatedResponse{}, err
 	}
 
+	lowItensInStock, err := s.repo.CountLowStockProductsByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductPaginatedResponse{}, err
+	}
+
 	var response []domain.ListProductsByCompanyRow
 
-	var totalValueInStock float64
-	var itensInStock int32
-	var lowItensInStock int32
-
 	for _, product := range products {
-
-		totalValueInStock += pgconv.PgNumericToFloat64(product.CostPrice) * float64(product.Quantity)
-		itensInStock += product.Quantity
-		if product.Quantity < 5 {
-			lowItensInStock += 1
-		}
-
 		response = append(response, domain.ListProductsByCompanyRow{
 			ID:           pgconv.PgUUIDToUUID(product.ID),
 			CompanyID:    pgconv.PgUUIDToUUID(product.CompanyID),
@@ -291,7 +298,7 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 		PaginatedResponse: paginationResponse,
 		TotalValueInStock: totalValueInStock,
 		ItensInStock:      itensInStock,
-		LowItensInStock:   lowItensInStock,
+		LowItensInStock:   int32(lowItensInStock),
 	}, nil
 }
 

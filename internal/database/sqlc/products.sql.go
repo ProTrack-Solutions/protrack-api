@@ -11,6 +11,21 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countLowStockProductsByCompany = `-- name: CountLowStockProductsByCompany :one
+SELECT COUNT(*) AS low_stock_count
+FROM products
+WHERE company_id = $1
+  AND quantity < 5
+  AND deleted_at IS NULL
+`
+
+func (q *Queries) CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLowStockProductsByCompany, companyID)
+	var low_stock_count int64
+	err := row.Scan(&low_stock_count)
+	return low_stock_count, err
+}
+
 const countProducts = `-- name: CountProducts :one
 SELECT SUM(quantity)
 FROM products
@@ -161,6 +176,35 @@ func (q *Queries) GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) 
 	var total_stock_value float64
 	err := row.Scan(&total_stock_value)
 	return total_stock_value, err
+}
+
+const getGeneralTotalStockValue = `-- name: GetGeneralTotalStockValue :one
+SELECT 
+    COALESCE(SUM(quantity * cost_price), 0.0)::DOUBLE PRECISION AS total_cost_value
+FROM products
+WHERE company_id = $1 
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, getGeneralTotalStockValue, companyID)
+	var total_cost_value float64
+	err := row.Scan(&total_cost_value)
+	return total_cost_value, err
+}
+
+const getGlobalTotalStockQuantity = `-- name: GetGlobalTotalStockQuantity :one
+SELECT COALESCE(SUM(quantity), 0)::INT AS total_items
+FROM products
+WHERE company_id = $1 
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, getGlobalTotalStockQuantity, companyID)
+	var total_items int32
+	err := row.Scan(&total_items)
+	return total_items, err
 }
 
 const getInventoryReport = `-- name: GetInventoryReport :many
