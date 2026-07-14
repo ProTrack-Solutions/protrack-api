@@ -52,6 +52,9 @@ type RepositoryInterface interface {
 	ListSalesWithDetailsPaginate(ctx context.Context, arg db.ListSalesWithDetailsPaginateParams) ([]db.ListSalesWithDetailsPaginateRow, error)
 	CountSalesByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	UpdateSale(ctx context.Context, arg db.UpdateSaleParams) error
+	CountSalesDeletedByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	GetTotalAmountPending(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -1023,6 +1026,21 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		return domain.SaleResponsePaginate{}, err
 	}
 
+	contSaleCancel, err := s.repo.CountSalesDeletedByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
+
+	totalPending, err := s.repo.GetTotalAmountPending(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
+
+	totalPaid, err := s.repo.GetTotalAmountPaid(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
+
 	rows, err := s.repo.ListSalesWithDetailsPaginate(ctx, db.ListSalesWithDetailsPaginateParams{
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 		Limit:     pagination.PerPage,
@@ -1030,9 +1048,6 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 	})
 
 	var response []domain.ListSalesWithInstallmentsResponse
-	var totalInvoiced float64
-	var totalPending float64
-	var salesCanceled int64
 
 	salesMap := make(map[uuid.UUID]*domain.ListSalesWithInstallmentsResponse)
 	var orderedIds []uuid.UUID
@@ -1041,18 +1056,6 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		saleId := pgconv.PgUUIDToUUID(row.SaleID)
 
 		if _, exists := salesMap[saleId]; !exists {
-
-			if row.SaleStatus == "paid" {
-				totalInvoiced += pgconv.PgNumericToFloat64(row.TotalAmount)
-			}
-
-			if pgconv.ParsePgTextToString(row.InstallmentStatus) == "pending" {
-				totalPending += pgconv.PgNumericToFloat64(row.InstallmentBalance)
-			}
-
-			if row.SaleStatus == "canceled" {
-				salesCanceled += 1
-			}
 
 			salesMap[saleId] = &domain.ListSalesWithInstallmentsResponse{
 				Sale: domain.ListSalesResponse{
@@ -1124,9 +1127,9 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 	return domain.SaleResponsePaginate{
 		PaginatedResponse: paginationResponse,
 		SalesCount:        total,
-		TotalInvoiced:     totalInvoiced,
+		TotalInvoiced:     totalPaid,
 		TotalPending:      totalPending,
-		SalesCanceled:     salesCanceled,
+		SalesCanceled:     contSaleCancel,
 	}, nil
 }
 

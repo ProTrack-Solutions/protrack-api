@@ -21,6 +21,7 @@ type Querier interface {
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CreateAccountReceivable(ctx context.Context, arg CreateAccountReceivableParams) error
 	CreateAnnouncements(ctx context.Context, arg CreateAnnouncementsParams) error
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error
@@ -85,6 +86,8 @@ type Querier interface {
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)
 	GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error)
+	GetTotalAmountPaid(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	GetTotalAmountPending(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetTotalAmountSummary(ctx context.Context, companyID pgtype.UUID) (GetTotalAmountSummaryRow, error)
 	GetTotalInflowByPeriod(ctx context.Context, arg GetTotalInflowByPeriodParams) (float64, error)
 	GetTotalOpenAmountByCompany(ctx context.Context, companyID pgtype.UUID) (GetTotalOpenAmountByCompanyRow, error)
