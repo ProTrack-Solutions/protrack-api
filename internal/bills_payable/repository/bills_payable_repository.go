@@ -64,3 +64,15 @@ func (r *Repository) UpdateOverdueBillsPayable(ctx context.Context) error {
 func (r *Repository) CountBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
 	return r.queries().CountBillsPayableByCompany(ctx, companyId)
 }
+
+func (r *Repository) SumBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().SumBillsPayableByCompany(ctx, companyId)
+}
+
+func (r *Repository) SumBillsPayableOverdue(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().SumBillsPayableOverdue(ctx, companyId)
+}
+
+func (r *Repository) SumBillsPayableSchedule(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().SumBillsPayableSchedule(ctx, companyId)
+}

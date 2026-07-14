@@ -102,3 +102,15 @@ WHERE status = 'pending'
 -- name: CountBillsPayableByCompany :one
 SELECT COUNT(*) FROM bills_payable
 WHERE company_id = $1;
+-- name: SumBillsPayableByCompany :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_amount
+FROM bills_payable 
+WHERE company_id = $1;
+-- name: SumBillsPayableOverdue :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_overdue
+FROM bills_payable 
+WHERE company_id = $1 AND status = 'overdue'; 
+-- name: SumBillsPayableSchedule :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_scheduled
+FROM bills_payable 
+WHERE company_id = $1 AND status = 'scheduled'; 
