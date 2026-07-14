@@ -26,6 +26,9 @@ type RepositoryInterface interface {
 	GetBillsPayableSummary(ctx context.Context, companyId pgtype.UUID) (db.GetBillsPayableSummaryRow, error)
 	UpdateOverdueBillsPayable(ctx context.Context) error
 	CountBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	SumBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	SumBillsPayableOverdue(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	SumBillsPayableSchedule(ctx context.Context, companyId pgtype.UUID) (float64, error)
 }
 
 type Service struct {
@@ -161,23 +164,25 @@ func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pag
 		return domain.ListBillsPayableResponse{}, err
 	}
 
-	var totalPayable float64
-	var totalOverdue float64
-	var totalScheduled float64
+	totalPayable, err := s.repo.SumBillsPayableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
+
+	totalOverdue, err := s.repo.SumBillsPayableOverdue(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
+
+	totalScheduled, err := s.repo.SumBillsPayableSchedule(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
 
 	var response []domain.ListBillsPayableRow
 
 	for _, billPayable := range billsPayable {
 		statusStr := billPayable.Status.(string)
-
-		totalPayable += pgconv.PgNumericToFloat64(billPayable.Amount)
-
-		switch billPayable.Status {
-		case "overdue":
-			totalOverdue += pgconv.PgNumericToFloat64(billPayable.Amount)
-		case "scheduled":
-			totalScheduled += pgconv.PgNumericToFloat64(billPayable.Amount)
-		}
 
 		response = append(response, domain.ListBillsPayableRow{
 			ID:                pgconv.PgUUIDToUUID(billPayable.ID),
