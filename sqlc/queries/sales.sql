@@ -337,3 +337,27 @@ SET discount_amount = $1,
     status = $9
 WHERE id = $10
     AND company_id = $11;
+-- name: CountSalesDeletedByCompany :one
+SELECT COUNT(*) FROM sales
+WHERE company_id = $1
+    AND deleted_at IS NOT NULL;
+-- name: GetTotalAmountPending :one
+SELECT COALESCE(
+        SUM(total_amount) FILTER (
+            WHERE status = 'pending' OR status = 'overdue'
+                AND company_id = $1
+                AND deleted_at IS NULL
+        ),
+        0
+    )::FLOAT AS total_pending_amount
+from sales;
+-- name: GetTotalAmountPaid :one
+SELECT COALESCE(
+        SUM(total_amount) FILTER (
+            WHERE status = 'paid'
+                AND company_id = $1
+                AND deleted_at IS NULL
+        ),
+        0
+    )::FLOAT AS total_pending_amount
+from sales;

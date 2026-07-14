@@ -53,6 +53,19 @@ func (q *Queries) CountSalesByCompany(ctx context.Context, companyID pgtype.UUID
 	return count, err
 }
 
+const countSalesDeletedByCompany = `-- name: CountSalesDeletedByCompany :one
+SELECT COUNT(*) FROM sales
+WHERE company_id = $1
+    AND deleted_at IS NOT NULL
+`
+
+func (q *Queries) CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countSalesDeletedByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createSale = `-- name: CreateSale :one
 INSERT INTO sales (
         customer_id,
@@ -476,6 +489,44 @@ type GetTotalAmountByStatusParams struct {
 
 func (q *Queries) GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error) {
 	row := q.db.QueryRow(ctx, getTotalAmountByStatus, arg.CompanyID, arg.Status)
+	var total_pending_amount float64
+	err := row.Scan(&total_pending_amount)
+	return total_pending_amount, err
+}
+
+const getTotalAmountPaid = `-- name: GetTotalAmountPaid :one
+SELECT COALESCE(
+        SUM(total_amount) FILTER (
+            WHERE status = 'paid'
+                AND company_id = $1
+                AND deleted_at IS NULL
+        ),
+        0
+    )::FLOAT AS total_pending_amount
+from sales
+`
+
+func (q *Queries) GetTotalAmountPaid(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, getTotalAmountPaid, companyID)
+	var total_pending_amount float64
+	err := row.Scan(&total_pending_amount)
+	return total_pending_amount, err
+}
+
+const getTotalAmountPending = `-- name: GetTotalAmountPending :one
+SELECT COALESCE(
+        SUM(total_amount) FILTER (
+            WHERE status = 'pending' OR status = 'overdue'
+                AND company_id = $1
+                AND deleted_at IS NULL
+        ),
+        0
+    )::FLOAT AS total_pending_amount
+from sales
+`
+
+func (q *Queries) GetTotalAmountPending(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, getTotalAmountPending, companyID)
 	var total_pending_amount float64
 	err := row.Scan(&total_pending_amount)
 	return total_pending_amount, err
