@@ -122,7 +122,7 @@ func (h *Handler) ListVendors(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"vendors": vendors})
+	c.JSON(http.StatusOK, vendors)
 }
 
 // ListVendorsIsActive godoc
