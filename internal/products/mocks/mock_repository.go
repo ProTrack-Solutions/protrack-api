@@ -305,3 +305,48 @@ func (mr *MockRepositoryInterfaceMockRecorder) WithTx(tx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTx", reflect.TypeOf((*MockRepositoryInterface)(nil).WithTx), tx)
 }
+
+// CountLowStockProductsByCompany mocks base method.
+func (m *MockRepositoryInterface) CountLowStockProductsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountLowStockProductsByCompany", ctx, companyId)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountLowStockProductsByCompany indicates an expected call of CountLowStockProductsByCompany.
+func (mr *MockRepositoryInterfaceMockRecorder) CountLowStockProductsByCompany(ctx, companyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountLowStockProductsByCompany", reflect.TypeOf((*MockRepositoryInterface)(nil).CountLowStockProductsByCompany), ctx, companyId)
+}
+
+// GetGeneralTotalStockValue mocks base method.
+func (m *MockRepositoryInterface) GetGeneralTotalStockValue(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGeneralTotalStockValue", ctx, companyId)
+	ret0, _ := ret[0].(float64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGeneralTotalStockValue indicates an expected call of GetGeneralTotalStockValue.
+func (mr *MockRepositoryInterfaceMockRecorder) GetGeneralTotalStockValue(ctx, companyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGeneralTotalStockValue", reflect.TypeOf((*MockRepositoryInterface)(nil).GetGeneralTotalStockValue), ctx, companyId)
+}
+
+// GetGlobalTotalStockQuantity mocks base method.
+func (m *MockRepositoryInterface) GetGlobalTotalStockQuantity(ctx context.Context, companyId pgtype.UUID) (int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetGlobalTotalStockQuantity", ctx, companyId)
+	ret0, _ := ret[0].(int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetGlobalTotalStockQuantity indicates an expected call of GetGlobalTotalStockQuantity.
+func (mr *MockRepositoryInterfaceMockRecorder) GetGlobalTotalStockQuantity(ctx, companyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetGlobalTotalStockQuantity", reflect.TypeOf((*MockRepositoryInterface)(nil).GetGlobalTotalStockQuantity), ctx, companyId)
+}

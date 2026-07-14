@@ -94,3 +94,15 @@ func (r *Repository) CountProductsByCompany(ctx context.Context, companyID pgtyp
 func (r *Repository) ListProductsByCompanyPaginated(ctx context.Context, arg db.ListProductsByCompanyPaginatedParams) ([]db.ListProductsByCompanyPaginatedRow, error) {
 	return r.queries().ListProductsByCompanyPaginated(ctx, arg)
 }
+
+func (r *Repository) CountLowStockProductsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	return r.queries().CountLowStockProductsByCompany(ctx, companyId)
+}
+
+func (r *Repository) GetGeneralTotalStockValue(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().GetGeneralTotalStockValue(ctx, companyId)
+}
+
+func (r *Repository) GetGlobalTotalStockQuantity(ctx context.Context, companyId pgtype.UUID) (int32, error) {
+	return r.queries().GetGlobalTotalStockQuantity(ctx, companyId)
+}
