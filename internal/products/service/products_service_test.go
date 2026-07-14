@@ -136,7 +136,6 @@ func TestCreateProduct_Success(t *testing.T) {
 	}
 
 	resp, err := svc.CreateProduct(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("esperava sem erro, obteve: %v", err)
 	}
@@ -200,7 +199,6 @@ func TestDeleteProduct_Success(t *testing.T) {
 		ID:        productID,
 		DeletedBy: deletedBy,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -251,7 +249,6 @@ func TestGetProductByBarcode_Success(t *testing.T) {
 		Return(expectedProduct, nil)
 
 	resp, err := svc.GetProductByBarcode(context.Background(), barcode)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -304,7 +301,6 @@ func TestGetProductById_Success(t *testing.T) {
 		Return(expectedProduct, nil)
 
 	resp, err := svc.GetProductById(context.Background(), id)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -362,7 +358,6 @@ func TestListProductsByCategoryId_Success(t *testing.T) {
 		Return(dbProducts, nil)
 
 	resp, err := svc.ListProductsByCategoryId(context.Background(), categoryID, companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -386,7 +381,6 @@ func TestListProductsByCategoryId_EmptyList(t *testing.T) {
 		Return([]db.Product{}, nil)
 
 	resp, err := svc.ListProductsByCategoryId(context.Background(), uuid.New(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -437,7 +431,6 @@ func TestListProductsByCompany_Success(t *testing.T) {
 		Return(dbRows, nil)
 
 	resp, err := svc.ListProductsByCompany(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -484,16 +477,27 @@ func TestListProductsByCompanyPaginated_Success(t *testing.T) {
 	categoryID := uuid.New()
 	pagination := globalDomain.PaginationParams{Page: 1, PerPage: 10}
 
-	// Produto com estoque alto
 	row1 := buildDbProductPaginatedRow(uuid.New(), companyID, categoryID, 10)
-	// Produto com estoque baixo (< 5)
 	row2 := buildDbProductPaginatedRow(uuid.New(), companyID, categoryID, 3)
-
 	dbRows := []db.ListProductsByCompanyPaginatedRow{row1, row2}
+
+	// Esses valores agora vêm de chamadas dedicadas ao repo, não são mais
+	// calculados a partir da lista paginada no service.
+	expectedTotal := 20.00*10 + 20.00*3 // 260.00
+	expectedItensInStock := int32(13)
+	expectedLowItensInStock := int64(1)
 
 	repo.EXPECT().
 		CountProductsByCompany(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
 		Return(int64(2), nil)
+
+	repo.EXPECT().
+		GetCostTotalStock(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
+		Return(expectedTotal, nil)
+
+	repo.EXPECT().
+		GetGlobalTotalStockQuantity(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
+		Return(expectedItensInStock, nil)
 
 	repo.EXPECT().
 		ListProductsByCompanyPaginated(gomock.Any(), db.ListProductsByCompanyPaginatedParams{
@@ -503,8 +507,11 @@ func TestListProductsByCompanyPaginated_Success(t *testing.T) {
 		}).
 		Return(dbRows, nil)
 
-	resp, err := svc.ListProductsByCompanyPaginated(context.Background(), companyID, pagination)
+	repo.EXPECT().
+		CountLowStockProductsByCompany(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
+		Return(expectedLowItensInStock, nil)
 
+	resp, err := svc.ListProductsByCompanyPaginated(context.Background(), companyID, pagination)
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -514,15 +521,12 @@ func TestListProductsByCompanyPaginated_Success(t *testing.T) {
 	if resp.TotalRows != 2 {
 		t.Errorf("esperava TotalRows=2, obteve %d", resp.TotalRows)
 	}
-	if resp.LowItensInStock != 1 {
+	if resp.LowItensInStock != int32(expectedLowItensInStock) {
 		t.Errorf("esperava LowItensInStock=1, obteve %d", resp.LowItensInStock)
 	}
-	// itensInStock = 10 + 3 = 13
-	if resp.ItensInStock != 13 {
+	if resp.ItensInStock != expectedItensInStock {
 		t.Errorf("esperava ItensInStock=13, obteve %d", resp.ItensInStock)
 	}
-	// totalValueInStock = (20.00 * 10) + (20.00 * 3) = 260.00
-	expectedTotal := 20.00*10 + 20.00*3
 	if resp.TotalValueInStock != expectedTotal {
 		t.Errorf("esperava TotalValueInStock=%f, obteve %f", expectedTotal, resp.TotalValueInStock)
 	}
@@ -558,8 +562,19 @@ func TestListProductsByCompanyPaginated_ListError(t *testing.T) {
 		Return(int64(5), nil)
 
 	repo.EXPECT().
+		GetCostTotalStock(gomock.Any(), gomock.Any()).
+		Return(0.0, nil)
+
+	repo.EXPECT().
+		GetGlobalTotalStockQuantity(gomock.Any(), gomock.Any()).
+		Return(int32(0), nil)
+
+	repo.EXPECT().
 		ListProductsByCompanyPaginated(gomock.Any(), gomock.Any()).
 		Return(nil, errDatabase)
+
+	// O service retorna antes de chegar em CountLowStockProductsByCompany,
+	// então esse EXPECT não deve existir aqui.
 
 	_, err := svc.ListProductsByCompanyPaginated(context.Background(), uuid.New(), globalDomain.PaginationParams{Page: 1, PerPage: 10})
 
@@ -584,6 +599,14 @@ func TestListProductsByCompanyPaginated_SecondPage(t *testing.T) {
 		Return(int64(12), nil)
 
 	repo.EXPECT().
+		GetCostTotalStock(gomock.Any(), gomock.Any()).
+		Return(160.0, nil)
+
+	repo.EXPECT().
+		GetGlobalTotalStockQuantity(gomock.Any(), gomock.Any()).
+		Return(int32(8), nil)
+
+	repo.EXPECT().
 		ListProductsByCompanyPaginated(gomock.Any(), db.ListProductsByCompanyPaginatedParams{
 			CompanyID: pgconv.ParseUUIDToPgType(companyID),
 			Limit:     5,
@@ -593,8 +616,11 @@ func TestListProductsByCompanyPaginated_SecondPage(t *testing.T) {
 			buildDbProductPaginatedRow(uuid.New(), companyID, categoryID, 8),
 		}, nil)
 
-	resp, err := svc.ListProductsByCompanyPaginated(context.Background(), companyID, pagination)
+	repo.EXPECT().
+		CountLowStockProductsByCompany(gomock.Any(), gomock.Any()).
+		Return(int64(0), nil)
 
+	resp, err := svc.ListProductsByCompanyPaginated(context.Background(), companyID, pagination)
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -640,7 +666,6 @@ func TestUpdateProduct_Success(t *testing.T) {
 		Name:      "Nome Atualizado",
 		UpdatedBy: updatedBy,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -716,7 +741,6 @@ func TestDecrementStock_Success(t *testing.T) {
 		ID:       productID,
 		Quantity: 3,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -761,7 +785,6 @@ func TestCountProducts_Success(t *testing.T) {
 		Return(int64(42), nil)
 
 	count, err := svc.CountProducts(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -810,7 +833,6 @@ func TestGetProductsPerformanceSummary_PositiveGrowth(t *testing.T) {
 
 	// percentage = ((150 - 100) / 100) * 100 = 50%
 	percentage, err := svc.GetProductsPerformanceSummary(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -837,7 +859,6 @@ func TestGetProductsPerformanceSummary_NegativeGrowth(t *testing.T) {
 
 	// percentage = ((80 - 100) / 100) * 100 = -20%
 	percentage, err := svc.GetProductsPerformanceSummary(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -862,7 +883,6 @@ func TestGetProductsPerformanceSummary_NoLastMonth_HasCurrentMonth(t *testing.T)
 
 	// lastMonthQty == 0 e currentMonthQty > 0 → 100%
 	percentage, err := svc.GetProductsPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -886,7 +906,6 @@ func TestGetProductsPerformanceSummary_BothZero(t *testing.T) {
 		}, nil)
 
 	percentage, err := svc.GetProductsPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -931,7 +950,6 @@ func TestGetCostTotalStock_Success(t *testing.T) {
 		Return(5000.50, nil)
 
 	total, err := svc.GetCostTotalStock(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -983,7 +1001,6 @@ func TestGetTop5BestSellingProducts_Success(t *testing.T) {
 		Return(dbRows, nil)
 
 	resp, err := svc.GetTop5BestSellingProducts(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -1054,7 +1071,6 @@ func TestGetInventoryReport_Success(t *testing.T) {
 		Return(dbRows, nil)
 
 	resp, err := svc.GetInventoryReport(context.Background(), companyID, startAt, endAt)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -1126,7 +1142,6 @@ func TestListProductsByDate_Success(t *testing.T) {
 		Return(dbRows, nil)
 
 	resp, err := svc.ListProductsByDate(context.Background(), companyID, startAt, endAt)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -1197,7 +1212,6 @@ func TestListProductBuCategoryIdAndDate_Success(t *testing.T) {
 		Return(dbRows, nil)
 
 	resp, err := svc.ListProductBuCategoryIdAndDate(context.Background(), categoryID, startAt, endAt)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
