@@ -131,6 +131,9 @@ type Querier interface {
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
 	SetStatusDepartment(ctx context.Context, arg SetStatusDepartmentParams) (int64, error)
+	SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	ToggleBillCategoriesActive(ctx context.Context, arg ToggleBillCategoriesActiveParams) error
 	TogglePaymentMethodActive(ctx context.Context, arg TogglePaymentMethodActiveParams) error
 	ToggleVendorsActive(ctx context.Context, arg ToggleVendorsActiveParams) error
