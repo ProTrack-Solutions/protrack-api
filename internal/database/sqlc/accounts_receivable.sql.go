@@ -11,6 +11,19 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAccountsReceivableByCompany = `-- name: CountAccountsReceivableByCompany :one
+SELECT COUNT(*) FROM accounts_receivable
+WHERE company_id = $1
+    AND deleted_at IS NULL
+`
+
+func (q *Queries) CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countAccountsReceivableByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createAccountReceivable = `-- name: CreateAccountReceivable :exec
 INSERT INTO accounts_receivable (
         company_id,
@@ -189,6 +202,38 @@ func (q *Queries) GetReceivablesBySale(ctx context.Context, saleID pgtype.UUID) 
 	return items, nil
 }
 
+const getReceivablesSummary = `-- name: GetReceivablesSummary :one
+SELECT 
+    COALESCE(
+        SUM(balance) FILTER (WHERE status != 'paid'), 
+        0
+    )::NUMERIC(10, 2) as total_outstanding,
+    
+    COALESCE(
+        SUM(balance) FILTER (
+            WHERE status != 'paid' 
+            AND (status = 'overdue' OR due_date < CURRENT_DATE)
+        ), 
+        0
+    )::NUMERIC(10, 2) as total_overdue
+
+FROM accounts_receivable
+WHERE company_id = $1
+  AND deleted_at IS NULL
+`
+
+type GetReceivablesSummaryRow struct {
+	TotalOutstanding pgtype.Numeric `json:"total_outstanding"`
+	TotalOverdue     pgtype.Numeric `json:"total_overdue"`
+}
+
+func (q *Queries) GetReceivablesSummary(ctx context.Context, companyID pgtype.UUID) (GetReceivablesSummaryRow, error) {
+	row := q.db.QueryRow(ctx, getReceivablesSummary, companyID)
+	var i GetReceivablesSummaryRow
+	err := row.Scan(&i.TotalOutstanding, &i.TotalOverdue)
+	return i, err
+}
+
 const getTotalOpenAmountByCompany = `-- name: GetTotalOpenAmountByCompany :one
 SELECT company_id,
     SUM(balance)::NUMERIC(10, 2) as total_open
@@ -235,6 +280,80 @@ func (q *Queries) GetTotalOverdueAmountByCompany(ctx context.Context, companyID 
 	var i GetTotalOverdueAmountByCompanyRow
 	err := row.Scan(&i.CompanyID, &i.TotalOverdue)
 	return i, err
+}
+
+const listAccountsReceivables = `-- name: ListAccountsReceivables :many
+SELECT ar.id, ar.company_id, ar.customer_id, ar.sale_id, ar.total_amount, ar.balance, ar.due_date, ar.installment_number, ar.total_installments, ar.status, ar.created_at, ar.created_by, ar.updated_at, ar.updated_by, ar.deleted_at,
+    c.full_name as customer_name
+FROM accounts_receivable ar
+JOIN customers c ON ar.customer_id = c.id
+WHERE ar.company_id = $1
+    AND ar.deleted_at IS NULL
+ORDER BY ar.due_date ASC
+LIMIT $2
+OFFSET $3
+`
+
+type ListAccountsReceivablesParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Limit     int32       `json:"limit"`
+	Offset    int32       `json:"offset"`
+}
+
+type ListAccountsReceivablesRow struct {
+	ID                pgtype.UUID        `json:"id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	CustomerID        pgtype.UUID        `json:"customer_id"`
+	SaleID            pgtype.UUID        `json:"sale_id"`
+	TotalAmount       pgtype.Numeric     `json:"total_amount"`
+	Balance           pgtype.Numeric     `json:"balance"`
+	DueDate           pgtype.Date        `json:"due_date"`
+	InstallmentNumber pgtype.Int4        `json:"installment_number"`
+	TotalInstallments pgtype.Int4        `json:"total_installments"`
+	Status            string             `json:"status"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	CreatedBy         pgtype.UUID        `json:"created_by"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	UpdatedBy         pgtype.UUID        `json:"updated_by"`
+	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
+	CustomerName      string             `json:"customer_name"`
+}
+
+func (q *Queries) ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error) {
+	rows, err := q.db.Query(ctx, listAccountsReceivables, arg.CompanyID, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAccountsReceivablesRow{}
+	for rows.Next() {
+		var i ListAccountsReceivablesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.CustomerID,
+			&i.SaleID,
+			&i.TotalAmount,
+			&i.Balance,
+			&i.DueDate,
+			&i.InstallmentNumber,
+			&i.TotalInstallments,
+			&i.Status,
+			&i.CreatedAt,
+			&i.CreatedBy,
+			&i.UpdatedAt,
+			&i.UpdatedBy,
+			&i.DeletedAt,
+			&i.CustomerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listOverdueReceivables = `-- name: ListOverdueReceivables :many
