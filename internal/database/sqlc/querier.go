@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -80,6 +81,7 @@ type Querier interface {
 	GetProductCategoryById(ctx context.Context, id pgtype.UUID) (ProductCategory, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetProductsPerformanceSummaryRow, error)
 	GetReceivablesBySale(ctx context.Context, saleID pgtype.UUID) ([]AccountsReceivable, error)
+	GetReceivablesSummary(ctx context.Context, companyID pgtype.UUID) (GetReceivablesSummaryRow, error)
 	GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSaleByIdRow, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
@@ -97,6 +99,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
+	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
 	ListBillCategories(ctx context.Context, companyID pgtype.UUID) ([]BillCategory, error)
 	ListBillCategoriesActive(ctx context.Context, id pgtype.UUID) ([]BillCategory, error)

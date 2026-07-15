@@ -40,6 +40,62 @@ definitions:
       total_pending:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables:
+    properties:
+      balance:
+        type: number
+      company_id:
+        type: string
+      created_at:
+        type: string
+      created_by:
+        type: string
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      days_overdue:
+        type: integer
+      deleted_at:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      installment_number:
+        type: integer
+      sale_id:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+      total_installments:
+        type: integer
+      updated_at:
+        type: string
+      updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse:
+    properties:
+      amount:
+        type: number
+      amount_overdue:
+        type: number
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest:
     properties:
       content:
@@ -217,8 +273,6 @@ definitions:
       notes:
         type: string
       payment_method_id:
-        type: string
-      status:
         type: string
       vendor_id:
         type: string
@@ -1541,6 +1595,44 @@ paths:
       security:
       - BearerAuth: []
       summary: Resumo da dívida do cliente
+      tags:
+      - accounts-receivable
+  /accounts-receivable/complete/list:
+    get:
+      description: Retorna a lista de contas a receber da empresa com base nos parâmetros
+        de paginação enviados no cabeçalho.
+      parameters:
+      - in: header
+        name: page
+        type: integer
+      - in: header
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse'
+        "400":
+          description: Falha na validação dos parâmetros de paginação
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: company_id não encontrado na sessão
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista as contas a receber
       tags:
       - accounts-receivable
   /accounts-receivable/customer/{customerId}:

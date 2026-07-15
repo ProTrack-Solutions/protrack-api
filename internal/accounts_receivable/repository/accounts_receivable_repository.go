@@ -62,3 +62,15 @@ func (r *Repository) GetTotalOverdueAmountByCompany(ctx context.Context, company
 func (r *Repository) DeleteAccountReceivableBySaleID(ctx context.Context, arg db.DeleteAccountsReceivableBySaleIdParams) error {
 	return r.queries().DeleteAccountsReceivableBySaleId(ctx, arg)
 }
+
+func (r *Repository) ListAccountsReceivables(ctx context.Context, arg db.ListAccountsReceivablesParams) ([]db.ListAccountsReceivablesRow, error) {
+	return r.queries().ListAccountsReceivables(ctx, arg)
+}
+
+func (r *Repository) CountAccountsReceivableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	return r.queries().CountAccountsReceivableByCompany(ctx, companyId)
+}
+
+func (r *Repository) GetReceivablesSummary(ctx context.Context, companyId pgtype.UUID) (db.GetReceivablesSummaryRow, error) {
+	return r.queries().GetReceivablesSummary(ctx, companyId)
+}
