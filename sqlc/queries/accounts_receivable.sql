@@ -79,3 +79,35 @@ GROUP BY company_id;
 DELETE FROM accounts_receivable 
 WHERE sale_id = $1 
     AND company_id = $2;
+-- name: ListAccountsReceivables :many
+SELECT ar.*,
+    c.full_name as customer_name
+FROM accounts_receivable ar
+JOIN customers c ON ar.customer_id = c.id
+WHERE ar.company_id = $1
+    AND ar.deleted_at IS NULL
+ORDER BY ar.due_date ASC
+LIMIT $2
+OFFSET $3;
+-- name: CountAccountsReceivableByCompany :one
+SELECT COUNT(*) FROM accounts_receivable
+WHERE company_id = $1
+    AND deleted_at IS NULL;
+-- name: GetReceivablesSummary :one
+SELECT 
+    COALESCE(
+        SUM(balance) FILTER (WHERE status != 'paid'), 
+        0
+    )::NUMERIC(10, 2) as total_outstanding,
+    
+    COALESCE(
+        SUM(balance) FILTER (
+            WHERE status != 'paid' 
+            AND (status = 'overdue' OR due_date < CURRENT_DATE)
+        ), 
+        0
+    )::NUMERIC(10, 2) as total_overdue
+
+FROM accounts_receivable
+WHERE company_id = $1
+  AND deleted_at IS NULL;

@@ -7,6 +7,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -223,4 +224,41 @@ func (h *Handler) GetTotalPendingAndOverdue(c *gin.Context) {
 	response.TotalPending = totalPending
 
 	c.JSON(http.StatusOK, gin.H{"totals": response})
+}
+
+// ListAccountsReceivables godoc
+// @Summary      Lista as contas a receber
+// @Description  Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.
+// @Tags         accounts-receivable
+// @Produce      json
+// @Security     BearerAuth
+// @Param        Pagination-Headers header globaldomain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Success      200 {object} domain.ListAccountsReceivablesResponse
+// @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
+// @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
+// @Failure      500 {object} map[string]interface{} "Erro interno do servidor"
+// @Router       /accounts-receivable/complete/list [get]
+func (h *Handler) ListAccountsReceivables(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	var pagination globaldomain.PaginationParams
+
+	if err := c.ShouldBindHeader(&pagination); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		return
+	}
+
+	response, err := h.service.ListAccountsReceivables(c.Request.Context(), companyId, pagination)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, response)
 }
