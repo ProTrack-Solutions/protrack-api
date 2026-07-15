@@ -52,6 +52,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts-receivable/complete/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts-receivable"
+                ],
+                "summary": "Lista as contas a receber",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Falha na validação dos parâmetros de paginação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "company_id não encontrado na sessão",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/accounts-receivable/customer/{customerId}": {
             "get": {
                 "security": [
@@ -4196,6 +4254,91 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "days_overdue": {
+                    "type": "integer"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installment_number": {
+                    "type": "integer"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "total_installments": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_overdue": {
+                    "type": "number"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest": {
             "type": "object",
             "required": [
@@ -4455,9 +4598,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_method_id": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 },
                 "vendor_id": {

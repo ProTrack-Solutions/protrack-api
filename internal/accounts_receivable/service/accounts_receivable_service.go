@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/repository"
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +26,9 @@ type RepositoryInterface interface {
 	GetTotalOpenAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOpenAmountByCompanyRow, error)
 	GetTotalOverdueAmountByCompany(ctx context.Context, companyId pgtype.UUID) (db.GetTotalOverdueAmountByCompanyRow, error)
 	DeleteAccountReceivableBySaleID(ctx context.Context, arg db.DeleteAccountsReceivableBySaleIdParams) error
+	ListAccountsReceivables(ctx context.Context, arg db.ListAccountsReceivablesParams) ([]db.ListAccountsReceivablesRow, error)
+	CountAccountsReceivableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	GetReceivablesSummary(ctx context.Context, companyId pgtype.UUID) (db.GetReceivablesSummaryRow, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -396,4 +401,77 @@ func (s *Service) DeleteAccountReceivableBySaleIDTx(ctx context.Context, tx db.D
 		SaleID:    pgconv.ParseUUIDToPgType(saleId),
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 	})
+}
+
+func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UUID, pagination globaldomain.PaginationParams) (domain.ListAccountsReceivablesResponse, error) {
+	count, err := s.repo.CountAccountsReceivableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListAccountsReceivablesResponse{}, err
+	}
+
+	summary, err := s.repo.GetReceivablesSummary(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListAccountsReceivablesResponse{}, err
+	}
+
+	accountsReceivable, err := s.repo.ListAccountsReceivables(ctx, db.ListAccountsReceivablesParams{
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+		Limit:     pagination.PerPage,
+		Offset:    (pagination.Page - 1) * pagination.PerPage,
+	})
+	if err != nil {
+		return domain.ListAccountsReceivablesResponse{}, err
+	}
+
+	var response []domain.ListAccountsReceivables
+
+	for _, account := range accountsReceivable {
+
+		dueDate := time.Date(
+			account.DueDate.Time.Year(),
+			account.DueDate.Time.Month(),
+			account.DueDate.Time.Day(),
+			0, 0, 0, 0,
+			time.UTC,
+		)
+
+		now := time.Now()
+		nowNormalize := time.Date(
+			now.Year(),
+			now.Month(),
+			now.Day(),
+			0, 0, 0, 0,
+			time.UTC,
+		)
+
+		daysOverdue := nowNormalize.Sub(dueDate)
+
+		response = append(response, domain.ListAccountsReceivables{
+			ID:                pgconv.PgUUIDToUUID(account.ID),
+			CompanyID:         pgconv.PgUUIDToUUID(account.CompanyID),
+			CustomerID:        pgconv.PgUUIDToUUID(account.CustomerID),
+			SaleID:            pgconv.PgUUIDToUUID(account.SaleID),
+			TotalAmount:       pgconv.PgNumericToFloat64(account.TotalAmount),
+			Balance:           pgconv.PgNumericToFloat64(account.Balance),
+			DueDate:           pgconv.PgDateToString(account.DueDate),
+			InstallmentNumber: int64(pgconv.PgInt4ToInt(account.InstallmentNumber)),
+			TotalInstallments: int64(pgconv.PgInt4ToInt(account.TotalInstallments)),
+			Status:            account.Status,
+			CreatedAt:         pgconv.PgTimestamptzToTime(account.CreatedAt),
+			CreatedBy:         pgconv.PgUUIDToUUID(account.CreatedBy),
+			UpdatedAt:         pgconv.PgTimestamptzToTime(account.UpdatedAt),
+			UpdatedBy:         pgconv.PgUUIDToUUID(account.UpdatedBy),
+			DeletedAt:         pgconv.PgTimestamptzToTime(account.DeletedAt),
+			CustomerName:      account.CustomerName,
+			DaysOverdue:       int64(daysOverdue),
+		})
+	}
+
+	paginationResponse := globaldomain.NewPaginatedResponse(response, count, pagination)
+
+	return domain.ListAccountsReceivablesResponse{
+		PaginatedResponse: paginationResponse,
+		AmountOverdue:     pgconv.PgNumericToFloat64(summary.TotalOverdue),
+		Amount:            pgconv.PgNumericToFloat64(summary.TotalOutstanding),
+	}, nil
 }
