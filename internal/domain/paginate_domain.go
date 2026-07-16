@@ -3,8 +3,8 @@ package globaldomain
 import "math"
 
 type PaginationParams struct {
-	Page    int32 `header:"page,default=1"`
-	PerPage int32 `header:"per_page,default=10"`
+	Page    int32 `header:"Page,default=1"`
+	PerPage int32 `header:"Perpage,default=10"`
 }
 
 type PaginatedResponse[T any] struct {

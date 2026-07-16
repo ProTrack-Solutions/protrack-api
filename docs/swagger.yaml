@@ -955,8 +955,6 @@ definitions:
         type: string
       payment_method_id:
         type: string
-      user_id:
-        type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.CreateProductCategoryRequest:
     properties:
@@ -3593,11 +3591,11 @@ paths:
       parameters:
       - description: Página
         in: header
-        name: Page
+        name: page
         type: integer
       - description: Itens por página
         in: header
-        name: PerPage
+        name: per_page
         type: integer
       produces:
       - application/json
