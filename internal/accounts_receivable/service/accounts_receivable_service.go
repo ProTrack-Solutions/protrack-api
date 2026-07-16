@@ -427,24 +427,30 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 
 	for _, account := range accountsReceivable {
 
-		dueDate := time.Date(
-			account.DueDate.Time.Year(),
-			account.DueDate.Time.Month(),
-			account.DueDate.Time.Day(),
-			0, 0, 0, 0,
-			time.UTC,
-		)
+		var daysOverdue time.Duration
 
-		now := time.Now()
-		nowNormalize := time.Date(
-			now.Year(),
-			now.Month(),
-			now.Day(),
-			0, 0, 0, 0,
-			time.UTC,
-		)
+		if account.Status == "overdue" {
+			dueDate := time.Date(
+				account.DueDate.Time.Year(),
+				account.DueDate.Time.Month(),
+				account.DueDate.Time.Day(),
+				0, 0, 0, 0,
+				time.UTC,
+			)
 
-		daysOverdue := nowNormalize.Sub(dueDate)
+			now := time.Now()
+			nowNormalize := time.Date(
+				now.Year(),
+				now.Month(),
+				now.Day(),
+				0, 0, 0, 0,
+				time.UTC,
+			)
+
+			daysOverdue = nowNormalize.Sub(dueDate)
+		}
+
+		days := int64(daysOverdue / (24 * time.Hour))
 
 		response = append(response, domain.ListAccountsReceivables{
 			ID:                pgconv.PgUUIDToUUID(account.ID),
@@ -463,7 +469,7 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 			UpdatedBy:         pgconv.PgUUIDToUUID(account.UpdatedBy),
 			DeletedAt:         pgconv.PgTimestamptzToTime(account.DeletedAt),
 			CustomerName:      account.CustomerName,
-			DaysOverdue:       int64(daysOverdue),
+			DaysOverdue:       days,
 		})
 	}
 
