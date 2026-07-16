@@ -3166,13 +3166,13 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Página",
-                        "name": "Page",
+                        "name": "page",
                         "in": "header"
                     },
                     {
                         "type": "integer",
                         "description": "Itens por página",
-                        "name": "PerPage",
+                        "name": "per_page",
                         "in": "header"
                     }
                 ],
@@ -5622,9 +5622,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "payment_method_id": {
-                    "type": "string"
-                },
-                "user_id": {
                     "type": "string"
                 }
             }

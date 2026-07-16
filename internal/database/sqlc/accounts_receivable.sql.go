@@ -211,8 +211,7 @@ SELECT
     
     COALESCE(
         SUM(balance) FILTER (
-            WHERE status != 'paid' 
-            AND (status = 'overdue' OR due_date < CURRENT_DATE)
+            WHERE status = 'overdue'
         ), 
         0
     )::NUMERIC(10, 2) as total_overdue
