@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -227,7 +228,7 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 	for i := 6; i >= 0; i-- {
 		startAt := dayBase.AddDate(0, -i, 0)
 
-		endAt := startAt.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		endAt := startAt.AddDate(0, 1, 0)
 
 		totalInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
@@ -240,8 +241,8 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 
 		totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
 			CompanyID:     pgconv.ParseUUIDToPgType(companyId),
-			PaymentDate:   pgconv.StringToPgDate(startAt.GoString()),
-			PaymentDate_2: pgconv.StringToPgDate(endAt.GoString()),
+			PaymentDate:   pgconv.ToPgDate(startAt),
+			PaymentDate_2: pgconv.ToPgDate(endAt),
 		})
 		if err != nil {
 			return []domain.GetCashFlowResponse{}, err
@@ -250,11 +251,60 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 		accumulatedBalance += totalInFlow - totalOutFlow
 
 		response = append(response, domain.GetCashFlowResponse{
-			Date:         startAt.Format("01/01/2006"),
+			Date:         startAt.Format("01/2006"),
 			TotalInflow:  totalInFlow,
 			TotalOutflow: totalOutFlow,
 		})
 
+	}
+
+	return response, nil
+}
+
+func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummaryParams, companyId uuid.UUID) ([]domain.GetTotalSummaryResponse, error) {
+	dayBase := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
+
+	var response []domain.GetTotalSummaryResponse
+
+	var totalPeriod float64
+
+	switch req.Period {
+	case "day":
+		for i := 0; i < int(req.Days); i++ {
+			startAt := dayBase.AddDate(0, 0, -i)
+
+			endAt := startAt.AddDate(0, 0, 1)
+
+			totalInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return []domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(endAt),
+			})
+			if err != nil {
+				return []domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod = totalInFlow - totalOutFlow
+
+			period := fmt.Sprintf("%d/%d", i, req.Days)
+
+			response = append(response, domain.GetTotalSummaryResponse{
+				Period:       period,
+				TotalOutFlow: totalOutFlow,
+				TotalInFlow:  totalInFlow,
+				TotalPeriod:  totalPeriod,
+			})
+
+		}
 	}
 
 	return response, nil
