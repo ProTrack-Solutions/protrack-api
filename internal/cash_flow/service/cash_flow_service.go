@@ -349,7 +349,6 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 		}
 
 	case "month":
-		dayBase := time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)
 
 		for i := 0; i < int(req.Quantity); i++ {
 
