@@ -45,13 +45,20 @@ type GetCashFlowResponse struct {
 }
 
 type GetTotalSummaryParams struct {
-	Days   int64  `json:"days"`
-	Period string `json:"period"`
+	Quantity int64  `json:"quantity" form:"quantity"`
+	Period   string `json:"period" form:"period"`
+}
+
+type TotalSummaty struct {
+	Period             string  `json:"period"`
+	TotalPeriodOutFlow float64 `json:"total_period_outflow"`
+	TotalPeriodInFlow  float64 `json:"total_period_inflow"`
+	TotalPeriod        float64 `json:"total_period"`
 }
 
 type GetTotalSummaryResponse struct {
-	Period       string  `json:"period"`
-	TotalOutFlow float64 `json:"total_outflow"`
-	TotalInFlow  float64 `json:"total_inflow"`
-	TotalPeriod  float64 `json:"total_period"`
+	Summary      []TotalSummaty `json:"summary"`
+	TotalOutFlow float64        `json:"total_outflow"`
+	TotalInFlow  float64        `json:"total_inflow"`
+	Total        float64        `json:"total"`
 }

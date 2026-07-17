@@ -1144,6 +1144,72 @@
                 }
             }
         },
+        "/cash-flow/total-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-flow"
+                ],
+                "summary": "Resumo total",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "quantity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de validação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/companies": {
             "get": {
                 "security": [
@@ -4451,9 +4517,6 @@
                 "payment_method_id": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "vendor_id": {
                     "type": "string"
                 }
@@ -4720,6 +4783,23 @@
                     "type": "number"
                 },
                 "total_outflow": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string"
+                },
+                "total_inflow": {
+                    "type": "number"
+                },
+                "total_outflow": {
+                    "type": "number"
+                },
+                "total_period": {
                     "type": "number"
                 }
             }

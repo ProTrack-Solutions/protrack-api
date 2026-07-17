@@ -2,7 +2,8 @@
 SELECT COALESCE(SUM(total_amount), 0)::FLOAT AS total_inflow
 FROM sales
 WHERE company_id = $1
-    AND created_at BETWEEN $2 AND $3;
+    AND created_at >= $2  -- Passar '2026-06-18T00:00:00Z'
+    AND created_at < $3;
 -- name: GetTotalOutflowByPeriod :one
 SELECT COALESCE(SUM(amount_paid), 0)::FLOAT AS total_outflow
 FROM bills_payable
