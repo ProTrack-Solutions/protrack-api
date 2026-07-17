@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -261,51 +260,139 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 	return response, nil
 }
 
-func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummaryParams, companyId uuid.UUID) ([]domain.GetTotalSummaryResponse, error) {
+func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummaryParams, companyId uuid.UUID) (domain.GetTotalSummaryResponse, error) {
 	dayBase := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
 
-	var response []domain.GetTotalSummaryResponse
+	var response []domain.TotalSummaty
 
 	var totalPeriod float64
 
+	var totalOutFlow float64
+	var totalInFlow float64
+
 	switch req.Period {
 	case "day":
-		for i := 0; i < int(req.Days); i++ {
+		for i := 0; i < int(req.Quantity); i++ {
 			startAt := dayBase.AddDate(0, 0, -i)
 
 			endAt := startAt.AddDate(0, 0, 1)
 
-			totalInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
 				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
 				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
 				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
 			})
 			if err != nil {
-				return []domain.GetTotalSummaryResponse{}, err
+				return domain.GetTotalSummaryResponse{}, err
 			}
 
-			totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(startAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
+
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
+
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("02/01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
+			})
+
+		}
+	case "week":
+		weedDay := dayBase.Weekday()
+		currentWeekStart := dayBase.AddDate(0, 0, -int(weedDay))
+
+		for i := 0; i < int(req.Quantity); i++ {
+			startAt := currentWeekStart.AddDate(0, 0, -i*7)
+			endAt := startAt.AddDate(0, 0, 7)
+
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(endAt.AddDate(0, 0, -1)), // Sábado (inclusivo)
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
+
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
+
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("02/01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
+			})
+
+		}
+
+	case "month":
+		dayBase := time.Date(time.Now().Year(), time.Now().Month(), 1, 0, 0, 0, 0, time.Local)
+
+		for i := 0; i < int(req.Quantity); i++ {
+
+			startAt := dayBase.AddDate(0, -i, 0)
+
+			endAt := startAt.AddDate(0, 1, 0)
+
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
 				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
 				PaymentDate:   pgconv.ToPgDate(startAt),
 				PaymentDate_2: pgconv.ToPgDate(endAt),
 			})
 			if err != nil {
-				return []domain.GetTotalSummaryResponse{}, err
+				return domain.GetTotalSummaryResponse{}, err
 			}
 
-			totalPeriod = totalInFlow - totalOutFlow
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
 
-			period := fmt.Sprintf("%d/%d", i, req.Days)
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
 
-			response = append(response, domain.GetTotalSummaryResponse{
-				Period:       period,
-				TotalOutFlow: totalOutFlow,
-				TotalInFlow:  totalInFlow,
-				TotalPeriod:  totalPeriod,
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
 			})
-
 		}
 	}
 
-	return response, nil
+	return domain.GetTotalSummaryResponse{
+		Summary:      response,
+		TotalOutFlow: totalOutFlow,
+		TotalInFlow:  totalInFlow,
+		Total:        totalPeriod,
+	}, nil
 }
