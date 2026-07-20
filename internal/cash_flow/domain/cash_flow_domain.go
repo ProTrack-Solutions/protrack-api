@@ -57,8 +57,10 @@ type TotalSummaty struct {
 }
 
 type GetTotalSummaryResponse struct {
-	Summary      []TotalSummaty `json:"summary"`
-	TotalOutFlow float64        `json:"total_outflow"`
-	TotalInFlow  float64        `json:"total_inflow"`
-	Total        float64        `json:"total"`
+	Summary                []TotalSummaty                     `json:"summary"`
+	TotalOutFlow           float64                            `json:"total_outflow"`
+	TotalInFlow            float64                            `json:"total_inflow"`
+	Total                  float64                            `json:"total"`
+	TotalCategoriesInFlow  []GetCashInFlowByCategoryResponse  `json:"total_categories_in_flow"`
+	TotalCategoriesOutFlow []GetCashOutFlowByCategoryResponse `json:"total_categories_out_flow"`
 }

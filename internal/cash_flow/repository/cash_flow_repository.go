@@ -42,3 +42,11 @@ func (r *Repository) GetCashInFlowByCategory(ctx context.Context, companyId pgty
 func (r *Repository) GetCashOutFlowByCategory(ctx context.Context, companyId pgtype.UUID) ([]db.GetCashOutFlowByCategoryRow, error) {
 	return r.queries().GetCashOutFlowByCategory(ctx, companyId)
 }
+
+func (r *Repository) GetCashInFlowCategoryByPeriod(ctx context.Context, arg db.GetCashInFlowCategoryByPeriodParams) ([]db.GetCashInFlowCategoryByPeriodRow, error) {
+	return r.queries().GetCashInFlowCategoryByPeriod(ctx, arg)
+}
+
+func (r *Repository) GetCashOutFlowCategoryByPeriod(ctx context.Context, arg db.GetCashOutFlowCategoryByPeriodParams) ([]db.GetCashOutFlowCategoryByPeriodRow, error) {
+	return r.queries().GetCashOutFlowCategoryByPeriod(ctx, arg)
+}
