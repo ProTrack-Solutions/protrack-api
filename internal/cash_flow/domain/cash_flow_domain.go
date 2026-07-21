@@ -43,3 +43,24 @@ type GetCashFlowResponse struct {
 	TotalInflow  float64 `json:"total_inflow"`
 	TotalOutflow float64 `json:"total_outflow"`
 }
+
+type GetTotalSummaryParams struct {
+	Quantity int64  `json:"quantity" form:"quantity"`
+	Period   string `json:"period" form:"period"`
+}
+
+type TotalSummaty struct {
+	Period             string  `json:"period"`
+	TotalPeriodOutFlow float64 `json:"total_period_outflow"`
+	TotalPeriodInFlow  float64 `json:"total_period_inflow"`
+	TotalPeriod        float64 `json:"total_period"`
+}
+
+type GetTotalSummaryResponse struct {
+	Summary                []TotalSummaty                     `json:"summary"`
+	TotalOutFlow           float64                            `json:"total_outflow"`
+	TotalInFlow            float64                            `json:"total_inflow"`
+	Total                  float64                            `json:"total"`
+	TotalCategoriesInFlow  []GetCashInFlowByCategoryResponse  `json:"total_categories_in_flow"`
+	TotalCategoriesOutFlow []GetCashOutFlowByCategoryResponse `json:"total_categories_out_flow"`
+}

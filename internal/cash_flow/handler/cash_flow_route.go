@@ -14,5 +14,6 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		cashFlow.GET("/outflow-category", h.GetCashOutFlowByCategory)
 		cashFlow.GET("/summary-month", h.GetCashFlowPeriod)
 		cashFlow.GET("", h.GetCashFlow)
+		cashFlow.GET("/total-summary", h.GetTotalSummary)
 	}
 }

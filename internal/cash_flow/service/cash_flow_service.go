@@ -18,6 +18,8 @@ type RepositoryInterface interface {
 	GetTotalOutflowByPeriod(ctx context.Context, arg db.GetTotalOutflowByPeriodParams) (float64, error)
 	GetCashInFlowByCategory(ctx context.Context, companyId pgtype.UUID) ([]db.GetCashInFlowByCategoryRow, error)
 	GetCashOutFlowByCategory(ctx context.Context, companyId pgtype.UUID) ([]db.GetCashOutFlowByCategoryRow, error)
+	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg db.GetCashOutFlowCategoryByPeriodParams) ([]db.GetCashOutFlowCategoryByPeriodRow, error)
+	GetCashInFlowCategoryByPeriod(ctx context.Context, arg db.GetCashInFlowCategoryByPeriodParams) ([]db.GetCashInFlowCategoryByPeriodRow, error)
 }
 
 type Service struct {
@@ -227,7 +229,7 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 	for i := 6; i >= 0; i-- {
 		startAt := dayBase.AddDate(0, -i, 0)
 
-		endAt := startAt.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		endAt := startAt.AddDate(0, 1, 0)
 
 		totalInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
@@ -240,8 +242,8 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 
 		totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
 			CompanyID:     pgconv.ParseUUIDToPgType(companyId),
-			PaymentDate:   pgconv.StringToPgDate(startAt.GoString()),
-			PaymentDate_2: pgconv.StringToPgDate(endAt.GoString()),
+			PaymentDate:   pgconv.ToPgDate(startAt),
+			PaymentDate_2: pgconv.ToPgDate(endAt),
 		})
 		if err != nil {
 			return []domain.GetCashFlowResponse{}, err
@@ -250,7 +252,7 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 		accumulatedBalance += totalInFlow - totalOutFlow
 
 		response = append(response, domain.GetCashFlowResponse{
-			Date:         startAt.Format("01/01/2006"),
+			Date:         startAt.Format("01/2006"),
 			TotalInflow:  totalInFlow,
 			TotalOutflow: totalOutFlow,
 		})
@@ -258,4 +260,340 @@ func (s *Service) GetCashFlow(ctx context.Context, companyId uuid.UUID) ([]domai
 	}
 
 	return response, nil
+}
+
+func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummaryParams, companyId uuid.UUID) (domain.GetTotalSummaryResponse, error) {
+	dayBase := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), 0, 0, 0, 0, time.Local)
+
+	var response []domain.TotalSummaty
+	var responseCategoryInFlow []domain.GetCashInFlowByCategoryResponse
+	var responseCategoryOutFlow []domain.GetCashOutFlowByCategoryResponse
+
+	var totalPeriod float64
+
+	var totalOutFlow float64
+	var totalInFlow float64
+
+	switch req.Period {
+	case "day":
+		quantity := int(req.Quantity)
+
+		for i := 0; i < quantity; i++ {
+			offset := quantity - 1 - i
+			startAt := dayBase.AddDate(0, 0, -offset)
+
+			endAt := startAt.AddDate(0, 0, 1)
+
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(startAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
+
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
+
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("02/01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
+			})
+
+		}
+
+		initialAt := dayBase
+
+		finishAt := dayBase.AddDate(0, 0, -int(req.Quantity))
+
+		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		var totalAmountCategoriesInFlow float64
+
+		for _, cashIn := range totalCategoriesInFlow {
+			totalAmountCategoriesInFlow += cashIn.TotalAmount
+		}
+
+		var totalAmountCategoriesOutFlow float64
+
+		for _, cashOut := range totalCategoriesOutFlow {
+			totalAmountCategoriesOutFlow += cashOut.TotalAmount
+		}
+
+		for _, inCategory := range totalCategoriesInFlow {
+
+			var totalPercentage float64
+
+			if totalAmountCategoriesInFlow > 0 {
+				totalPercentage = (inCategory.TotalAmount / totalInFlow) * 100
+			}
+
+			responseCategoryInFlow = append(responseCategoryInFlow, domain.GetCashInFlowByCategoryResponse{
+				NameCategory:     inCategory.CategoryName,
+				TotalInFlow:      inCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+
+		for _, outCategory := range totalCategoriesOutFlow {
+			var totalPercentage float64
+
+			if totalAmountCategoriesOutFlow > 0 {
+				totalPercentage = (outCategory.TotalAmount / totalOutFlow) * 100
+			}
+
+			responseCategoryOutFlow = append(responseCategoryOutFlow, domain.GetCashOutFlowByCategoryResponse{
+				NameCategory:     outCategory.CategoryName,
+				TotalOutFlow:     outCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+
+	case "week":
+		weedDay := dayBase.Weekday()
+		currentWeekStart := dayBase.AddDate(0, 0, -int(weedDay))
+
+		quantity := int(req.Quantity)
+
+		for i := 0; i < quantity; i++ {
+			offset := quantity - 1 - i
+			startAt := currentWeekStart.AddDate(0, 0, -offset*7)
+			endAt := startAt.AddDate(0, 0, 7)
+
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(endAt.AddDate(0, 0, -1)), // Sábado (inclusivo)
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
+
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
+
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("02/01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
+			})
+
+		}
+
+		initialAt := currentWeekStart
+
+		finishAt := currentWeekStart.AddDate(0, 0, -int(req.Quantity))
+
+		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		var totalAmountCategoriesInFlow float64
+
+		for _, cashIn := range totalCategoriesInFlow {
+			totalAmountCategoriesInFlow += cashIn.TotalAmount
+		}
+
+		var totalAmountCategoriesOutFlow float64
+
+		for _, cashOut := range totalCategoriesOutFlow {
+			totalAmountCategoriesOutFlow += cashOut.TotalAmount
+		}
+
+		for _, inCategory := range totalCategoriesInFlow {
+
+			var totalPercentage float64
+
+			if totalAmountCategoriesInFlow > 0 {
+				totalPercentage = (inCategory.TotalAmount / totalInFlow) * 100
+			}
+
+			responseCategoryInFlow = append(responseCategoryInFlow, domain.GetCashInFlowByCategoryResponse{
+				NameCategory:     inCategory.CategoryName,
+				TotalInFlow:      inCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+
+		for _, outCategory := range totalCategoriesOutFlow {
+			var totalPercentage float64
+
+			if totalAmountCategoriesOutFlow > 0 {
+				totalPercentage = (outCategory.TotalAmount / totalOutFlow) * 100
+			}
+
+			responseCategoryOutFlow = append(responseCategoryOutFlow, domain.GetCashOutFlowByCategoryResponse{
+				NameCategory:     outCategory.CategoryName,
+				TotalOutFlow:     outCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+
+	case "month":
+		quantity := int(req.Quantity)
+
+		for i := 0; i < quantity; i++ {
+			offset := quantity - 1 - i
+			startAt := dayBase.AddDate(0, -offset, 0)
+			endAt := startAt.AddDate(0, 1, 0)
+
+			totalPeriodInFlow, err := s.repo.GetTotalInflowByPeriod(ctx, db.GetTotalInflowByPeriodParams{
+				CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+				CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+				CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriodOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
+				CompanyID:     pgconv.ParseUUIDToPgType(companyId),
+				PaymentDate:   pgconv.ToPgDate(startAt),
+				PaymentDate_2: pgconv.ToPgDate(endAt),
+			})
+			if err != nil {
+				return domain.GetTotalSummaryResponse{}, err
+			}
+
+			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
+
+			totalOutFlow += totalPeriodOutFlow
+			totalInFlow += totalPeriodInFlow
+
+			response = append(response, domain.TotalSummaty{
+				Period:             startAt.Format("01/2006"),
+				TotalPeriodOutFlow: totalPeriodOutFlow,
+				TotalPeriodInFlow:  totalPeriodInFlow,
+				TotalPeriod:        totalPeriod,
+			})
+		}
+
+		initialAt := dayBase
+
+		finishAt := dayBase.AddDate(0, -int(req.Quantity), 0)
+
+		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
+			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+		})
+		if err != nil {
+			return domain.GetTotalSummaryResponse{}, nil
+		}
+
+		var totalAmountCategoriesInFlow float64
+
+		for _, cashIn := range totalCategoriesInFlow {
+			totalAmountCategoriesInFlow += cashIn.TotalAmount
+		}
+
+		var totalAmountCategoriesOutFlow float64
+
+		for _, cashOut := range totalCategoriesOutFlow {
+			totalAmountCategoriesOutFlow += cashOut.TotalAmount
+		}
+
+		for _, inCategory := range totalCategoriesInFlow {
+
+			var totalPercentage float64
+
+			if totalAmountCategoriesInFlow > 0 {
+				totalPercentage = (inCategory.TotalAmount / totalInFlow) * 100
+			}
+
+			responseCategoryInFlow = append(responseCategoryInFlow, domain.GetCashInFlowByCategoryResponse{
+				NameCategory:     inCategory.CategoryName,
+				TotalInFlow:      inCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+
+		for _, outCategory := range totalCategoriesOutFlow {
+			var totalPercentage float64
+
+			if totalAmountCategoriesOutFlow > 0 {
+				totalPercentage = (outCategory.TotalAmount / totalOutFlow) * 100
+			}
+
+			responseCategoryOutFlow = append(responseCategoryOutFlow, domain.GetCashOutFlowByCategoryResponse{
+				NameCategory:     outCategory.CategoryName,
+				TotalOutFlow:     outCategory.TotalAmount,
+				PercentageInFlow: totalPercentage,
+			})
+		}
+	}
+
+	return domain.GetTotalSummaryResponse{
+		Summary:                response,
+		TotalOutFlow:           totalOutFlow,
+		TotalInFlow:            totalInFlow,
+		Total:                  totalPeriod,
+		TotalCategoriesInFlow:  responseCategoryInFlow,
+		TotalCategoriesOutFlow: responseCategoryOutFlow,
+	}, nil
 }
