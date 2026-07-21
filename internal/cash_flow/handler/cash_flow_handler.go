@@ -156,7 +156,7 @@ func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"cash_flow_month": cashFlowMonth})
+	c.JSON(http.StatusOK, cashFlowMonth)
 }
 
 // GetCashFlow godoc

@@ -153,10 +153,10 @@ FROM bill_categories bc
     LEFT JOIN bills_payable b ON b.category_id = bc.id
     AND b.company_id = $1
     AND b.status = 'paid'
+    AND b.created_at BETWEEN $2 AND $3
 WHERE bc.company_id = $1
     AND bc.is_active = TRUE
     AND bc.deleted_at IS NULL
-    AND bc.created_at BETWEEN $2 AND $3
 GROUP BY bc.name
 ORDER BY total_amount DESC
 `
