@@ -201,8 +201,8 @@ func (s *Service) GetCashFlowPeriod(ctx context.Context, companyId uuid.UUID) ([
 
 		totalOutFlow, err := s.repo.GetTotalOutflowByPeriod(ctx, db.GetTotalOutflowByPeriodParams{
 			CompanyID:     pgconv.ParseUUIDToPgType(companyId),
-			PaymentDate:   pgconv.StringToPgDate(startAt.GoString()),
-			PaymentDate_2: pgconv.StringToPgDate(endAt.GoString()),
+			PaymentDate:   pgconv.ToPgDate(startAt),
+			PaymentDate_2: pgconv.ToPgDate(endAt),
 		})
 		if err != nil {
 			return []domain.GetCashFlowPeriodResponse{}, err
@@ -268,6 +268,9 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 	var response []domain.TotalSummaty
 	var responseCategoryInFlow []domain.GetCashInFlowByCategoryResponse
 	var responseCategoryOutFlow []domain.GetCashOutFlowByCategoryResponse
+	var values []float64
+
+	var projection float64
 
 	var totalPeriod float64
 
@@ -302,6 +305,8 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 				return domain.GetTotalSummaryResponse{}, err
 			}
 
+			values = append(values, totalPeriodInFlow)
+
 			totalPeriod += totalPeriodInFlow - totalPeriodOutFlow
 
 			totalOutFlow += totalPeriodOutFlow
@@ -316,9 +321,11 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 
 		}
 
-		initialAt := dayBase
+		projection = domain.CalcularProjecao(values, int(req.Quantity))
 
-		finishAt := dayBase.AddDate(0, 0, -int(req.Quantity))
+		initialAt := dayBase.AddDate(0, 0, -int(req.Quantity))
+
+		finishAt := dayBase
 
 		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
@@ -331,8 +338,8 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 
 		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
-			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
-			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
 		})
 		if err != nil {
 			return domain.GetTotalSummaryResponse{}, nil
@@ -422,9 +429,9 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 
 		}
 
-		initialAt := currentWeekStart
+		initialAt := currentWeekStart.AddDate(0, 0, -int(req.Quantity))
 
-		finishAt := currentWeekStart.AddDate(0, 0, -int(req.Quantity))
+		finishAt := currentWeekStart
 
 		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
@@ -437,8 +444,8 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 
 		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
-			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
-			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
 		})
 		if err != nil {
 			return domain.GetTotalSummaryResponse{}, nil
@@ -524,9 +531,9 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 			})
 		}
 
-		initialAt := dayBase
+		initialAt := dayBase.AddDate(0, -int(req.Quantity), 0)
 
-		finishAt := dayBase.AddDate(0, -int(req.Quantity), 0)
+		finishAt := dayBase
 
 		totalCategoriesInFlow, err := s.repo.GetCashInFlowCategoryByPeriod(ctx, db.GetCashInFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
@@ -539,8 +546,8 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 
 		totalCategoriesOutFlow, err := s.repo.GetCashOutFlowCategoryByPeriod(ctx, db.GetCashOutFlowCategoryByPeriodParams{
 			CompanyID:   pgconv.ParseUUIDToPgType(companyId),
-			CreatedAt:   pgconv.TimeToPgTimestamptz(finishAt),
-			CreatedAt_2: pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt:   pgconv.TimeToPgTimestamptz(initialAt),
+			CreatedAt_2: pgconv.TimeToPgTimestamptz(finishAt),
 		})
 		if err != nil {
 			return domain.GetTotalSummaryResponse{}, nil
@@ -595,5 +602,6 @@ func (s *Service) GetTotalSummary(ctx context.Context, req domain.GetTotalSummar
 		Total:                  totalPeriod,
 		TotalCategoriesInFlow:  responseCategoryInFlow,
 		TotalCategoriesOutFlow: responseCategoryOutFlow,
+		Projection:             projection,
 	}, nil
 }
