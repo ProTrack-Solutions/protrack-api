@@ -3,6 +3,8 @@ package handler
 import (
 	"net/http"
 
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/departments/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
 	"github.com/gin-gonic/gin"
@@ -10,12 +12,16 @@ import (
 )
 
 type Handler struct {
-	service *service.Service
+	service    *service.Service
+	jwtManager *jwt.JWTManager
+	blacklist  *cache.TokenBlacklist
 }
 
-func NewHandler(service *service.Service) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
 	return &Handler{
-		service: service,
+		service:    service,
+		jwtManager: jwtManager,
+		blacklist:  blacklist,
 	}
 }
 
@@ -28,6 +34,26 @@ func NewHandler(service *service.Service) *Handler {
 // @Success      201 {object} domain.DepartmentResponse
 // @Router       /departments [post]
 func (h *Handler) CreateDepartment(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	userIdStr := c.GetString("sub")
+	if userIdStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		return
+	}
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var req domain.CreateDepartmentParams
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -35,7 +61,7 @@ func (h *Handler) CreateDepartment(c *gin.Context) {
 		return
 	}
 
-	department, err := h.service.CreateDepartment(c.Request.Context(), req)
+	department, err := h.service.CreateDepartment(c.Request.Context(), req, companyId, userId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -100,17 +126,16 @@ func (h *Handler) GetDepartmentById(c *gin.Context) {
 // @Summary      Lista departamentos por empresa
 // @Tags         departments
 // @Produce      json
-// @Param        id path string true "ID da empresa"
 // @Success      200 {array} domain.DepartmentResponse
-// @Router       /departments/list/{id} [get]
+// @Router       /departments/list [get]
 func (h *Handler) ListDepartmentsByCompanyId(c *gin.Context) {
-	companyIdStr := c.Param("companyId")
-
-	companyId, err := uuid.Parse(companyIdStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id null"})
 		return
 	}
+
+	companyId := companyIdAny.(uuid.UUID)
 
 	departments, err := h.service.ListDepartmentsByCompanyId(c.Request.Context(), companyId)
 	if err != nil {
@@ -118,7 +143,7 @@ func (h *Handler) ListDepartmentsByCompanyId(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"departments": departments})
+	c.JSON(http.StatusOK, departments)
 }
 
 // SetStatusDepartment godoc
@@ -130,6 +155,26 @@ func (h *Handler) ListDepartmentsByCompanyId(c *gin.Context) {
 // @Success      200 {object} map[string]int64
 // @Router       /departments/status [put]
 func (h *Handler) SetStatusDepartment(c *gin.Context) {
+	userIdStr := c.GetString("sub")
+	if userIdStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		return
+	}
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	departmentIdStr := c.Param("departmentId")
+
+	departmentId, err := uuid.Parse(departmentIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var req domain.SetStatusDepartmentParams
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -137,7 +182,7 @@ func (h *Handler) SetStatusDepartment(c *gin.Context) {
 		return
 	}
 
-	count, err := h.service.SetStatusDepartment(c.Request.Context(), req)
+	count, err := h.service.SetStatusDepartment(c.Request.Context(), req, userId, departmentId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -164,6 +209,18 @@ func (h *Handler) UpdateDepartment(c *gin.Context) {
 		return
 	}
 
+	userIdStr := c.GetString("sub")
+	if userIdStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		return
+	}
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var req domain.UpdateDepartmentParams
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -171,7 +228,7 @@ func (h *Handler) UpdateDepartment(c *gin.Context) {
 		return
 	}
 
-	department, err := h.service.UpdateDepartment(c.Request.Context(), id, req)
+	department, err := h.service.UpdateDepartment(c.Request.Context(), id, userId, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
