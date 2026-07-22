@@ -30,12 +30,12 @@ func NewService(repo *repository.Repository) *Service {
 	}
 }
 
-func (s *Service) CreateDepartment(ctx context.Context, req domain.CreateDepartmentParams) (domain.DepartmentResponse, error) {
+func (s *Service) CreateDepartment(ctx context.Context, req domain.CreateDepartmentParams, companyId uuid.UUID, userId uuid.UUID) (domain.DepartmentResponse, error) {
 	department, err := s.repo.CreateDepartment(ctx, db.CreateDepartmentParams{
-		CompanyID:   pgconv.ParseUUIDToPgType(req.CompanyID),
+		CompanyID:   pgconv.ParseUUIDToPgType(companyId),
 		Name:        req.Name,
 		Description: pgconv.ParseStringToPgText(req.Description),
-		CreatedBy:   pgconv.ParseUUIDToPgType(req.CompanyID),
+		CreatedBy:   pgconv.ParseUUIDToPgType(userId),
 	})
 	if err != nil {
 		return domain.DepartmentResponse{}, err
@@ -107,11 +107,11 @@ func (s *Service) ListDepartmentsByCompanyId(ctx context.Context, companyId uuid
 	return response, nil
 }
 
-func (s *Service) SetStatusDepartment(ctx context.Context, req domain.SetStatusDepartmentParams) (int64, error) {
+func (s *Service) SetStatusDepartment(ctx context.Context, req domain.SetStatusDepartmentParams, userId uuid.UUID, departmentId uuid.UUID) (int64, error) {
 	count, err := s.repo.SetStatusDepartment(ctx, db.SetStatusDepartmentParams{
-		ID:        pgconv.ParseUUIDToPgType(req.ID),
+		ID:        pgconv.ParseUUIDToPgType(departmentId),
 		Column2:   req.Status,
-		UpdatedBy: pgconv.ParseUUIDToPgType(req.UpdatedBy),
+		UpdatedBy: pgconv.ParseUUIDToPgType(userId),
 	})
 	if err != nil {
 		return 0, err
@@ -120,22 +120,28 @@ func (s *Service) SetStatusDepartment(ctx context.Context, req domain.SetStatusD
 	return count, nil
 }
 
-func (s *Service) UpdateDepartment(ctx context.Context, id uuid.UUID, req domain.UpdateDepartmentParams) (domain.DepartmentResponse, error) {
+func (s *Service) UpdateDepartment(ctx context.Context, id uuid.UUID, userId uuid.UUID, req domain.UpdateDepartmentParams) (domain.DepartmentResponse, error) {
 	currentDepartment, err := s.repo.GetDepartmentById(ctx, pgconv.ParseUUIDToPgType(id))
 	if err != nil {
 		return domain.DepartmentResponse{}, err
 	}
 
 	arg := db.UpdateDepartmentParams{
-		ID:          currentDepartment.ID,
 		Name:        currentDepartment.Name,
 		Description: currentDepartment.Description,
-		UpdatedBy:   currentDepartment.UpdatedBy,
 	}
 
 	domain.ApplyUpdateProductCategoryParams(req, &arg)
 
-	department, err := s.repo.UpdateDepartment(ctx, arg)
+	department, err := s.repo.UpdateDepartment(ctx, db.UpdateDepartmentParams{
+		ID:          pgconv.ParseUUIDToPgType(id),
+		Name:        arg.Name,
+		Description: arg.Description,
+		UpdatedBy:   pgconv.ParseUUIDToPgType(userId),
+	})
+	if err != nil {
+		return domain.DepartmentResponse{}, err
+	}
 
 	return domain.DepartmentResponse{
 		ID:          pgconv.PgUUIDToUUID(department.ID),

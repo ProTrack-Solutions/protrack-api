@@ -204,7 +204,7 @@ func main() {
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
 	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
-	departmentsHandler := departmentsHandler.NewHandler(departmentsService)
+	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
 	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist)
 	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist)
 	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist)
