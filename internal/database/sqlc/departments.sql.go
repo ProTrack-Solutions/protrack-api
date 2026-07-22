@@ -168,7 +168,7 @@ UPDATE departments
 SET name = $2,
     description = $3,
     updated_by = $4,
-    updated_by = NOW()
+    updated_at = NOW()
 WHERE id = $1
 RETURNING id, company_id, name, description, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
 `

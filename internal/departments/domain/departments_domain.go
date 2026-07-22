@@ -24,10 +24,8 @@ type Department struct {
 }
 
 type CreateDepartmentParams struct {
-	CompanyID   uuid.UUID `json:"company_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CreatedBy   uuid.UUID `json:"created_by"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type DeleteDepartmentParams struct {
@@ -36,16 +34,12 @@ type DeleteDepartmentParams struct {
 }
 
 type SetStatusDepartmentParams struct {
-	ID        uuid.UUID    `json:"id"`
-	Status    enums.Status `json:"Status"`
-	UpdatedBy uuid.UUID    `json:"updated_by"`
+	Status enums.Status `json:"Status"`
 }
 
 type UpdateDepartmentParams struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	UpdatedBy   uuid.UUID `json:"updated_by"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 type DepartmentResponse struct {
