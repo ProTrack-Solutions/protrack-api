@@ -24,7 +24,7 @@ type RepositoryInterface interface {
 	CreateUsers(ctx context.Context, arg db.CreateUserParams) (db.User, error)
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	GetUserByEmail(ctx context.Context, email string) (db.User, error)
-	GetUserById(ctx context.Context, id pgtype.UUID) (db.User, error)
+	GetUserById(ctx context.Context, id pgtype.UUID) (db.GetUserByIDRow, error)
 	ListUsers(ctx context.Context) ([]db.User, error)
 	UpdatePasswordHash(ctx context.Context, arg db.UpdatePasswordHashParams) error
 	UpdateUser(ctx context.Context, arg db.UpdateUserParams) (db.User, error)
@@ -138,21 +138,22 @@ func (s *Service) GetUserByID(ctx context.Context, id uuid.UUID) (domain.UserRes
 	}
 
 	return domain.UserResponse{
-		ID:           pgconv.PgUUIDToUUID(user.ID),
-		Name:         user.Name,
-		Email:        user.Email,
-		Username:     pgconv.ParsePgTextToString(user.Username),
-		Role:         user.Role,
-		Status:       user.Status,
-		CompanyID:    pgconv.PgUUIDToUUID(user.CompanyID),
-		DepartmentID: pgconv.PgUUIDToUUID(user.DepartmentID),
-		LastLoginAt:  pgconv.PgTimestamptzToTime(user.LastLoginAt),
-		CreatedBy:    pgconv.PgUUIDToUUID(user.CreatedBy),
-		UpdatedBy:    pgconv.PgUUIDToUUID(user.UpdatedBy),
-		DeletedBy:    pgconv.PgUUIDToUUID(user.DeletedBy),
-		CreatedAt:    pgconv.PgTimestamptzToTime(user.CreatedAt),
-		UpdatedAt:    pgconv.PgTimestamptzToTime(user.UpdatedAt),
-		DeletedAt:    pgconv.PgTimestamptzToTime(user.DeletedAt),
+		ID:             pgconv.PgUUIDToUUID(user.ID),
+		Name:           user.Name,
+		Email:          user.Email,
+		Username:       pgconv.ParsePgTextToString(user.Username),
+		Role:           user.Role,
+		Status:         user.Status,
+		CompanyID:      pgconv.PgUUIDToUUID(user.CompanyID),
+		DepartmentID:   pgconv.PgUUIDToUUID(user.DepartmentID),
+		LastLoginAt:    pgconv.PgTimestamptzToTime(user.LastLoginAt),
+		CreatedBy:      pgconv.PgUUIDToUUID(user.CreatedBy),
+		UpdatedBy:      pgconv.PgUUIDToUUID(user.UpdatedBy),
+		DeletedBy:      pgconv.PgUUIDToUUID(user.DeletedBy),
+		CreatedAt:      pgconv.PgTimestamptzToTime(user.CreatedAt),
+		UpdatedAt:      pgconv.PgTimestamptzToTime(user.UpdatedAt),
+		DeletedAt:      pgconv.PgTimestamptzToTime(user.DeletedAt),
+		DepartmentName: user.DepartmentName,
 	}, nil
 }
 

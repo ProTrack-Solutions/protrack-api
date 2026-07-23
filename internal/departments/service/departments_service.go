@@ -52,10 +52,10 @@ func (s *Service) CreateDepartment(ctx context.Context, req domain.CreateDepartm
 	}, nil
 }
 
-func (s *Service) DeleteDepartment(ctx context.Context, req domain.DeleteDepartmentParams) error {
+func (s *Service) DeleteDepartment(ctx context.Context, departmentId, userId uuid.UUID) error {
 	return s.repo.DeleteDepartment(ctx, db.DeleteDepartmentParams{
-		ID:        pgconv.ParseUUIDToPgType(req.ID),
-		DeletedBy: pgconv.ParseUUIDToPgType(req.DeletedBy),
+		ID:        pgconv.ParseUUIDToPgType(departmentId),
+		DeletedBy: pgconv.ParseUUIDToPgType(userId),
 	})
 }
 
