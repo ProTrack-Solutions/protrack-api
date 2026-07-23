@@ -42,7 +42,7 @@ func (r *Repository) GetUserByEmail(ctx context.Context, email string) (db.User,
 	return q.GetUserByEmail(ctx, email)
 }
 
-func (r *Repository) GetUserById(ctx context.Context, id pgtype.UUID) (db.User, error) {
+func (r *Repository) GetUserById(ctx context.Context, id pgtype.UUID) (db.GetUserByIDRow, error) {
 	q := db.New(r.db)
 	return q.GetUserByID(ctx, id)
 }

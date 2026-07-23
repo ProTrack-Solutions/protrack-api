@@ -15,10 +15,12 @@ INSERT INTO users(
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 -- name: GetUserByID :one
-SELECT *
-FROM users
-WHERE id = $1
-    AND deleted_at IS NULL;
+SELECT u.*,
+d.name AS department_name
+FROM users u
+    INNER JOIN departments d ON u.department_id  = d.id
+WHERE u.id = $1
+    AND u.deleted_at IS NULL;
 -- name: GetUserByEmail :one
 SELECT *
 FROM users

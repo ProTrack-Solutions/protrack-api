@@ -86,10 +86,19 @@ func (h *Handler) DeleteDepartment(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.DeleteDepartment(c.Request.Context(), domain.DeleteDepartmentParams{
-		ID:        id,
-		DeletedBy: uuid.Nil,
-	}); err != nil {
+	userIdStr := c.GetString("sub")
+	if userIdStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		return
+	}
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.DeleteDepartment(c.Request.Context(), id, userId); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

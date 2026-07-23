@@ -99,7 +99,7 @@ type Querier interface {
 	GetTotalOverdueAmountByCompany(ctx context.Context, companyID pgtype.UUID) (GetTotalOverdueAmountByCompanyRow, error)
 	GetTotalReceivedByPeriod(ctx context.Context, arg GetTotalReceivedByPeriodParams) (pgtype.Numeric, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
-	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
