@@ -70,12 +70,12 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "name": "page",
+                        "name": "Page",
                         "in": "header"
                     },
                     {
                         "type": "integer",
-                        "name": "per_page",
+                        "name": "Perpage",
                         "in": "header"
                     }
                 ],
@@ -1860,7 +1860,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/departments/list/{id}": {
+        "/departments/list": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1869,15 +1869,6 @@ const docTemplate = `{
                     "departments"
                 ],
                 "summary": "Lista departamentos por empresa",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da empresa",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -4128,6 +4119,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/whatsapp/instance/connection-state": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Consulta o status da instância na Evolution API (ex: open, connecting, close) e retorna os dados da conexão.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Obtém o estado de conexão do WhatsApp",
+                "responses": {
+                    "200": {
+                        "description": "Estado atual do WhatsApp obtido com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha na comunicação com o serviço ou Evolution API",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/whatsapp/instance/create": {
             "post": {
                 "security": [
@@ -4145,6 +4176,42 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/whatsapp/instance/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove/desconecta a instância do WhatsApp associada à empresa do usuário autenticado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Deleta a instância do WhatsApp",
+                "responses": {
+                    "204": {
+                        "description": "Instância deletada com sucesso"
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao deletar a instância no serviço",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4939,16 +5006,51 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse": {
             "type": "object",
             "properties": {
-                "period": {
-                    "type": "string"
+                "projection": {
+                    "type": "number"
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty"
+                    }
+                },
+                "total": {
+                    "type": "number"
+                },
+                "total_categories_in_flow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse"
+                    }
+                },
+                "total_categories_out_flow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashOutFlowByCategoryResponse"
+                    }
                 },
                 "total_inflow": {
                     "type": "number"
                 },
                 "total_outflow": {
                     "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string"
                 },
                 "total_period": {
+                    "type": "number"
+                },
+                "total_period_inflow": {
+                    "type": "number"
+                },
+                "total_period_outflow": {
                     "type": "number"
                 }
             }
@@ -5419,12 +5521,6 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams": {
             "type": "object",
             "properties": {
-                "company_id": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -5476,12 +5572,6 @@ const docTemplate = `{
             "properties": {
                 "Status": {
                     "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
                 }
             }
         },
@@ -5491,13 +5581,7 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "name": {
-                    "type": "string"
-                },
-                "updated_by": {
                     "type": "string"
                 }
             }
@@ -6361,6 +6445,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "department_id": {
+                    "type": "string"
+                },
+                "department_name": {
                     "type": "string"
                 },
                 "email": {

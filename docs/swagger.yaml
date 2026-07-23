@@ -452,13 +452,36 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse:
     properties:
-      period:
-        type: string
+      projection:
+        type: number
+      summary:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty'
+        type: array
+      total:
+        type: number
+      total_categories_in_flow:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse'
+        type: array
+      total_categories_out_flow:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashOutFlowByCategoryResponse'
+        type: array
       total_inflow:
         type: number
       total_outflow:
         type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty:
+    properties:
+      period:
+        type: string
       total_period:
+        type: number
+      total_period_inflow:
+        type: number
+      total_period_outflow:
         type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse:
@@ -770,10 +793,6 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams:
     properties:
-      company_id:
-        type: string
-      created_by:
-        type: string
       description:
         type: string
       name:
@@ -808,20 +827,12 @@ definitions:
     properties:
       Status:
         $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status'
-      id:
-        type: string
-      updated_by:
-        type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.UpdateDepartmentParams:
     properties:
       description:
         type: string
-      id:
-        type: string
       name:
-        type: string
-      updated_by:
         type: string
     type: object
   ? github_com_ProTrack-Solutions_protrack-api_internal_domain.PaginatedResponse-github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain_ListAnnoucementsPaginateResponse
@@ -1396,6 +1407,8 @@ definitions:
         type: string
       department_id:
         type: string
+      department_name:
+        type: string
       email:
         type: string
       id:
@@ -1612,10 +1625,10 @@ paths:
         de paginação enviados no cabeçalho.
       parameters:
       - in: header
-        name: page
+        name: Page
         type: integer
       - in: header
-        name: per_page
+        name: Perpage
         type: integer
       produces:
       - application/json
@@ -2775,14 +2788,8 @@ paths:
       summary: Atualiza um departamento
       tags:
       - departments
-  /departments/list/{id}:
+  /departments/list:
     get:
-      parameters:
-      - description: ID da empresa
-        in: path
-        name: id
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -4104,6 +4111,33 @@ paths:
       summary: Ativa ou desativa um fornecedor
       tags:
       - vendors
+  /whatsapp/instance/connection-state:
+    get:
+      description: 'Consulta o status da instância na Evolution API (ex: open, connecting,
+        close) e retorna os dados da conexão.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Estado atual do WhatsApp obtido com sucesso
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Empresa não autenticada no contexto
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Falha na comunicação com o serviço ou Evolution API
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtém o estado de conexão do WhatsApp
+      tags:
+      - whatsapp
   /whatsapp/instance/create:
     post:
       produces:
@@ -4117,6 +4151,30 @@ paths:
       security:
       - BearerAuth: []
       summary: Cria instância WhatsApp e retorna QR Code
+      tags:
+      - whatsapp
+  /whatsapp/instance/delete:
+    delete:
+      description: Remove/desconecta a instância do WhatsApp associada à empresa do
+        usuário autenticado.
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: Instância deletada com sucesso
+        "401":
+          description: Empresa não autenticada no contexto
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Falha ao deletar a instância no serviço
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Deleta a instância do WhatsApp
       tags:
       - whatsapp
 securityDefinitions:
