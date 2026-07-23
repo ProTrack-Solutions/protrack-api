@@ -122,15 +122,37 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, username, password_hash, role, status, company_id, department_id, last_login_at, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
-FROM users
-WHERE id = $1
-    AND deleted_at IS NULL
+SELECT u.id, u.name, u.email, u.username, u.password_hash, u.role, u.status, u.company_id, u.department_id, u.last_login_at, u.created_by, u.updated_by, u.deleted_by, u.created_at, u.updated_at, u.deleted_at,
+d.name AS department_name
+FROM users u
+    INNER JOIN departments d ON u.department_id  = d.id
+WHERE u.id = $1
+    AND u.deleted_at IS NULL
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error) {
+type GetUserByIDRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	Name           string             `json:"name"`
+	Email          string             `json:"email"`
+	Username       pgtype.Text        `json:"username"`
+	PasswordHash   string             `json:"password_hash"`
+	Role           string             `json:"role"`
+	Status         interface{}        `json:"status"`
+	CompanyID      pgtype.UUID        `json:"company_id"`
+	DepartmentID   pgtype.UUID        `json:"department_id"`
+	LastLoginAt    pgtype.Timestamptz `json:"last_login_at"`
+	CreatedBy      pgtype.UUID        `json:"created_by"`
+	UpdatedBy      pgtype.UUID        `json:"updated_by"`
+	DeletedBy      pgtype.UUID        `json:"deleted_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	DepartmentName string             `json:"department_name"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
@@ -148,6 +170,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.DepartmentName,
 	)
 	return i, err
 }
