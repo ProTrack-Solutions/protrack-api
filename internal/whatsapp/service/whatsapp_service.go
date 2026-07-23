@@ -120,3 +120,87 @@ func (s *Service) CreateInstance(ctx context.Context, companyID uuid.UUID) (stri
 
 	return qrCode, nil
 }
+
+func (s *Service) ConnectonState(ctx context.Context, companyId uuid.UUID) (domain.ConnectonStateResponse, error) {
+	company, err := s.companiesService.GetCompanyByID(ctx, companyId)
+	if err != nil {
+		return domain.ConnectonStateResponse{}, fmt.Errorf("failed to retrieve company: %w", err)
+	}
+
+	instanceName := fmt.Sprintf("%s-%s", company.Name, companyId.String())
+
+	url := fmt.Sprintf("%s/instance/connectionState/%s", s.cfg.EvolutionApiUrl, instanceName)
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return domain.ConnectonStateResponse{}, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("apikey", s.cfg.EvolutionKey)
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return domain.ConnectonStateResponse{}, err
+	}
+	defer response.Body.Close()
+
+	body, _ := io.ReadAll(response.Body)
+
+	if response.StatusCode == http.StatusNotFound {
+		return domain.ConnectonStateResponse{
+			InstanceName: "",
+			State:        "not_created",
+		}, nil
+	}
+
+	if response.StatusCode != http.StatusOK {
+		return domain.ConnectonStateResponse{}, fmt.Errorf("failed to get state instance: %s", body)
+	}
+
+	var result domain.EvolutionConnectionStateResponse
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return domain.ConnectonStateResponse{}, err
+	}
+
+	return domain.ConnectonStateResponse{
+		InstanceName: result.Instance.InstanceName,
+		State:        result.Instance.State,
+	}, nil
+}
+
+func (s *Service) DeleteInstance(ctx context.Context, companyId uuid.UUID) error {
+	company, err := s.companiesService.GetCompanyByID(ctx, companyId)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve company: %w", err)
+	}
+
+	instanceName := fmt.Sprintf("%s-%s", company.Name, companyId.String())
+
+	url := fmt.Sprintf("%s/instance/logout/%s", s.cfg.EvolutionApiUrl, instanceName)
+
+	request, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("apikey", s.cfg.EvolutionKey)
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	body, _ := io.ReadAll(response.Body)
+
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("failed to retrieve company: status %d, body: %s", response.StatusCode, body)
+	}
+
+	return nil
+}
