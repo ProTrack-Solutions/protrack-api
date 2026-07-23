@@ -28,11 +28,6 @@ type CreateDepartmentParams struct {
 	Description string `json:"description"`
 }
 
-type DeleteDepartmentParams struct {
-	ID        uuid.UUID `json:"id"`
-	DeletedBy uuid.UUID `json:"deleted_by"`
-}
-
 type SetStatusDepartmentParams struct {
 	Status enums.Status `json:"Status"`
 }
