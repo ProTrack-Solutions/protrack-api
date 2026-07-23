@@ -102,7 +102,7 @@ services:
       - CACHE_REDIS_URI=redis://redis:6379/0
       - CACHE_REDIS_SAVE_INSTANCES=true
       - CONFIG_SESSION_HTTP_BROWSER_ARGS="['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process', '--disable-gpu']"
-      - CONFIG_SESSION_PHONE_VERSION=2.3000.1033881095
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1043690208
 
     security_opt:
       - seccomp:unconfined
