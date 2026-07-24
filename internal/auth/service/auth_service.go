@@ -6,21 +6,28 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
+	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
+	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	userDomain "github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
-	"github.com/ProTrack-Solutions/protrack-api/internal/users/service"
+	userService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
 )
 
 type Service struct {
-	userService *service.Service
-	jwtManager  *jwt.JWTManager
+	userService      *userService.Service
+	companiesService *companiesService.Service
+	jwtManager       *jwt.JWTManager
+	pool             *pgxpool.Pool
 }
 
-func NewService(userService *service.Service, jwtManager *jwt.JWTManager) *Service {
+func NewService(userService *userService.Service, companiesService *companiesService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
 	return &Service{
-		userService: userService,
-		jwtManager:  jwtManager,
+		userService:      userService,
+		companiesService: companiesService,
+		jwtManager:       jwtManager,
+		pool:             pool,
 	}
 }
 
@@ -109,4 +116,50 @@ func (s *Service) GetUserFromContext(ctx context.Context, id uuid.UUID) (userDom
 		DeletedAt:      user.DeletedAt,
 		DepartmentName: user.DepartmentName,
 	}, nil
+}
+
+func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	companyId, err := s.companiesService.CreateCompanyTx(ctx, tx, companiesDomain.CreateCompanyParams{
+		Name:                req.Company.Name,
+		TradeName:           req.Company.TradeName,
+		Document:            req.Company.Document,
+		Email:               req.Company.Email,
+		Phone:               req.Company.Phone,
+		Website:             req.Company.Website,
+		AddressStreet:       req.Company.AddressStreet,
+		AddressNumber:       req.Company.AddressNumber,
+		AddressComplement:   req.Company.AddressComplement,
+		AddressNeighborhood: req.Company.AddressNeighborhood,
+		AddressCity:         req.Company.AddressCity,
+		AddressState:        req.Company.AddressState,
+		AddressZipcode:      req.Company.AddressZipcode,
+		AddressCountry:      req.Company.AddressCountry,
+		Timezone:            req.Company.Timezone,
+		Status:              "ACTIVE",
+		CreatedBy:           uuid.Nil,
+	})
+	if err != nil {
+		return err
+	}
+
+	err = s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
+		Name:         req.User.Name,
+		Email:        req.User.Email,
+		Username:     req.User.Username,
+		PasswordHash: req.User.PasswordHash,
+		Role:         "ADMIN",
+		Status:       "ACTIVE",
+		CompanyID:    companyId,
+	})
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }

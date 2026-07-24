@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/alexedwards/argon2id"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
@@ -306,4 +308,45 @@ func (s *Service) UpdateUserCompanyAndRole(ctx context.Context, req domain.Updat
 		CompanyID: pgconv.ParseUUIDToPgType(req.CompanyID),
 		Role:      req.Role,
 	})
+}
+
+func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.CreateUserParams) error {
+	repoTx := db.New(tx)
+
+	log.Info().Str("password", req.PasswordHash).Msg("password")
+
+	if err := validate.ValidPassword(req.PasswordHash); err != nil {
+		return err
+	}
+
+	is := validate.IsValidEmail(req.Email)
+	if is == false {
+		return errors.New("invalid email")
+	}
+
+	// hashPassword, err := bcrypt.GenerateFromPassword([]byte(req.PasswordHash), 12)
+
+	passwordPepper := req.PasswordHash + s.cfg.Pepper
+
+	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+
+	_, err = repoTx.CreateUser(ctx, db.CreateUserParams{
+		Name:         req.Name,
+		Email:        req.Email,
+		Username:     pgconv.ParseStringToPgText(req.Username),
+		PasswordHash: string(hashPassword),
+		Role:         "ADMIN",
+		Status:       "ACTIVE",
+		CompanyID:    pgconv.ParseUUIDToPgType(req.CompanyID),
+		CreatedAt:    pgconv.TimeToPgTimestamptz(time.Now()),
+		CreatedBy:    pgconv.ParseUUIDToPgType(uuid.Nil),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

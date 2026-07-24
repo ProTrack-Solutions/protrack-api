@@ -532,6 +532,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/register": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Registra uma nova empresa e um usuário administrador",
+                "parameters": [
+                    {
+                        "description": "Dados de registro",
+                        "name": "register",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Empresa e usuário criados com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/bill-categories": {
             "get": {
                 "security": [
@@ -1296,42 +1350,6 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
                             }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "companies"
-                ],
-                "summary": "Cria uma empresa",
-                "parameters": [
-                    {
-                        "description": "Empresa",
-                        "name": "company",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
                         }
                     }
                 }
@@ -4888,6 +4906,84 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "type": "object",
+                    "properties": {
+                        "address_city": {
+                            "type": "string"
+                        },
+                        "address_complement": {
+                            "type": "string"
+                        },
+                        "address_country": {
+                            "type": "string"
+                        },
+                        "address_neighborhood": {
+                            "type": "string"
+                        },
+                        "address_number": {
+                            "type": "string"
+                        },
+                        "address_state": {
+                            "type": "string"
+                        },
+                        "address_street": {
+                            "type": "string"
+                        },
+                        "address_zipcode": {
+                            "type": "string"
+                        },
+                        "document": {
+                            "type": "string"
+                        },
+                        "document_type": {
+                            "type": "string"
+                        },
+                        "email": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "phone": {
+                            "type": "string"
+                        },
+                        "timezone": {
+                            "type": "string"
+                        },
+                        "trade_name": {
+                            "type": "string"
+                        },
+                        "website": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "user": {
+                    "type": "object",
+                    "properties": {
+                        "document": {
+                            "type": "string"
+                        },
+                        "email": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "password_hash": {
+                            "type": "string"
+                        },
+                        "username": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse": {
             "type": "object",
             "properties": {
@@ -5397,69 +5493,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                },
-                "website": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams": {
-            "type": "object",
-            "properties": {
-                "address_city": {
-                    "type": "string"
-                },
-                "address_complement": {
-                    "type": "string"
-                },
-                "address_country": {
-                    "type": "string"
-                },
-                "address_neighborhood": {
-                    "type": "string"
-                },
-                "address_number": {
-                    "type": "string"
-                },
-                "address_state": {
-                    "type": "string"
-                },
-                "address_street": {
-                    "type": "string"
-                },
-                "address_zipcode": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "deleted_by": {
-                    "type": "string"
-                },
-                "document": {
-                    "type": "string"
-                },
-                "document_type": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "status": {},
-                "timezone": {
-                    "type": "string"
-                },
-                "trade_name": {
                     "type": "string"
                 },
                 "updated_by": {
