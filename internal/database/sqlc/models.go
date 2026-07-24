@@ -212,6 +212,18 @@ type PaymentMethod struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Plan struct {
+	ID           pgtype.UUID        `json:"id"`
+	Name         string             `json:"name"`
+	Description  pgtype.Text        `json:"description"`
+	PriceCents   int32              `json:"price_cents"`
+	Currency     pgtype.Text        `json:"currency"`
+	BillingCycle string             `json:"billing_cycle"`
+	Active       pgtype.Bool        `json:"active"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Product struct {
 	ID          pgtype.UUID        `json:"id"`
 	CompanyID   pgtype.UUID        `json:"company_id"`
