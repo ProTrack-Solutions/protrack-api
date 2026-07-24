@@ -4119,6 +4119,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/whatsapp/instance/connect": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Solicita a conexão da instância do WhatsApp para a empresa autenticada e retorna o QR Code/Payload para escaneamento.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Conecta a instância WhatsApp e retorna QR Code",
+                "responses": {
+                    "200": {
+                        "description": "Exemplo: {\\\"qr_code\\\": \\\"...\\\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao conectar a instância no serviço",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/whatsapp/instance/connection-state": {
             "get": {
                 "security": [

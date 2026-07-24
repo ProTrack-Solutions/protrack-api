@@ -204,3 +204,50 @@ func (s *Service) DeleteInstance(ctx context.Context, companyId uuid.UUID) error
 
 	return nil
 }
+
+func (s *Service) ConnectInstance(ctx context.Context, companyId uuid.UUID) (string, error) {
+	company, err := s.companiesService.GetCompanyByID(ctx, companyId)
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve company: %w", err)
+	}
+
+	instanceName := fmt.Sprintf("%s-%s", company.Name, companyId.String())
+
+	connectUrl := fmt.Sprintf("%s/instance/connect/%s", s.cfg.EvolutionApiUrl, instanceName)
+
+	request, err := http.NewRequest("GET", connectUrl, nil)
+	if err != nil {
+		return "", err
+	}
+
+	request.Header.Set("apikey", s.cfg.EvolutionKey)
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		return "", err
+	}
+	defer response.Body.Close()
+
+	resConnect, err := client.Do(request)
+	if err != nil {
+		log.Warn().Err(err).Msg("Erro ao conectar à Evolution API, tentando novamente...")
+	}
+	defer resConnect.Body.Close()
+
+	bodyConnect, _ := io.ReadAll(resConnect.Body)
+	if resConnect.StatusCode != http.StatusOK {
+		log.Warn().Str("response", string(bodyConnect)).Msg("Resposta inesperada da Evolution API, tentando novamente...")
+		return "", fmt.Errorf("Resposta inesperada da Evolution API, tentando novamente...")
+	}
+
+	var resultConnect domain.EvolutionConnectResponse
+	if err := json.Unmarshal(bodyConnect, &resultConnect); err != nil {
+		log.Warn().Err(err).Msg("Erro ao decodificar resposta da Evolution API, tentando novamente...")
+		return "", err
+	}
+
+	qrCode := resultConnect.Code
+
+	return qrCode, nil
+}
