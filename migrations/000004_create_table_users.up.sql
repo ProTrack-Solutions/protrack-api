@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL DEFAULT 'USER',
     status status_enum NOT NULL DEFAULT 'ACTIVE',
-    company_id UUID NULL,
+    company_id UUID NOT NULL,
     department_id UUID NULL,
     last_login_at TIMESTAMPTZ NULL,
     created_by UUID NULL,

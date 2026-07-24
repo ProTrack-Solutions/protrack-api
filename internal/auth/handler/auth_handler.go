@@ -234,3 +234,29 @@ func (h *Handler) Logout(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
 }
+
+// Register godoc
+// @Summary      Registra uma nova empresa e um usuário administrador
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        register body domain.RegisterRequest true "Dados de registro"
+// @Success      201 {object} map[string]string "Empresa e usuário criados com sucesso"
+// @Failure      400 {object} map[string]string "Requisição inválida"
+// @Failure      500 {object} map[string]string "Erro interno do servidor"
+// @Router       /auth/register [post]
+func (h *Handler) Register(c *gin.Context) {
+	var req domain.RegisterRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.Register(c.Request.Context(), req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusCreated)
+}
