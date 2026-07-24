@@ -189,7 +189,7 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	authService := authService.NewService(usersService, jwtManager)
+	authService := authService.NewService(usersService, companiesService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)

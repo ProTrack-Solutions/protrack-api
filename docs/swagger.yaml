@@ -192,6 +192,57 @@ definitions:
         description: Tipo do token (Bearer)
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest:
+    properties:
+      company:
+        properties:
+          address_city:
+            type: string
+          address_complement:
+            type: string
+          address_country:
+            type: string
+          address_neighborhood:
+            type: string
+          address_number:
+            type: string
+          address_state:
+            type: string
+          address_street:
+            type: string
+          address_zipcode:
+            type: string
+          document:
+            type: string
+          document_type:
+            type: string
+          email:
+            type: string
+          name:
+            type: string
+          phone:
+            type: string
+          timezone:
+            type: string
+          trade_name:
+            type: string
+          website:
+            type: string
+        type: object
+      user:
+        properties:
+          document:
+            type: string
+          email:
+            type: string
+          name:
+            type: string
+          password_hash:
+            type: string
+          username:
+            type: string
+        type: object
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse:
     properties:
       company_id:
@@ -526,48 +577,6 @@ definitions:
       trade_name:
         type: string
       updated_at:
-        type: string
-      updated_by:
-        type: string
-      website:
-        type: string
-    type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams:
-    properties:
-      address_city:
-        type: string
-      address_complement:
-        type: string
-      address_country:
-        type: string
-      address_neighborhood:
-        type: string
-      address_number:
-        type: string
-      address_state:
-        type: string
-      address_street:
-        type: string
-      address_zipcode:
-        type: string
-      created_by:
-        type: string
-      deleted_by:
-        type: string
-      document:
-        type: string
-      document_type:
-        type: string
-      email:
-        type: string
-      name:
-        type: string
-      phone:
-        type: string
-      status: {}
-      timezone:
-        type: string
-      trade_name:
         type: string
       updated_by:
         type: string
@@ -1980,6 +1989,41 @@ paths:
       summary: Renova o token de acesso
       tags:
       - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados de registro
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Empresa e usuário criados com sucesso
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registra uma nova empresa e um usuário administrador
+      tags:
+      - auth
   /bill-categories:
     get:
       produces:
@@ -2444,28 +2488,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Lista todas as empresas
-      tags:
-      - companies
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Empresa
-        in: body
-        name: company
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
-      security:
-      - BearerAuth: []
-      summary: Cria uma empresa
       tags:
       - companies
   /companies/{id}:

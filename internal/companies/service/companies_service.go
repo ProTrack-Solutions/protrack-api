@@ -42,7 +42,6 @@ func NewService(pool *pgxpool.Pool, repo *repository.Repository, usersRepo *user
 
 func (s *Service) CreateCompany(
 	ctx context.Context,
-	userId uuid.UUID,
 	req domain.CreateCompanyParams,
 ) (domain.CompanyResponse, error) {
 	typeDocument, err := validate.ValidateDocument(req.Document)
@@ -57,7 +56,6 @@ func (s *Service) CreateCompany(
 	defer tx.Rollback(ctx)
 
 	companyRepo := repository.NewRepository(tx)
-	userRepo := usersRepo.NewRepository(tx)
 
 	company, err := companyRepo.CreateCompany(ctx, db.CreateCompanyParams{
 		Name:         req.Name,
@@ -67,22 +65,8 @@ func (s *Service) CreateCompany(
 		Email:        pgconv.ParseStringToPgText(req.Email),
 		Phone:        pgconv.ParseStringToPgText(req.Phone),
 		Website:      pgconv.ParseStringToPgText(req.Website),
-		CreatedBy:    pgconv.ParseUUIDToPgType(userId),
 	})
 	if err != nil {
-		return domain.CompanyResponse{}, err
-	}
-
-	err = userRepo.UpdateUserCompanyAndRole(ctx, db.UpdateUserCompanyAndRoleParams{
-		ID:        pgconv.ParseUUIDToPgType(userId),
-		CompanyID: company.ID,
-		Role:      "ADMIN",
-	})
-	if err != nil {
-		return domain.CompanyResponse{}, err
-	}
-
-	if err := tx.Commit(ctx); err != nil {
 		return domain.CompanyResponse{}, err
 	}
 
@@ -174,9 +158,9 @@ func (s *Service) GetCompanyByID(ctx context.Context, id uuid.UUID) (domain.Comp
 	}, nil
 }
 
-func (s *Service) GetCompanyByIDTx(ctx context.Context, tx db.DBTX,id uuid.UUID) (domain.CompanyResponse, error) {
+func (s *Service) GetCompanyByIDTx(ctx context.Context, tx db.DBTX, id uuid.UUID) (domain.CompanyResponse, error) {
 	repoTx := db.New(tx)
-	
+
 	company, err := repoTx.GetCompanyByID(ctx, pgconv.ParseUUIDToPgType(id))
 	if err != nil {
 		return domain.CompanyResponse{}, err
@@ -314,4 +298,38 @@ func (s *Service) UpdateCompany(ctx context.Context, id uuid.UUID, req domain.Up
 		UpdatedBy:           pgconv.PgUUIDToUUID(company.UpdatedBy),
 		UpdatedAt:           pgconv.PgTimestamptzToTime(company.UpdatedAt),
 	}, nil
+}
+
+func (s *Service) CreateCompanyTx(ctx context.Context, tx db.DBTX, req domain.CreateCompanyParams) (uuid.UUID, error) {
+	typeDocument, err := validate.ValidateDocument(req.Document)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	repoTx := db.New(tx)
+
+	company, err := repoTx.CreateCompany(ctx, db.CreateCompanyParams{
+		Name:                req.Name,
+		TradeName:           pgconv.ParseStringToPgText(req.TradeName),
+		Document:            pgconv.ParseStringToPgText(req.Document),
+		DocumentType:        pgconv.ParseStringToPgText(typeDocument),
+		Email:               pgconv.ParseStringToPgText(req.Email),
+		Phone:               pgconv.ParseStringToPgText(req.Phone),
+		Website:             pgconv.ParseStringToPgText(req.Website),
+		AddressStreet:       pgconv.ParseStringToPgText(req.AddressStreet),
+		AddressNumber:       pgconv.ParseStringToPgText(req.AddressNumber),
+		AddressComplement:   pgconv.ParseStringToPgText(req.AddressComplement),
+		AddressNeighborhood: pgconv.ParseStringToPgText(req.AddressNeighborhood),
+		AddressCity:         pgconv.ParseStringToPgText(req.AddressCity),
+		AddressState:        pgconv.ParseStringToPgText(req.AddressState),
+		AddressZipcode:      pgconv.ParseStringToPgText(req.AddressZipcode),
+		AddressCountry:      pgconv.ParseStringToPgText(req.AddressCountry),
+		Timezone:            pgconv.ParseStringToPgText(req.Timezone),
+		CreatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return pgconv.PgUUIDToUUID(company.ID), nil
 }
