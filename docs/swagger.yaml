@@ -978,6 +978,65 @@ definitions:
       payment_method_id:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.CreatePlanRequest:
+    properties:
+      billing_cycle:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      value_amount:
+        type: number
+    required:
+    - billing_cycle
+    - currency
+    - description
+    - name
+    - value_amount
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse:
+    properties:
+      active:
+        type: boolean
+      billing_cycle:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price_cents:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.UpdatePlanParams:
+    properties:
+      billing_cycle:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      value_amount:
+        type: number
+    required:
+    - billing_cycle
+    - currency
+    - description
+    - name
+    - value_amount
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_categories_domain.CreateProductCategoryRequest:
     properties:
       color:
@@ -3112,6 +3171,159 @@ paths:
       summary: Registra um novo pagamento
       tags:
       - payments
+  /plans:
+    get:
+      parameters:
+      - description: Ativo
+        in: query
+        name: active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse'
+            type: array
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista planos por status ativo
+      tags:
+      - plans
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Plano
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.CreatePlanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um plano
+      tags:
+      - plans
+  /plans/{id}:
+    get:
+      parameters:
+      - description: ID do plano
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse'
+        "400":
+          description: ID do plano inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca um plano por ID
+      tags:
+      - plans
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do plano
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Plano
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.UpdatePlanParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida ou ID inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza um plano
+      tags:
+      - plans
+  /plans/{id}/active:
+    patch:
+      parameters:
+      - description: ID do plano
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Ativo
+        in: query
+        name: active
+        required: true
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: ID do plano inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Ativa ou desativa um plano
+      tags:
+      - plans
   /product:
     post:
       consumes:
