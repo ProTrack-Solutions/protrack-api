@@ -103,3 +103,31 @@ func (h *Handler) Deleteinstance(c *gin.Context) {
 
 	c.Status(http.StatusNoContent)
 }
+
+// ConnectInstance godoc
+// @Summary      Conecta a instância WhatsApp e retorna QR Code
+// @Description  Solicita a conexão da instância do WhatsApp para a empresa autenticada e retorna o QR Code/Payload para escaneamento.
+// @Tags         whatsapp
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200  {object}  map[string]string  "Exemplo: {\"qr_code\": \"...\"}"
+// @Failure      401  {object}  map[string]string     "Empresa não autenticada no contexto"
+// @Failure      500  {object}  map[string]string     "Falha ao conectar a instância no serviço"
+// @Router       /whatsapp/instance/connect [get]
+func (h *Handler) ConnectInstance(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	qrCode, err := h.service.ConnectInstance(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"qr_code": qrCode})
+}

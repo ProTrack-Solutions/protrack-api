@@ -11,5 +11,6 @@ func (h *Handler) RegisterRoute(router *gin.RouterGroup) {
 		whatsappGroup.POST("/instance/create", h.CreateInstance)
 		whatsappGroup.GET("/instance/connection-state", h.ConnectonState)
 		whatsappGroup.DELETE("/instance/delete", h.Deleteinstance)
+		whatsappGroup.GET("/instance/connect", h.ConnectInstance)
 	}
 }
