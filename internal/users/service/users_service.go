@@ -155,7 +155,7 @@ func (s *Service) GetUserByID(ctx context.Context, id uuid.UUID) (domain.UserRes
 		CreatedAt:      pgconv.PgTimestamptzToTime(user.CreatedAt),
 		UpdatedAt:      pgconv.PgTimestamptzToTime(user.UpdatedAt),
 		DeletedAt:      pgconv.PgTimestamptzToTime(user.DeletedAt),
-		DepartmentName: user.DepartmentName,
+		DepartmentName: pgconv.ParsePgTextToString(user.DepartmentName),
 	}, nil
 }
 
