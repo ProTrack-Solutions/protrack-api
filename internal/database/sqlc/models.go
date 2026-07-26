@@ -288,6 +288,22 @@ type SaleItem struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type SubscriptionPaymentMethod struct {
+	ID                     pgtype.UUID        `json:"id"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	GatewayPaymentMethodID string             `json:"gateway_payment_method_id"`
+	Type                   string             `json:"type"`
+	CardBrand              pgtype.Text        `json:"card_brand"`
+	CardLast4              pgtype.Text        `json:"card_last4"`
+	CardExpMonth           pgtype.Int4        `json:"card_exp_month"`
+	CardExpYear            pgtype.Int4        `json:"card_exp_year"`
+	IsDefault              pgtype.Bool        `json:"is_default"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	UpdatedBy              pgtype.UUID        `json:"updated_by"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
 	ID           pgtype.UUID        `json:"id"`
 	Name         string             `json:"name"`

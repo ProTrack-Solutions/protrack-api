@@ -65,6 +65,9 @@ import (
 	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
 	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
+	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
+	subscriptionPaymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
 	usersHandler "github.com/ProTrack-Solutions/protrack-api/internal/users/handler"
 	usersRepository "github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
 	usersService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
@@ -182,7 +185,9 @@ func main() {
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
+	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 
+	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
 	companiesService := companiesService.NewService(db.Pool, companiesRepository, usersRepository)
@@ -206,6 +211,7 @@ func main() {
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	plansService := plansService.NewService(plansRepository)
 
+	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
 	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
@@ -250,6 +256,7 @@ func main() {
 	whatsappHandler.RegisterRoute(api)
 	annoucementsHandler.RegisterRoutes(api)
 	plansHandler.RegisterRoutes(api)
+	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
