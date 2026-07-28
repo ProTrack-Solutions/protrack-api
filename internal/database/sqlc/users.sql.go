@@ -122,12 +122,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT u.id, u.name, u.email, u.username, u.password_hash, u.role, u.status, u.company_id, u.department_id, u.last_login_at, u.created_by, u.updated_by, u.deleted_by, u.created_at, u.updated_at, u.deleted_at,
-d.name AS department_name
+SELECT 
+    u.id, u.name, u.email, u.username, u.password_hash, u.role, u.status, u.company_id, u.department_id, u.last_login_at, u.created_by, u.updated_by, u.deleted_by, u.created_at, u.updated_at, u.deleted_at,
+    d.name AS department_name
 FROM users u
-    INNER JOIN departments d ON u.department_id  = d.id
+LEFT JOIN departments d ON u.department_id = d.id
 WHERE u.id = $1
-    AND u.deleted_at IS NULL
+  AND u.deleted_at IS NULL
 `
 
 type GetUserByIDRow struct {
@@ -147,7 +148,7 @@ type GetUserByIDRow struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
-	DepartmentName string             `json:"department_name"`
+	DepartmentName pgtype.Text        `json:"department_name"`
 }
 
 func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error) {
