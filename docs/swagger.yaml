@@ -2945,6 +2945,108 @@ paths:
       summary: Altera o status de um departamento
       tags:
       - departments
+  /invoice-history/{id}:
+    get:
+      parameters:
+      - description: ID da fatura
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: ID inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca fatura por ID
+      tags:
+      - invoice-history
+  /invoice-history/company:
+    get:
+      parameters:
+      - description: Página
+        in: header
+        name: Page
+        type: integer
+      - description: Itens por página
+        in: header
+        name: PerPage
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Parâmetros inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista faturas da empresa com paginação
+      tags:
+      - invoice-history
+  /invoice-history/mp/{mp_payment_id}:
+    get:
+      parameters:
+      - description: MP Payment ID
+        in: path
+        name: mp_payment_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca fatura por mp_payment_id
+      tags:
+      - invoice-history
   /logout:
     post:
       produces:
