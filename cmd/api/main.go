@@ -191,6 +191,7 @@ func main() {
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 
+	plansService := plansService.NewService(plansRepository)
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
@@ -199,7 +200,7 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	authService := authService.NewService(usersService, companiesService, jwtManager, db.Pool)
+	authService := authService.NewService(usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
@@ -214,7 +215,6 @@ func main() {
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	whatsappService := whatsappService.NewService(cfg, companiesService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
-	plansService := plansService.NewService(plansRepository)
 
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)

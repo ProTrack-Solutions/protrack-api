@@ -27,7 +27,7 @@ func (r *Repository) WithTx(tx db.DBTX) *Repository {
 	}
 }
 
-func (r *Repository) CreateSubscriptionPaymentMethod(ctx context.Context, arg db.CreateSubscriptionPaymentMethodParams) error {
+func (r *Repository) CreateSubscriptionPaymentMethod(ctx context.Context, arg db.CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error) {
 	return r.queries().CreateSubscriptionPaymentMethod(ctx, arg)
 }
 

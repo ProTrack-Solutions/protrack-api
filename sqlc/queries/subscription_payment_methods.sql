@@ -1,4 +1,4 @@
--- name: CreateSubscriptionPaymentMethod :exec
+-- name: CreateSubscriptionPaymentMethod :one
 INSERT INTO subscription_payment_methods (
     company_id,
     gateway_payment_method_id,
@@ -11,7 +11,8 @@ INSERT INTO subscription_payment_methods (
     created_by
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
-); 
+)
+RETURNING id; 
 
 -- name: ListSubscriptionPaymentMethodsByCompanyId :many
 SELECT * FROM subscription_payment_methods WHERE company_id = $1;
