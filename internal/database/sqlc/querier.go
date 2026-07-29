@@ -18,6 +18,7 @@ type Querier interface {
 	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountInvoices(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -31,6 +32,7 @@ type Querier interface {
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
 	CreateCustomers(ctx context.Context, arg CreateCustomersParams) (pgtype.UUID, error)
 	CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error)
+	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
 	CreatePlan(ctx context.Context, arg CreatePlanParams) error
@@ -75,6 +77,8 @@ type Querier interface {
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
+	GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHistory, error)
+	GetInvoiceByMpPaymentId(ctx context.Context, mpPaymentID string) (InvoiceHistory, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -118,6 +122,7 @@ type Querier interface {
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]Customer, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
+	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
 	ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UUID) ([]ListItemsFromPendingSaleRow, error)
@@ -162,6 +167,7 @@ type Querier interface {
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) error
 	UpdateCustomerBalance(ctx context.Context, arg UpdateCustomerBalanceParams) error
 	UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error)
+	UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateOverdueBillsPayable(ctx context.Context) error
 	UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]UpdateOverdueSalesAndAccountsGlobalRow, error)
