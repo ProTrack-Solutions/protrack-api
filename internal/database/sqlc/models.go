@@ -288,6 +288,20 @@ type SaleItem struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
+type Subscription struct {
+	ID                 pgtype.UUID        `json:"id"`
+	CompanyID          pgtype.UUID        `json:"company_id"`
+	PlanID             pgtype.UUID        `json:"plan_id"`
+	PaymentMethodID    pgtype.UUID        `json:"payment_method_id"`
+	MpSubscriptionID   pgtype.Text        `json:"mp_subscription_id"`
+	Status             string             `json:"status"`
+	CurrentPeriodStart pgtype.Timestamptz `json:"current_period_start"`
+	CurrentPeriodEnd   pgtype.Timestamptz `json:"current_period_end"`
+	CanceledAt         pgtype.Timestamptz `json:"canceled_at"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
 type SubscriptionPaymentMethod struct {
 	ID                     pgtype.UUID        `json:"id"`
 	CompanyID              pgtype.UUID        `json:"company_id"`

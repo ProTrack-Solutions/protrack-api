@@ -214,8 +214,6 @@ definitions:
             type: string
           document:
             type: string
-          document_type:
-            type: string
           email:
             type: string
           name:
@@ -237,7 +235,7 @@ definitions:
             type: string
           name:
             type: string
-          password_hash:
+          password:
             type: string
           username:
             type: string
@@ -1412,6 +1410,46 @@ definitions:
         type: string
       status: {}
       updated_by:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse:
+    properties:
+      canceled_at:
+        type: string
+      company_id:
+        type: string
+      created_at:
+        type: string
+      current_period_end:
+        type: string
+      current_period_start:
+        type: string
+      id:
+        type: string
+      mp_subscription_id:
+        type: string
+      payment_method_id:
+        type: string
+      plan_id:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionMethodRequest:
+    properties:
+      payment_mathod_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest:
+    properties:
+      plan_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest:
+    properties:
+      status:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams:
@@ -4150,6 +4188,182 @@ paths:
       summary: Total de vendas pendentes
       tags:
       - sales
+  /subscription/{id}:
+    get:
+      parameters:
+      - description: ID da assinatura
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse'
+        "400":
+          description: ID da assinatura inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca assinatura por ID
+      tags:
+      - subscriptions
+  /subscription/cancel/{id}:
+    put:
+      parameters:
+      - description: ID da assinatura
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: ID da assinatura inválido
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancela uma assinatura
+      tags:
+      - subscriptions
+  /subscription/method/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da assinatura
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados do novo método de pagamento
+        in: body
+        name: method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza método de pagamento da assinatura
+      tags:
+      - subscriptions
+  /subscription/plan/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da assinatura
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados do novo plano
+        in: body
+        name: plan
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza o plano da assinatura
+      tags:
+      - subscriptions
+  /subscription/status/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da assinatura
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Novo status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza status da assinatura
+      tags:
+      - subscriptions
   /users:
     get:
       produces:
