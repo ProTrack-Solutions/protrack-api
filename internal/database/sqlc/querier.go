@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -37,6 +38,7 @@ type Querier interface {
 	CreateProductCategory(ctx context.Context, arg CreateProductCategoryParams) (ProductCategory, error)
 	CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error)
 	CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) error
+	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) error
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
@@ -92,6 +94,7 @@ type Querier interface {
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
+	GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error)
 	GetSubscriptionPaymentMethodById(ctx context.Context, id pgtype.UUID) (SubscriptionPaymentMethod, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)
 	GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error)
@@ -168,7 +171,10 @@ type Querier interface {
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateSale(ctx context.Context, arg UpdateSaleParams) error
 	UpdateSaleStatus(ctx context.Context, arg UpdateSaleStatusParams) error
+	UpdateSubscriptionMethod(ctx context.Context, arg UpdateSubscriptionMethodParams) error
 	UpdateSubscriptionPaymentMethod(ctx context.Context, arg UpdateSubscriptionPaymentMethodParams) error
+	UpdateSubscriptionPlan(ctx context.Context, arg UpdateSubscriptionPlanParams) error
+	UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
