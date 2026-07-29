@@ -317,9 +317,7 @@ CREATE TABLE IF NOT EXISTS accounts_receivable (
     CONSTRAINT fk_receivable_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_receivable_sale FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_receivable_customer ON accounts_receivable(customer_id);
-CREATE INDEX idx_receivable_status ON accounts_receivable(status);
-CREATE INDEX idx_receivable_due_date ON accounts_receivable(due_date);
+
 CREATE TYPE announcement_type AS ENUM ('info', 'warning', 'success', 'maintenance');
 
 CREATE TABLE IF NOT EXISTS announcements(
@@ -339,8 +337,6 @@ CREATE TABLE IF NOT EXISTS announcements(
     deleted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT fk_announcements_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE -- Vírgula removida daqui
 );
-
-CREATE INDEX idx_announcements_visibility ON announcements (is_active, starts_at, expires_at);
 
 CREATE TABLE IF NOT EXISTS plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -391,7 +387,17 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-
-CREATE INDEX idx_subscriptions_company_id ON subscriptions(company_id);
-CREATE INDEX idx_subscriptions_mp_id ON subscriptions(mp_subscription_id);
+CREATE TABLE IF NOT EXISTS invoice_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id),
+    payment_method_id UUID REFERENCES subscription_payment_methods(id),
+    
+    mp_payment_id VARCHAR(255) UNIQUE NOT NULL, -- ID único da transação gerado pelo MP (Payment ID)
+    amount_cents INT NOT NULL,                   -- Valor cobrado (em centavos)
+    status VARCHAR(50) NOT NULL,                 -- 'approved', 'rejected', 'refunded', 'in_process'
+    
+    paid_at TIMESTAMPTZ,                           -- Data/hora da confirmação do pagamento
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);

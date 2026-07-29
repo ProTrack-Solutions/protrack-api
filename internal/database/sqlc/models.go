@@ -190,6 +190,19 @@ type Department struct {
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type InvoiceHistory struct {
+	ID              pgtype.UUID        `json:"id"`
+	SubscriptionID  pgtype.UUID        `json:"subscription_id"`
+	CompanyID       pgtype.UUID        `json:"company_id"`
+	PaymentMethodID pgtype.UUID        `json:"payment_method_id"`
+	MpPaymentID     string             `json:"mp_payment_id"`
+	AmountCents     int32              `json:"amount_cents"`
+	Status          string             `json:"status"`
+	PaidAt          pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PaymentHistory struct {
 	ID              pgtype.UUID        `json:"id"`
 	CompanyID       pgtype.UUID        `json:"company_id"`
