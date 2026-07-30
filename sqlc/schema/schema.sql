@@ -340,6 +340,7 @@ CREATE TABLE IF NOT EXISTS announcements(
 
 CREATE TABLE IF NOT EXISTS plans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,              -- ex: 'Plano Pro'
     description TEXT,                        -- ex: 'Acesso total a todas as funcionalidades'
     price_cents INT NOT NULL,                -- ex: 4990 (R$ 49,90 - gravado em centavos para evitar erros de arredondamento)
@@ -373,7 +374,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     payment_method_id UUID REFERENCES subscription_payment_methods(id),
     
     -- Dados de Integração com Mercado Pago
-    mp_subscription_id VARCHAR(255) UNIQUE,  -- ID do Preapproval gerado pela API do MP
+    external_subscription_id VARCHAR(255) UNIQUE,  -- ID do Preapproval gerado pela API do MP
     
     -- Controle de Status
     -- Valores possíveis: 'authorized' (ativa/paga), 'paused', 'cancelled', 'pending'
@@ -393,7 +394,7 @@ CREATE TABLE IF NOT EXISTS invoice_history (
     company_id UUID NOT NULL REFERENCES companies(id),
     payment_method_id UUID REFERENCES subscription_payment_methods(id),
     
-    mp_payment_id VARCHAR(255) UNIQUE NOT NULL, -- ID único da transação gerado pelo MP (Payment ID)
+    external_payment_id VARCHAR(255) UNIQUE NOT NULL, -- ID único da transação gerado pelo MP (Payment ID)
     amount_cents INT NOT NULL,                   -- Valor cobrado (em centavos)
     status VARCHAR(50) NOT NULL,                 -- 'approved', 'rejected', 'refunded', 'in_process'
     

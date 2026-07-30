@@ -11,6 +11,8 @@ import (
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	stripeDomain "github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
+	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	paymentMethodsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
 	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
@@ -28,12 +30,14 @@ type Service struct {
 	paymentMethodsService *paymentMethodsService.Service
 	subscriptionService   *subscriptionService.Service
 	plansService          *plansService.Service
+	stripeService         *stripeService.Service
 	jwtManager            *jwt.JWTManager
 	pool                  *pgxpool.Pool
 }
 
-func NewService(userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
+func NewService(stripeService *stripeService.Service, userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
 	return &Service{
+		stripeService:         stripeService,
 		userService:           userService,
 		companiesService:      companiesService,
 		paymentMethodsService: paymentMethodsService,
@@ -149,7 +153,12 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		return fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
 	}
 
-	// TODO: Aqui entrará a chamada da API do Mercado Pago (antes do banco)
+	stripe, err := s.stripeService.CreateSubscription(stripeDomain.CreateSubscriptionInput{
+		Email:     req.Company.Email,
+		Name:      req.Company.TradeName,
+		CardToken: req.Payment.CardToken,
+		PriceID:   plan.ExternalId,
+	})
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -180,6 +189,8 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		return err
 	}
 
+	log.Debug().Err(err).Msg("Erro company")
+
 	userId, err := s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
 		Name:         req.User.Name,
 		Email:        req.User.Email,
@@ -192,9 +203,10 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	if err != nil {
 		return err
 	}
+	log.Debug().Err(err).Msg("Erro user")
 
 	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
-		GatewayPaymentMethodId: "",
+		GatewayPaymentMethodId: stripe.CustomerID,
 		Type:                   req.Payment.Type,
 		CardBrand:              req.Payment.CardBrand,
 		CardLastFour:           req.Payment.CardLastFour,
@@ -204,12 +216,12 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	})
 
 	err = s.subscriptionService.CreateSubscription(ctx, tx, companyId, subscriptionDomain.CreateSubscriptionRequest{
-		PlanId:             req.Payment.PlanID,
-		PaymentMethodsId:   paymentId,
-		MpSubscriptionId:   "",
-		Status:             "",
-		CurrentPeriodStart: periodStart,
-		CurrentPeriodEnd:   periodEnd,
+		PlanId:                 req.Payment.PlanID,
+		PaymentMethodsId:       paymentId,
+		ExternalSubscriptionID: stripe.SubscriptionID,
+		Status:                 stripe.Status,
+		CurrentPeriodStart:     periodStart,
+		CurrentPeriodEnd:       periodEnd,
 	})
 
 	return tx.Commit(ctx)

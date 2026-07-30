@@ -27,7 +27,7 @@ INSERT INTO invoice_history (
     subscription_id,
     company_id,
     payment_method_id,
-    mp_payment_id,
+    external_payment_id,
     amount_cents,
     status,
     paid_at
@@ -37,13 +37,13 @@ INSERT INTO invoice_history (
 `
 
 type CreateInvoiceHistoryParams struct {
-	SubscriptionID  pgtype.UUID        `json:"subscription_id"`
-	CompanyID       pgtype.UUID        `json:"company_id"`
-	PaymentMethodID pgtype.UUID        `json:"payment_method_id"`
-	MpPaymentID     string             `json:"mp_payment_id"`
-	AmountCents     int32              `json:"amount_cents"`
-	Status          string             `json:"status"`
-	PaidAt          pgtype.Timestamptz `json:"paid_at"`
+	SubscriptionID    pgtype.UUID        `json:"subscription_id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	PaymentMethodID   pgtype.UUID        `json:"payment_method_id"`
+	ExternalPaymentID string             `json:"external_payment_id"`
+	AmountCents       int32              `json:"amount_cents"`
+	Status            string             `json:"status"`
+	PaidAt            pgtype.Timestamptz `json:"paid_at"`
 }
 
 func (q *Queries) CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error {
@@ -51,7 +51,7 @@ func (q *Queries) CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHis
 		arg.SubscriptionID,
 		arg.CompanyID,
 		arg.PaymentMethodID,
-		arg.MpPaymentID,
+		arg.ExternalPaymentID,
 		arg.AmountCents,
 		arg.Status,
 		arg.PaidAt,
@@ -60,7 +60,7 @@ func (q *Queries) CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHis
 }
 
 const getInvoiceById = `-- name: GetInvoiceById :one
-SELECT id, subscription_id, company_id, payment_method_id, mp_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
+SELECT id, subscription_id, company_id, payment_method_id, external_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
 WHERE id = $1 LIMIT 1
 `
 
@@ -72,7 +72,7 @@ func (q *Queries) GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHi
 		&i.SubscriptionID,
 		&i.CompanyID,
 		&i.PaymentMethodID,
-		&i.MpPaymentID,
+		&i.ExternalPaymentID,
 		&i.AmountCents,
 		&i.Status,
 		&i.PaidAt,
@@ -83,19 +83,19 @@ func (q *Queries) GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHi
 }
 
 const getInvoiceByMpPaymentId = `-- name: GetInvoiceByMpPaymentId :one
-SELECT id, subscription_id, company_id, payment_method_id, mp_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
-WHERE mp_payment_id = $1 LIMIT 1
+SELECT id, subscription_id, company_id, payment_method_id, external_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
+WHERE external_payment_id = $1 LIMIT 1
 `
 
-func (q *Queries) GetInvoiceByMpPaymentId(ctx context.Context, mpPaymentID string) (InvoiceHistory, error) {
-	row := q.db.QueryRow(ctx, getInvoiceByMpPaymentId, mpPaymentID)
+func (q *Queries) GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error) {
+	row := q.db.QueryRow(ctx, getInvoiceByMpPaymentId, externalPaymentID)
 	var i InvoiceHistory
 	err := row.Scan(
 		&i.ID,
 		&i.SubscriptionID,
 		&i.CompanyID,
 		&i.PaymentMethodID,
-		&i.MpPaymentID,
+		&i.ExternalPaymentID,
 		&i.AmountCents,
 		&i.Status,
 		&i.PaidAt,
@@ -106,7 +106,7 @@ func (q *Queries) GetInvoiceByMpPaymentId(ctx context.Context, mpPaymentID strin
 }
 
 const listInvoicesByCompany = `-- name: ListInvoicesByCompany :many
-SELECT id, subscription_id, company_id, payment_method_id, mp_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
+SELECT id, subscription_id, company_id, payment_method_id, external_payment_id, amount_cents, status, paid_at, created_at, updated_at FROM invoice_history
 WHERE company_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -132,7 +132,7 @@ func (q *Queries) ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByC
 			&i.SubscriptionID,
 			&i.CompanyID,
 			&i.PaymentMethodID,
-			&i.MpPaymentID,
+			&i.ExternalPaymentID,
 			&i.AmountCents,
 			&i.Status,
 			&i.PaidAt,
@@ -155,16 +155,16 @@ SET
     status = $2,
     paid_at = $3,
     updated_at = NOW()
-WHERE mp_payment_id = $1
+WHERE external_payment_id = $1
 `
 
 type UpdateInvoiceStatusParams struct {
-	MpPaymentID string             `json:"mp_payment_id"`
-	Status      string             `json:"status"`
-	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	ExternalPaymentID string             `json:"external_payment_id"`
+	Status            string             `json:"status"`
+	PaidAt            pgtype.Timestamptz `json:"paid_at"`
 }
 
 func (q *Queries) UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) error {
-	_, err := q.db.Exec(ctx, updateInvoiceStatus, arg.MpPaymentID, arg.Status, arg.PaidAt)
+	_, err := q.db.Exec(ctx, updateInvoiceStatus, arg.ExternalPaymentID, arg.Status, arg.PaidAt)
 	return err
 }
