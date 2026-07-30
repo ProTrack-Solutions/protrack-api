@@ -310,18 +310,18 @@ func (s *Service) UpdateUserCompanyAndRole(ctx context.Context, req domain.Updat
 	})
 }
 
-func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.CreateUserParams) error {
+func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.CreateUserParams) (uuid.UUID, error) {
 	repoTx := db.New(tx)
 
 	log.Info().Str("password", req.PasswordHash).Msg("password")
 
 	if err := validate.ValidPassword(req.PasswordHash); err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
 	is := validate.IsValidEmail(req.Email)
 	if is == false {
-		return errors.New("invalid email")
+		return uuid.Nil, errors.New("invalid email")
 	}
 
 	// hashPassword, err := bcrypt.GenerateFromPassword([]byte(req.PasswordHash), 12)
@@ -330,10 +330,10 @@ func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.Creat
 
 	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	_, err = repoTx.CreateUser(ctx, db.CreateUserParams{
+	user, err := repoTx.CreateUser(ctx, db.CreateUserParams{
 		Name:         req.Name,
 		Email:        req.Email,
 		Username:     pgconv.ParseStringToPgText(req.Username),
@@ -345,8 +345,8 @@ func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.Creat
 		CreatedBy:    pgconv.ParseUUIDToPgType(uuid.Nil),
 	})
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	return nil
+	return pgconv.PgUUIDToUUID(user.ID), nil
 }

@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createSubscriptionPaymentMethod = `-- name: CreateSubscriptionPaymentMethod :exec
+const createSubscriptionPaymentMethod = `-- name: CreateSubscriptionPaymentMethod :one
 INSERT INTO subscription_payment_methods (
     company_id,
     gateway_payment_method_id,
@@ -25,6 +25,7 @@ INSERT INTO subscription_payment_methods (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
+RETURNING id
 `
 
 type CreateSubscriptionPaymentMethodParams struct {
@@ -39,8 +40,8 @@ type CreateSubscriptionPaymentMethodParams struct {
 	CreatedBy              pgtype.UUID `json:"created_by"`
 }
 
-func (q *Queries) CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) error {
-	_, err := q.db.Exec(ctx, createSubscriptionPaymentMethod,
+func (q *Queries) CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, createSubscriptionPaymentMethod,
 		arg.CompanyID,
 		arg.GatewayPaymentMethodID,
 		arg.Type,
@@ -51,7 +52,9 @@ func (q *Queries) CreateSubscriptionPaymentMethod(ctx context.Context, arg Creat
 		arg.IsDefault,
 		arg.CreatedBy,
 	)
-	return err
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const deleteSubscriptionPaymentMethod = `-- name: DeleteSubscriptionPaymentMethod :exec
