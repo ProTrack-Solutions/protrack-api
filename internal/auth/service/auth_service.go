@@ -3,11 +3,18 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	paymentMethodsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
+	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
+	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
+	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	userDomain "github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
 	userService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/google/uuid"
@@ -16,18 +23,24 @@ import (
 )
 
 type Service struct {
-	userService      *userService.Service
-	companiesService *companiesService.Service
-	jwtManager       *jwt.JWTManager
-	pool             *pgxpool.Pool
+	userService           *userService.Service
+	companiesService      *companiesService.Service
+	paymentMethodsService *paymentMethodsService.Service
+	subscriptionService   *subscriptionService.Service
+	plansService          *plansService.Service
+	jwtManager            *jwt.JWTManager
+	pool                  *pgxpool.Pool
 }
 
-func NewService(userService *userService.Service, companiesService *companiesService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
+func NewService(userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
 	return &Service{
-		userService:      userService,
-		companiesService: companiesService,
-		jwtManager:       jwtManager,
-		pool:             pool,
+		userService:           userService,
+		companiesService:      companiesService,
+		paymentMethodsService: paymentMethodsService,
+		subscriptionService:   subscriptionService,
+		plansService:          plansService,
+		jwtManager:            jwtManager,
+		pool:                  pool,
 	}
 }
 
@@ -119,6 +132,25 @@ func (s *Service) GetUserFromContext(ctx context.Context, id uuid.UUID) (userDom
 }
 
 func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) error {
+	plan, err := s.plansService.GetPlanByID(ctx, req.Payment.PlanID)
+	if err != nil {
+		return err
+	}
+
+	periodStart := time.Now()
+	var periodEnd time.Time
+
+	switch plan.BillingCycle {
+	case "monthly":
+		periodEnd = periodStart.AddDate(0, 1, 0)
+	case "yearly":
+		periodEnd = periodStart.AddDate(1, 0, 0)
+	default:
+		return fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
+	}
+
+	// TODO: Aqui entrará a chamada da API do Mercado Pago (antes do banco)
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -148,11 +180,11 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		return err
 	}
 
-	err = s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
+	userId, err := s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
 		Name:         req.User.Name,
 		Email:        req.User.Email,
 		Username:     req.User.Username,
-		PasswordHash: req.User.PasswordHash,
+		PasswordHash: req.User.Password,
 		Role:         "ADMIN",
 		Status:       "ACTIVE",
 		CompanyID:    companyId,
@@ -160,6 +192,25 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	if err != nil {
 		return err
 	}
+
+	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
+		GatewayPaymentMethodId: "",
+		Type:                   req.Payment.Type,
+		CardBrand:              req.Payment.CardBrand,
+		CardLastFour:           req.Payment.CardLastFour,
+		CardExpMonth:           req.Payment.CardExpMonth,
+		CardExpYear:            req.Payment.CardExpYear,
+		IsDefault:              true,
+	})
+
+	err = s.subscriptionService.CreateSubscription(ctx, tx, companyId, subscriptionDomain.CreateSubscriptionRequest{
+		PlanId:             req.Payment.PlanID,
+		PaymentMethodsId:   paymentId,
+		MpSubscriptionId:   "",
+		Status:             "",
+		CurrentPeriodStart: periodStart,
+		CurrentPeriodEnd:   periodEnd,
+	})
 
 	return tx.Commit(ctx)
 }

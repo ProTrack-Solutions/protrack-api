@@ -13,7 +13,7 @@ import (
 )
 
 type RepositoryInterface interface {
-	CreateSubscriptionPaymentMethod(ctx context.Context, arg db.CreateSubscriptionPaymentMethodParams) error
+	CreateSubscriptionPaymentMethod(ctx context.Context, arg db.CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
 	GetSubscriptionPaymentMethodByCompanyId(ctx context.Context, companyId pgtype.UUID) ([]db.SubscriptionPaymentMethod, error)
 	GetSubscriptionPaymentMethodById(ctx context.Context, paymentMethodId pgtype.UUID) (db.SubscriptionPaymentMethod, error)
 	UpdateSubscriptionPaymentMethod(ctx context.Context, arg db.UpdateSubscriptionPaymentMethodParams) error
@@ -34,10 +34,10 @@ func NewService(repo *repository.Repository, pool *pgxpool.Pool) *Service {
 	}
 }
 
-func (s *Service) CreateSubscriptionPaymentMethodTx(ctx context.Context, tx *pgxpool.Tx, companyId uuid.UUID, userId uuid.UUID, req domain.CreateSubscriptionPaymentMethodRequest) error {
+func (s *Service) CreateSubscriptionPaymentMethodTx(ctx context.Context, tx db.DBTX, companyId uuid.UUID, userId uuid.UUID, req domain.CreateSubscriptionPaymentMethodRequest) (uuid.UUID, error) {
 	RepoTx := s.repo.WithTx(tx)
 
-	return RepoTx.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
+	paymentId, err := RepoTx.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
 		CompanyID:              pgconv.ParseUUIDToPgType(companyId),
 		GatewayPaymentMethodID: req.GatewayPaymentMethodId,
 		Type:                   req.Type,
@@ -48,10 +48,15 @@ func (s *Service) CreateSubscriptionPaymentMethodTx(ctx context.Context, tx *pgx
 		IsDefault:              pgconv.BoolToPgBool(req.IsDefault),
 		CreatedBy:              pgconv.ParseUUIDToPgType(userId),
 	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return pgconv.PgUUIDToUUID(paymentId), nil
 }
 
 func (s *Service) CreateSubscriptionPaymentMethod(ctx context.Context, companyId uuid.UUID, userId uuid.UUID, req domain.CreateSubscriptionPaymentMethodRequest) error {
-	return s.repo.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
+	_, err := s.repo.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
 		CompanyID:              pgconv.ParseUUIDToPgType(companyId),
 		GatewayPaymentMethodID: req.GatewayPaymentMethodId,
 		Type:                   req.Type,
@@ -62,6 +67,8 @@ func (s *Service) CreateSubscriptionPaymentMethod(ctx context.Context, companyId
 		IsDefault:              pgconv.BoolToPgBool(req.IsDefault),
 		CreatedBy:              pgconv.ParseUUIDToPgType(userId),
 	})
+
+	return err
 }
 
 func (s *Service) GetSubscriptionPaymentMethodByCompanyId(ctx context.Context, companyId uuid.UUID) ([]domain.SubscriptionPaymentMethodResponse, error) {
