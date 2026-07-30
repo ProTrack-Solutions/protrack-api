@@ -30,6 +30,8 @@ type Config struct {
 	EvolutionApiUrl string
 
 	RabbitURL string
+
+	StripeSecretKey string
 }
 
 func LoadConfig() (*Config, error) {
@@ -52,6 +54,7 @@ func LoadConfig() (*Config, error) {
 		Pepper:          getEnv("PEPPER"),
 		EvolutionApiUrl: getEnv("EVOLUTION_API_URL"),
 		RabbitURL:       getEnv("RABBITMQ_URL"),
+		StripeSecretKey: getEnv("STRIPE_SECRET_KEY"),
 	}
 
 	return config, nil
