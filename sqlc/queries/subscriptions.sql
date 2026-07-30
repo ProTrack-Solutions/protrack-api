@@ -3,7 +3,7 @@ INSERT INTO subscriptions (
     company_id,
     plan_id,
     payment_method_id,
-    mp_subscription_id,
+    external_subscription_id,
     status,
     current_period_start,
     current_period_end

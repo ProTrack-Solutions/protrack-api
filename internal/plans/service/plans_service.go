@@ -63,6 +63,7 @@ func (s *Service) GetPlanByID(ctx context.Context, planId uuid.UUID) (domain.Pla
 		Active:       pgconv.PgBoolToBool(plan.Active),
 		CreatedAt:    pgconv.PgTimestamptzToTime(plan.CreatedAt),
 		UpdatedAt:    pgconv.PgTimestamptzToTime(plan.UpdatedAt),
+		ExternalId:   plan.ExternalID,
 	}, nil
 }
 

@@ -3,7 +3,7 @@ INSERT INTO invoice_history (
     subscription_id,
     company_id,
     payment_method_id,
-    mp_payment_id,
+    external_payment_id,
     amount_cents,
     status,
     paid_at
@@ -17,7 +17,7 @@ SET
     status = $2,
     paid_at = $3,
     updated_at = NOW()
-WHERE mp_payment_id = $1;
+WHERE external_payment_id = $1;
 
 -- name: GetInvoiceById :one
 SELECT * FROM invoice_history
@@ -25,7 +25,7 @@ WHERE id = $1 LIMIT 1;
 
 -- name: GetInvoiceByMpPaymentId :one
 SELECT * FROM invoice_history
-WHERE mp_payment_id = $1 LIMIT 1;
+WHERE external_payment_id = $1 LIMIT 1;
 
 -- name: ListInvoicesByCompany :many
 SELECT * FROM invoice_history

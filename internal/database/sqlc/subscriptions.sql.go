@@ -30,7 +30,7 @@ INSERT INTO subscriptions (
     company_id,
     plan_id,
     payment_method_id,
-    mp_subscription_id,
+    external_subscription_id,
     status,
     current_period_start,
     current_period_end
@@ -47,13 +47,13 @@ VALUES(
 `
 
 type CreateSubscriptionParams struct {
-	CompanyID          pgtype.UUID        `json:"company_id"`
-	PlanID             pgtype.UUID        `json:"plan_id"`
-	PaymentMethodID    pgtype.UUID        `json:"payment_method_id"`
-	MpSubscriptionID   pgtype.Text        `json:"mp_subscription_id"`
-	Status             string             `json:"status"`
-	CurrentPeriodStart pgtype.Timestamptz `json:"current_period_start"`
-	CurrentPeriodEnd   pgtype.Timestamptz `json:"current_period_end"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	PlanID                 pgtype.UUID        `json:"plan_id"`
+	PaymentMethodID        pgtype.UUID        `json:"payment_method_id"`
+	ExternalSubscriptionID pgtype.Text        `json:"external_subscription_id"`
+	Status                 string             `json:"status"`
+	CurrentPeriodStart     pgtype.Timestamptz `json:"current_period_start"`
+	CurrentPeriodEnd       pgtype.Timestamptz `json:"current_period_end"`
 }
 
 func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error {
@@ -61,7 +61,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		arg.CompanyID,
 		arg.PlanID,
 		arg.PaymentMethodID,
-		arg.MpSubscriptionID,
+		arg.ExternalSubscriptionID,
 		arg.Status,
 		arg.CurrentPeriodStart,
 		arg.CurrentPeriodEnd,
@@ -70,7 +70,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 }
 
 const getSubscriptionById = `-- name: GetSubscriptionById :one
-SELECT id, company_id, plan_id, payment_method_id, mp_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE id = $1
+SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE id = $1
 `
 
 func (q *Queries) GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error) {
@@ -81,7 +81,7 @@ func (q *Queries) GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subs
 		&i.CompanyID,
 		&i.PlanID,
 		&i.PaymentMethodID,
-		&i.MpSubscriptionID,
+		&i.ExternalSubscriptionID,
 		&i.Status,
 		&i.CurrentPeriodStart,
 		&i.CurrentPeriodEnd,

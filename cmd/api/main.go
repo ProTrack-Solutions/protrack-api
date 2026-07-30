@@ -65,6 +65,7 @@ import (
 	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
 	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
 	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
 	subscriptionPaymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
@@ -200,7 +201,8 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	authService := authService.NewService(usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
+	stripeService := stripeService.NewService(cfg)
+	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)

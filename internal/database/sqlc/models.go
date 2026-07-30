@@ -191,16 +191,16 @@ type Department struct {
 }
 
 type InvoiceHistory struct {
-	ID              pgtype.UUID        `json:"id"`
-	SubscriptionID  pgtype.UUID        `json:"subscription_id"`
-	CompanyID       pgtype.UUID        `json:"company_id"`
-	PaymentMethodID pgtype.UUID        `json:"payment_method_id"`
-	MpPaymentID     string             `json:"mp_payment_id"`
-	AmountCents     int32              `json:"amount_cents"`
-	Status          string             `json:"status"`
-	PaidAt          pgtype.Timestamptz `json:"paid_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                pgtype.UUID        `json:"id"`
+	SubscriptionID    pgtype.UUID        `json:"subscription_id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	PaymentMethodID   pgtype.UUID        `json:"payment_method_id"`
+	ExternalPaymentID string             `json:"external_payment_id"`
+	AmountCents       int32              `json:"amount_cents"`
+	Status            string             `json:"status"`
+	PaidAt            pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PaymentHistory struct {
@@ -227,6 +227,7 @@ type PaymentMethod struct {
 
 type Plan struct {
 	ID           pgtype.UUID        `json:"id"`
+	ExternalID   string             `json:"external_id"`
 	Name         string             `json:"name"`
 	Description  pgtype.Text        `json:"description"`
 	PriceCents   int32              `json:"price_cents"`
@@ -302,17 +303,17 @@ type SaleItem struct {
 }
 
 type Subscription struct {
-	ID                 pgtype.UUID        `json:"id"`
-	CompanyID          pgtype.UUID        `json:"company_id"`
-	PlanID             pgtype.UUID        `json:"plan_id"`
-	PaymentMethodID    pgtype.UUID        `json:"payment_method_id"`
-	MpSubscriptionID   pgtype.Text        `json:"mp_subscription_id"`
-	Status             string             `json:"status"`
-	CurrentPeriodStart pgtype.Timestamptz `json:"current_period_start"`
-	CurrentPeriodEnd   pgtype.Timestamptz `json:"current_period_end"`
-	CanceledAt         pgtype.Timestamptz `json:"canceled_at"`
-	CreatedAt          pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	ID                     pgtype.UUID        `json:"id"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	PlanID                 pgtype.UUID        `json:"plan_id"`
+	PaymentMethodID        pgtype.UUID        `json:"payment_method_id"`
+	ExternalSubscriptionID pgtype.Text        `json:"external_subscription_id"`
+	Status                 string             `json:"status"`
+	CurrentPeriodStart     pgtype.Timestamptz `json:"current_period_start"`
+	CurrentPeriodEnd       pgtype.Timestamptz `json:"current_period_end"`
+	CanceledAt             pgtype.Timestamptz `json:"canceled_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SubscriptionPaymentMethod struct {

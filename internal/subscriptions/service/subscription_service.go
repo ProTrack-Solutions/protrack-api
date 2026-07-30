@@ -37,13 +37,13 @@ func (s *Service) CreateSubscription(ctx context.Context, tx db.DBTX, companyId 
 	repoTx := db.New(tx)
 
 	return repoTx.CreateSubscription(ctx, db.CreateSubscriptionParams{
-		CompanyID:          pgconv.ParseUUIDToPgType(companyId),
-		PlanID:             pgconv.ParseUUIDToPgType(req.PlanId),
-		PaymentMethodID:    pgconv.ParseUUIDToPgType(req.PaymentMethodsId),
-		MpSubscriptionID:   pgconv.ParseStringToPgText(req.MpSubscriptionId),
-		Status:             req.Status,
-		CurrentPeriodStart: pgconv.TimeToPgTimestamptz(req.CurrentPeriodStart),
-		CurrentPeriodEnd:   pgconv.TimeToPgTimestamptz(req.CurrentPeriodEnd),
+		CompanyID:              pgconv.ParseUUIDToPgType(companyId),
+		PlanID:                 pgconv.ParseUUIDToPgType(req.PlanId),
+		PaymentMethodID:        pgconv.ParseUUIDToPgType(req.PaymentMethodsId),
+		ExternalSubscriptionID: pgconv.ParseStringToPgText(req.ExternalSubscriptionID),
+		Status:                 req.Status,
+		CurrentPeriodStart:     pgconv.TimeToPgTimestamptz(req.CurrentPeriodStart),
+		CurrentPeriodEnd:       pgconv.TimeToPgTimestamptz(req.CurrentPeriodEnd),
 	})
 }
 
@@ -54,17 +54,17 @@ func (s *Service) GetSubscriptionById(ctx context.Context, id uuid.UUID) (domain
 	}
 
 	return domain.SubscriptionResponse{
-		ID:                 pgconv.PgUUIDToUUID(subscription.ID),
-		CompanyID:          pgconv.PgUUIDToUUID(subscription.CompanyID),
-		PlanID:             pgconv.PgUUIDToUUID(subscription.PlanID),
-		PaymentMethodID:    pgconv.PgUUIDToUUID(subscription.PaymentMethodID),
-		MpSubscriptionID:   pgconv.ParsePgTextToString(subscription.MpSubscriptionID),
-		Status:             subscription.Status,
-		CurrentPeriodStart: pgconv.PgTimestamptzToTime(subscription.CurrentPeriodStart),
-		CurrentPeriodEnd:   pgconv.PgTimestamptzToTime(subscription.CurrentPeriodEnd),
-		CanceledAt:         pgconv.PgTimestamptzToTime(subscription.CanceledAt),
-		CreatedAt:          pgconv.PgTimestamptzToTime(subscription.CreatedAt),
-		UpdatedAt:          pgconv.PgTimestamptzToTime(subscription.UpdatedAt),
+		ID:                     pgconv.PgUUIDToUUID(subscription.ID),
+		CompanyID:              pgconv.PgUUIDToUUID(subscription.CompanyID),
+		PlanID:                 pgconv.PgUUIDToUUID(subscription.PlanID),
+		PaymentMethodID:        pgconv.PgUUIDToUUID(subscription.PaymentMethodID),
+		ExternalSubscriptionID: pgconv.ParsePgTextToString(subscription.ExternalSubscriptionID),
+		Status:                 subscription.Status,
+		CurrentPeriodStart:     pgconv.PgTimestamptzToTime(subscription.CurrentPeriodStart),
+		CurrentPeriodEnd:       pgconv.PgTimestamptzToTime(subscription.CurrentPeriodEnd),
+		CanceledAt:             pgconv.PgTimestamptzToTime(subscription.CanceledAt),
+		CreatedAt:              pgconv.PgTimestamptzToTime(subscription.CreatedAt),
+		UpdatedAt:              pgconv.PgTimestamptzToTime(subscription.UpdatedAt),
 	}, nil
 }
 
