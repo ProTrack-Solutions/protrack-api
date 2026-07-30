@@ -10,6 +10,8 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	mercadoPagoDomain "github.com/ProTrack-Solutions/protrack-api/internal/mercado_pago/domain"
+	mercadoPagoService "github.com/ProTrack-Solutions/protrack-api/internal/mercado_pago/service"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	paymentMethodsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
 	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
@@ -28,12 +30,14 @@ type Service struct {
 	paymentMethodsService *paymentMethodsService.Service
 	subscriptionService   *subscriptionService.Service
 	plansService          *plansService.Service
+	mercadoPagoService    *mercadoPagoService.Service
 	jwtManager            *jwt.JWTManager
 	pool                  *pgxpool.Pool
 }
 
-func NewService(userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
+func NewService(mercadoPagoService *mercadoPagoService.Service, userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
 	return &Service{
+		mercadoPagoService:    mercadoPagoService,
 		userService:           userService,
 		companiesService:      companiesService,
 		paymentMethodsService: paymentMethodsService,
@@ -137,19 +141,40 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		return err
 	}
 
+	// planValue := math.Round(float64(plan.PriceCents / 100))
+
 	periodStart := time.Now()
 	var periodEnd time.Time
+	// var frequencyType string
 
 	switch plan.BillingCycle {
 	case "monthly":
 		periodEnd = periodStart.AddDate(0, 1, 0)
+		// frequencyType = "months"
 	case "yearly":
 		periodEnd = periodStart.AddDate(1, 0, 0)
+		// frequencyType = "years"
 	default:
 		return fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
 	}
 
-	// TODO: Aqui entrará a chamada da API do Mercado Pago (antes do banco)
+	mpSub, err := s.mercadoPagoService.CreateSubscription(ctx, mercadoPagoDomain.MPPreApprovalRequest{
+		Reason:            fmt.Sprintf("Assinatura - %s", plan.Name),
+		ExternalReference: req.Company.Document,
+		PayerEmail:        req.Company.Email,
+		CardTokenID:       req.Payment.CardToken,
+		Status:            "authorized",
+		BackURL:           "https://www.mercadopago.com.ar",
+		AutoRecurring: mercadoPagoDomain.MPAutoRecurringReq{
+			Frequency:         1,
+			FrequencyType:     "months",
+			TransactionAmount: 59.99,
+			CurrencyID:        "BRL",
+		},
+	})
+	if err != nil {
+		return err
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -194,7 +219,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	}
 
 	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
-		GatewayPaymentMethodId: "",
+		GatewayPaymentMethodId: mpSub.ID,
 		Type:                   req.Payment.Type,
 		CardBrand:              req.Payment.CardBrand,
 		CardLastFour:           req.Payment.CardLastFour,
@@ -206,8 +231,8 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	err = s.subscriptionService.CreateSubscription(ctx, tx, companyId, subscriptionDomain.CreateSubscriptionRequest{
 		PlanId:             req.Payment.PlanID,
 		PaymentMethodsId:   paymentId,
-		MpSubscriptionId:   "",
-		Status:             "",
+		MpSubscriptionId:   mpSub.ID,
+		Status:             mpSub.Status,
 		CurrentPeriodStart: periodStart,
 		CurrentPeriodEnd:   periodEnd,
 	})

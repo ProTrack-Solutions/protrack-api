@@ -226,6 +226,36 @@ definitions:
             type: string
           website:
             type: string
+        required:
+        - document
+        - email
+        - name
+        - phone
+        type: object
+      payment:
+        properties:
+          card_brand:
+            type: string
+          card_exp_month:
+            type: integer
+          card_exp_year:
+            type: integer
+          card_last_four:
+            type: string
+          card_token:
+            type: string
+          plan_id:
+            type: string
+          type:
+            type: string
+        required:
+        - card_brand
+        - card_exp_month
+        - card_exp_year
+        - card_last_four
+        - card_token
+        - plan_id
+        - type
         type: object
       user:
         properties:
@@ -236,10 +266,21 @@ definitions:
           name:
             type: string
           password:
+            minLength: 8
             type: string
           username:
             type: string
+        required:
+        - document
+        - email
+        - name
+        - password
+        - username
         type: object
+    required:
+    - company
+    - payment
+    - user
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse:
     properties:

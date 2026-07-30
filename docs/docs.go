@@ -5348,9 +5348,20 @@ const docTemplate = `{
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest": {
             "type": "object",
+            "required": [
+                "company",
+                "payment",
+                "user"
+            ],
             "properties": {
                 "company": {
                     "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "phone"
+                    ],
                     "properties": {
                         "address_city": {
                             "type": "string"
@@ -5399,8 +5410,50 @@ const docTemplate = `{
                         }
                     }
                 },
+                "payment": {
+                    "type": "object",
+                    "required": [
+                        "card_brand",
+                        "card_exp_month",
+                        "card_exp_year",
+                        "card_last_four",
+                        "card_token",
+                        "plan_id",
+                        "type"
+                    ],
+                    "properties": {
+                        "card_brand": {
+                            "type": "string"
+                        },
+                        "card_exp_month": {
+                            "type": "integer"
+                        },
+                        "card_exp_year": {
+                            "type": "integer"
+                        },
+                        "card_last_four": {
+                            "type": "string"
+                        },
+                        "card_token": {
+                            "type": "string"
+                        },
+                        "plan_id": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                },
                 "user": {
                     "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "password",
+                        "username"
+                    ],
                     "properties": {
                         "document": {
                             "type": "string"
@@ -5412,7 +5465,8 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "password": {
-                            "type": "string"
+                            "type": "string",
+                            "minLength": 8
                         },
                         "username": {
                             "type": "string"

@@ -30,6 +30,10 @@ type Config struct {
 	EvolutionApiUrl string
 
 	RabbitURL string
+
+	MpAccessToken string
+	MpBaseUrl     string
+	MpPublicKey   string
 }
 
 func LoadConfig() (*Config, error) {
@@ -52,6 +56,9 @@ func LoadConfig() (*Config, error) {
 		Pepper:          getEnv("PEPPER"),
 		EvolutionApiUrl: getEnv("EVOLUTION_API_URL"),
 		RabbitURL:       getEnv("RABBITMQ_URL"),
+		MpAccessToken:   getEnv("MERCADO_PAGO_ACCESS_TOKEN"),
+		MpBaseUrl:       getEnv("MERCADO_PAGO_BASE_URL"),
+		MpPublicKey:     getEnv("MERCADO_PAGO_PUBLIC_KEY"),
 	}
 
 	return config, nil

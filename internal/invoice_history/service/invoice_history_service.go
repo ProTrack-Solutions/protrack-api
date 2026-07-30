@@ -8,12 +8,13 @@ import (
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/repository"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type RepositoryInterfave interface {
+type RepositoryInterface interface {
 	CreateInvoiceHistory(ctx context.Context, arg db.CreateInvoiceHistoryParams) error
 	UpdateInvoiceStatus(ctx context.Context, arg db.UpdateInvoiceStatusParams) error
 	GetInvoiceById(ctx context.Context, id pgtype.UUID) (db.InvoiceHistory, error)
@@ -23,11 +24,11 @@ type RepositoryInterfave interface {
 }
 
 type Service struct {
-	repo RepositoryInterfave
+	repo RepositoryInterface
 	pool *pgxpool.Pool
 }
 
-func NewServie(repo RepositoryInterfave, pool *pgxpool.Pool) *Service {
+func NewServie(repo *repository.Repository, pool *pgxpool.Pool) *Service {
 	return &Service{
 		repo: repo,
 		pool: pool,
