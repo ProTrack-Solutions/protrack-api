@@ -26,6 +26,7 @@ type PlanResponse struct {
 	Active       bool      `json:"active"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	ExternalId   string    `json:"external_id"`
 }
 
 type UpdatePlanParams struct {

@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     payment_method_id UUID REFERENCES subscription_payment_methods(id),
     
     -- Dados de Integração com Mercado Pago
-    mp_subscription_id VARCHAR(255) UNIQUE,  -- ID do Preapproval gerado pela API do MP
+    external_subscription_id VARCHAR(255) UNIQUE,  -- ID do Preapproval gerado pela API do MP
     
     -- Controle de Status
     -- Valores possíveis: 'authorized' (ativa/paga), 'paused', 'cancelled', 'pending'
@@ -20,5 +20,5 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_subscriptions_company_id ON subscriptions(company_id);
-CREATE INDEX idx_subscriptions_mp_id ON subscriptions(mp_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_company_id ON subscriptions(company_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_mp_id ON subscriptions(external_subscription_id);

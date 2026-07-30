@@ -40,7 +40,7 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) error {
 }
 
 const getPlanByID = `-- name: GetPlanByID :one
-SELECT id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
 FROM plans
 WHERE id = $1
 `
@@ -50,6 +50,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 	var i Plan
 	err := row.Scan(
 		&i.ID,
+		&i.ExternalID,
 		&i.Name,
 		&i.Description,
 		&i.PriceCents,
@@ -63,7 +64,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 }
 
 const listPlans = `-- name: ListPlans :many
-SELECT id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
 FROM plans
 `
 
@@ -78,6 +79,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 		var i Plan
 		if err := rows.Scan(
 			&i.ID,
+			&i.ExternalID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,
@@ -98,7 +100,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 }
 
 const listPlansByActiveStatus = `-- name: ListPlansByActiveStatus :many
-SELECT id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at
 FROM plans
 WHERE active = $1
 `
@@ -114,6 +116,7 @@ func (q *Queries) ListPlansByActiveStatus(ctx context.Context, active pgtype.Boo
 		var i Plan
 		if err := rows.Scan(
 			&i.ID,
+			&i.ExternalID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,

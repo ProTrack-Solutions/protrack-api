@@ -40,7 +40,7 @@ func (s *Service) CreateInvoiceHistory(ctx context.Context, tx db.DBTX, companyI
 	return repoTx.CreateInvoiceHistory(ctx, db.CreateInvoiceHistoryParams{
 		SubscriptionID:  pgconv.ParseUUIDToPgType(req.SubscriptionID),
 		CompanyID:       pgconv.ParseUUIDToPgType(companyId),
-		MpPaymentID:     req.MpPaymentID,
+		ExternalPaymentID: req.ExternalPaymentID,
 		AmountCents:     req.AmountCents,
 		Status:          req.Status,
 		PaymentMethodID: pgconv.ParseUUIDToPgType(req.PaymentMethodID),
@@ -48,11 +48,11 @@ func (s *Service) CreateInvoiceHistory(ctx context.Context, tx db.DBTX, companyI
 	})
 }
 
-func (s *Service) UpdateInvoceStatus(ctx context.Context, tx db.DBTX, mpPaymentId string, req domain.UpdateInvoceStatusRequest) error {
+func (s *Service) UpdateInvoceStatus(ctx context.Context, tx db.DBTX, ExternalPaymentID string, req domain.UpdateInvoceStatusRequest) error {
 	repoTx := db.New(tx)
 
 	return repoTx.UpdateInvoiceStatus(ctx, db.UpdateInvoiceStatusParams{
-		MpPaymentID: mpPaymentId,
+		ExternalPaymentID: ExternalPaymentID,
 		Status:      req.Status,
 		PaidAt:      pgconv.TimeToPgTimestamptz(time.Now()),
 	})
@@ -65,21 +65,21 @@ func (s *Service) GetInvoceById(ctx context.Context, id uuid.UUID) (domain.Invoi
 	}
 
 	return domain.InvoiceHistoryResponse{
-		ID:              pgconv.PgUUIDToUUID(invoice.CompanyID),
-		SubscriptionID:  pgconv.PgUUIDToUUID(invoice.SubscriptionID),
-		CompanyID:       pgconv.PgUUIDToUUID(invoice.CompanyID),
-		PaymentMethodID: pgconv.PgUUIDToUUID(invoice.PaymentMethodID),
-		MpPaymentID:     invoice.MpPaymentID,
-		AmountCents:     invoice.AmountCents,
-		Status:          invoice.Status,
-		PaidAt:          pgconv.PgTimestamptzToTime(invoice.PaidAt),
-		CreatedAt:       pgconv.PgTimestamptzToTime(invoice.CreatedAt),
-		UpdatedAt:       pgconv.PgTimestamptzToTime(invoice.UpdatedAt),
+		ID:                pgconv.PgUUIDToUUID(invoice.CompanyID),
+		SubscriptionID:    pgconv.PgUUIDToUUID(invoice.SubscriptionID),
+		CompanyID:         pgconv.PgUUIDToUUID(invoice.CompanyID),
+		PaymentMethodID:   pgconv.PgUUIDToUUID(invoice.PaymentMethodID),
+		ExternalPaymentID: invoice.ExternalPaymentID,
+		AmountCents:       invoice.AmountCents,
+		Status:            invoice.Status,
+		PaidAt:            pgconv.PgTimestamptzToTime(invoice.PaidAt),
+		CreatedAt:         pgconv.PgTimestamptzToTime(invoice.CreatedAt),
+		UpdatedAt:         pgconv.PgTimestamptzToTime(invoice.UpdatedAt),
 	}, nil
 }
 
-func (s *Service) GetInvoiceByMpPaymentId(ctx context.Context, mpPaymentId string) (domain.InvoiceHistoryResponse, error) {
-	invoice, err := s.repo.GetInvoiceByMpPaymentId(ctx, mpPaymentId)
+func (s *Service) GetInvoiceByMpPaymentId(ctx context.Context, ExternalPaymentID string) (domain.InvoiceHistoryResponse, error) {
+	invoice, err := s.repo.GetInvoiceByMpPaymentId(ctx, ExternalPaymentID)
 	if err != nil {
 		return domain.InvoiceHistoryResponse{}, nil
 	}
@@ -89,7 +89,7 @@ func (s *Service) GetInvoiceByMpPaymentId(ctx context.Context, mpPaymentId strin
 		SubscriptionID:  pgconv.PgUUIDToUUID(invoice.SubscriptionID),
 		CompanyID:       pgconv.PgUUIDToUUID(invoice.CompanyID),
 		PaymentMethodID: pgconv.PgUUIDToUUID(invoice.PaymentMethodID),
-		MpPaymentID:     invoice.MpPaymentID,
+		ExternalPaymentID:     invoice.ExternalPaymentID,
 		AmountCents:     invoice.AmountCents,
 		Status:          invoice.Status,
 		PaidAt:          pgconv.PgTimestamptzToTime(invoice.PaidAt),
@@ -117,16 +117,16 @@ func (s *Service) ListInvoiceByCompany(ctx context.Context, companyId uuid.UUID,
 
 	for _, in := range invoice {
 		response = append(response, domain.InvoiceHistoryResponse{
-			ID:              pgconv.PgUUIDToUUID(in.CompanyID),
-			SubscriptionID:  pgconv.PgUUIDToUUID(in.SubscriptionID),
-			CompanyID:       pgconv.PgUUIDToUUID(in.CompanyID),
-			PaymentMethodID: pgconv.PgUUIDToUUID(in.PaymentMethodID),
-			MpPaymentID:     in.MpPaymentID,
-			AmountCents:     in.AmountCents,
-			Status:          in.Status,
-			PaidAt:          pgconv.PgTimestamptzToTime(in.PaidAt),
-			CreatedAt:       pgconv.PgTimestamptzToTime(in.CreatedAt),
-			UpdatedAt:       pgconv.PgTimestamptzToTime(in.UpdatedAt),
+			ID:                pgconv.PgUUIDToUUID(in.CompanyID),
+			SubscriptionID:    pgconv.PgUUIDToUUID(in.SubscriptionID),
+			CompanyID:         pgconv.PgUUIDToUUID(in.CompanyID),
+			PaymentMethodID:   pgconv.PgUUIDToUUID(in.PaymentMethodID),
+			ExternalPaymentID: in.ExternalPaymentID,
+			AmountCents:       in.AmountCents,
+			Status:            in.Status,
+			PaidAt:            pgconv.PgTimestamptzToTime(in.PaidAt),
+			CreatedAt:         pgconv.PgTimestamptzToTime(in.CreatedAt),
+			UpdatedAt:         pgconv.PgTimestamptzToTime(in.UpdatedAt),
 		})
 	}
 
