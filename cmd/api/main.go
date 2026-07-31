@@ -50,6 +50,8 @@ import (
 	plansHandler "github.com/ProTrack-Solutions/protrack-api/internal/plans/handler"
 	plansRepository "github.com/ProTrack-Solutions/protrack-api/internal/plans/repository"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	planFeaturesRepository "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/repository"
+	planFeaturesService "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/service"
 	productsHandler "github.com/ProTrack-Solutions/protrack-api/internal/products/handler"
 	productsRepository "github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
 	productsService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
@@ -192,7 +194,9 @@ func main() {
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 
-	plansService := plansService.NewService(plansRepository)
+	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
+	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
+	plansService := plansService.NewService(plansRepository, plansFeatureSvc, db.Pool)
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
