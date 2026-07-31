@@ -70,8 +70,10 @@ func (s *Service) CreatePlans(ctx context.Context, req domain.CreatePlanRequest)
 			return err
 		}
 
-		if err := s.plansFeatureService.CreatePlanFeatureTx(ctx, tx, pgconv.PgUUIDToUUID(id), req.Features); err != nil {
-			return err
+		if s.plansFeatureService != nil && len(req.Features) > 0 {
+			if err := s.plansFeatureService.CreatePlanFeatureTx(ctx, tx, pgconv.PgUUIDToUUID(id), req.Features); err != nil {
+				return err
+			}
 		}
 
 		return tx.Commit(ctx)
@@ -92,8 +94,10 @@ func (s *Service) CreatePlans(ctx context.Context, req domain.CreatePlanRequest)
 		return err
 	}
 
-	if err := s.plansFeatureService.CreatePlanFeatureTx(ctx, nil, pgconv.PgUUIDToUUID(id), req.Features); err != nil {
-		return err
+	if s.plansFeatureService != nil && len(req.Features) > 0 {
+		if err := s.plansFeatureService.CreatePlanFeatureTx(ctx, nil, pgconv.PgUUIDToUUID(id), req.Features); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -106,10 +110,11 @@ func (s *Service) GetPlanByID(ctx context.Context, planId uuid.UUID) (domain.Pla
 	}
 
 	var features []plansFeatureDomain.PlanFeatureResponse
-
-	features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
-	if err != nil {
-		return domain.PlanResponse{}, err
+	if s.plansFeatureService != nil {
+		features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
+		if err != nil {
+			return domain.PlanResponse{}, err
+		}
 	}
 
 	return domain.PlanResponse{
@@ -138,10 +143,11 @@ func (s *Service) ListPlans(ctx context.Context) ([]domain.PlanResponse, error) 
 		planId := pgconv.PgUUIDToUUID(plan.ID)
 
 		var features []plansFeatureDomain.PlanFeatureResponse
-
-		features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
-		if err != nil {
-			return nil, err
+		if s.plansFeatureService != nil {
+			features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		planResponses = append(planResponses, domain.PlanResponse{
@@ -172,9 +178,11 @@ func (s *Service) ListPlansByActiveStatus(ctx context.Context, active bool) ([]d
 		planId := pgconv.PgUUIDToUUID(plan.ID)
 
 		var features []plansFeatureDomain.PlanFeatureResponse
-		features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
-		if err != nil {
-			return nil, err
+		if s.plansFeatureService != nil {
+			features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		planResponses = append(planResponses, domain.PlanResponse{
