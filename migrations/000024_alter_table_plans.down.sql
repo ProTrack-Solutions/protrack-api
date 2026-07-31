@@ -1,0 +1,3 @@
+ALTER TABLE plans
+  DROP COLUMN IF EXISTS highlight,
+  DROP COLUMN IF EXISTS icon;

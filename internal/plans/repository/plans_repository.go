@@ -27,7 +27,7 @@ func (r *Repository) queries() *db.Queries {
 	return db.New(r.db)
 }
 
-func (r *Repository) CreatePlans(ctx context.Context, arg db.CreatePlanParams) error {
+func (r *Repository) CreatePlans(ctx context.Context, arg db.CreatePlanParams) (pgtype.UUID, error) {
 	return r.queries().CreatePlan(ctx, arg)
 }
 
