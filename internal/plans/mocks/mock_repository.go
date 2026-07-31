@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/plans/repository"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/mock/gomock"
 )
@@ -35,11 +36,12 @@ func (m *MockRepositoryInterface) EXPECT() *MockRepositoryInterfaceMockRecorder 
 }
 
 // CreatePlans mocks o método CreatePlans.
-func (m *MockRepositoryInterface) CreatePlans(ctx context.Context, arg db.CreatePlanParams) error {
+func (m *MockRepositoryInterface) CreatePlans(ctx context.Context, arg db.CreatePlanParams) (pgtype.UUID, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePlans", ctx, arg)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(pgtype.UUID)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 func (mr *MockRepositoryInterfaceMockRecorder) CreatePlans(ctx, arg any) *gomock.Call {
@@ -113,4 +115,17 @@ func (m *MockRepositoryInterface) TogglePlanActiveStatus(ctx context.Context, ar
 func (mr *MockRepositoryInterfaceMockRecorder) TogglePlanActiveStatus(ctx, arg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TogglePlanActiveStatus", reflect.TypeOf((*MockRepositoryInterface)(nil).TogglePlanActiveStatus), ctx, arg)
+}
+
+// WithTx mocks o método WithTx.
+func (m *MockRepositoryInterface) WithTx(tx db.DBTX) *repository.Repository {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WithTx", tx)
+	ret0, _ := ret[0].(*repository.Repository)
+	return ret0
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) WithTx(tx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTx", reflect.TypeOf((*MockRepositoryInterface)(nil).WithTx), tx)
 }
