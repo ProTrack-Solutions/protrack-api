@@ -12,10 +12,16 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/plans/mocks"
 	"github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/mock/gomock"
 )
 
 var errDatabase = errors.New("database error")
+
+func newService(t *testing.T, repo *mocks.MockRepositoryInterface) *service.Service {
+	t.Helper()
+	return service.NewServiceWithRepo(repo, nil)
+}
 
 func buildDbPlan(id uuid.UUID, name string, active bool) db.Plan {
 	now := time.Now().UTC()
@@ -29,6 +35,7 @@ func buildDbPlan(id uuid.UUID, name string, active bool) db.Plan {
 		Active:       pgconv.BoolToPgBool(active),
 		CreatedAt:    pgconv.TimeToPgTimestamptz(now),
 		UpdatedAt:    pgconv.TimeToPgTimestamptz(now),
+		ExternalID:   "ext_123",
 	}
 }
 
@@ -41,19 +48,23 @@ func TestCreatePlans_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
+	newID := uuid.New()
 	req := domain.CreatePlanRequest{
 		Name:         "Plano Básico",
 		Description:  "Plano inicial",
 		ValueAmount:  29.90,
 		Currency:     "BRL",
 		BillingCycle: "MONTHLY",
+		ExternalID:   "ext_basico",
+		Highlight:    true,
+		Icon:         "star",
 	}
 
 	repo.EXPECT().
 		CreatePlans(gomock.Any(), gomock.Any()).
-		DoAndReturn(func(ctx context.Context, arg db.CreatePlanParams) error {
+		DoAndReturn(func(ctx context.Context, arg db.CreatePlanParams) (pgtype.UUID, error) {
 			if arg.Name != "Plano Básico" {
 				t.Errorf("Name incorreto: %s", arg.Name)
 			}
@@ -63,7 +74,16 @@ func TestCreatePlans_Success(t *testing.T) {
 			if arg.BillingCycle != "MONTHLY" {
 				t.Errorf("BillingCycle incorreto: %s", arg.BillingCycle)
 			}
-			return nil
+			if arg.ExternalID != "ext_basico" {
+				t.Errorf("ExternalID incorreto: %s", arg.ExternalID)
+			}
+			if !arg.Highlight {
+				t.Errorf("Highlight deveria ser true")
+			}
+			if arg.Icon != "star" {
+				t.Errorf("Icon incorreto: %s", arg.Icon)
+			}
+			return pgconv.ParseUUIDToPgType(newID), nil
 		})
 
 	err := svc.CreatePlans(context.Background(), req)
@@ -77,11 +97,11 @@ func TestCreatePlans_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		CreatePlans(gomock.Any(), gomock.Any()).
-		Return(errDatabase)
+		Return(pgtype.UUID{}, errDatabase)
 
 	err := svc.CreatePlans(context.Background(), domain.CreatePlanRequest{
 		Name:        "Plano Erro",
@@ -105,7 +125,7 @@ func TestGetPlanByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	planID := uuid.New()
 	dbPlan := buildDbPlan(planID, "Plano Pro", true)
@@ -131,6 +151,9 @@ func TestGetPlanByID_Success(t *testing.T) {
 	if !resp.Active {
 		t.Errorf("Active deveria ser true")
 	}
+	if resp.ExternalId != "ext_123" {
+		t.Errorf("ExternalId incorreto: %s", resp.ExternalId)
+	}
 }
 
 func TestGetPlanByID_RepositoryError(t *testing.T) {
@@ -138,7 +161,7 @@ func TestGetPlanByID_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		GetPlanByID(gomock.Any(), gomock.Any()).
@@ -159,7 +182,7 @@ func TestListPlans_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	id1 := uuid.New()
 	id2 := uuid.New()
@@ -190,7 +213,7 @@ func TestListPlans_EmptyList(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		ListPlans(gomock.Any()).
@@ -210,7 +233,7 @@ func TestListPlans_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		ListPlans(gomock.Any()).
@@ -231,7 +254,7 @@ func TestListPlansByActiveStatus_ActiveTrue(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	id := uuid.New()
 	dbPlans := []db.Plan{buildDbPlan(id, "Plano Ativo", true)}
@@ -257,7 +280,7 @@ func TestListPlansByActiveStatus_ActiveFalse(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	id := uuid.New()
 	dbPlans := []db.Plan{buildDbPlan(id, "Plano Inativo", false)}
@@ -283,7 +306,7 @@ func TestListPlansByActiveStatus_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		ListPlansByActiveStatus(gomock.Any(), gomock.Any()).
@@ -304,7 +327,7 @@ func TestUpdatePlan_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	planID := uuid.New()
 	currentDbPlan := buildDbPlan(planID, "Plano Antigo", true)
@@ -340,7 +363,7 @@ func TestUpdatePlan_ZeroValueAmount_KeepsCurrentPrice(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	planID := uuid.New()
 	currentDbPlan := buildDbPlan(planID, "Plano Básico", true)
@@ -374,7 +397,7 @@ func TestUpdatePlan_GetPlanByIDError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		GetPlanByID(gomock.Any(), gomock.Any()).
@@ -394,7 +417,7 @@ func TestUpdatePlan_UpdateRepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	planID := uuid.New()
 	currentDbPlan := buildDbPlan(planID, "Plano Antigo", true)
@@ -425,7 +448,7 @@ func TestTogglePlanActiveStatus_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	planID := uuid.New()
 
@@ -447,7 +470,7 @@ func TestTogglePlanActiveStatus_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := service.NewService(repo)
+	svc := newService(t, repo)
 
 	repo.EXPECT().
 		TogglePlanActiveStatus(gomock.Any(), gomock.Any()).
