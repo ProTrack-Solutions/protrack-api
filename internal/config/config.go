@@ -31,7 +31,8 @@ type Config struct {
 
 	RabbitURL string
 
-	StripeSecretKey string
+	StripeSecretKey     string
+	StripeWebhookSecret string
 }
 
 func LoadConfig() (*Config, error) {
@@ -39,22 +40,23 @@ func LoadConfig() (*Config, error) {
 	_ = godotenv.Load(".env")
 
 	config := &Config{
-		DBHost:          getEnv("DB_HOST"),
-		DBPort:          getEnv("DB_PORT"),
-		DBUser:          getEnv("DB_USER"),
-		DBPassword:      getEnv("DB_PASSWORD"),
-		DBName:          getEnv("DB_NAME"),
-		DBSSLMode:       getEnv("DB_SSLMODE"),
-		ApiPort:         getEnv("API_PORT"),
-		SecretKey:       getEnv("JWT_SECRET"),
-		EvolutionApi:    getEnv("EVOLUTION_API"),
-		EvolutionKey:    getEnv("EVOLUTION_KEY"),
-		RedisHost:       getEnv("REDIS_HOST"),
-		RedisPort:       getEnv("REDIS_PORT"),
-		Pepper:          getEnv("PEPPER"),
-		EvolutionApiUrl: getEnv("EVOLUTION_API_URL"),
-		RabbitURL:       getEnv("RABBITMQ_URL"),
-		StripeSecretKey: getEnv("STRIPE_SECRET_KEY"),
+		DBHost:              getEnv("DB_HOST"),
+		DBPort:              getEnv("DB_PORT"),
+		DBUser:              getEnv("DB_USER"),
+		DBPassword:          getEnv("DB_PASSWORD"),
+		DBName:              getEnv("DB_NAME"),
+		DBSSLMode:           getEnv("DB_SSLMODE"),
+		ApiPort:             getEnv("API_PORT"),
+		SecretKey:           getEnv("JWT_SECRET"),
+		EvolutionApi:        getEnv("EVOLUTION_API"),
+		EvolutionKey:        getEnv("EVOLUTION_KEY"),
+		RedisHost:           getEnv("REDIS_HOST"),
+		RedisPort:           getEnv("REDIS_PORT"),
+		Pepper:              getEnv("PEPPER"),
+		EvolutionApiUrl:     getEnv("EVOLUTION_API_URL"),
+		RabbitURL:           getEnv("RABBITMQ_URL"),
+		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY"),
+		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),
 	}
 
 	return config, nil

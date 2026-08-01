@@ -47,6 +47,8 @@ import (
 	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/payment_methods/service"
 	paymentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/payments/handler"
 	paymentsService "github.com/ProTrack-Solutions/protrack-api/internal/payments/service"
+	planFeaturesRepository "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/repository"
+	planFeaturesService "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/service"
 	plansHandler "github.com/ProTrack-Solutions/protrack-api/internal/plans/handler"
 	plansRepository "github.com/ProTrack-Solutions/protrack-api/internal/plans/repository"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
@@ -65,6 +67,7 @@ import (
 	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
 	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	stripeHandler "github.com/ProTrack-Solutions/protrack-api/internal/stripe/handler"
 	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
 	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
@@ -191,8 +194,10 @@ func main() {
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
+	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
-	plansService := plansService.NewService(plansRepository)
+	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
+	plansService := plansService.NewService(plansRepository, plansFeatureSvc, db.Pool)
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
@@ -201,7 +206,7 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	stripeService := stripeService.NewService(cfg)
+	stripeService := stripeService.NewService(cfg, subscriptionsService)
 	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
@@ -241,6 +246,7 @@ func main() {
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService)
+	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -266,6 +272,7 @@ func main() {
 	plansHandler.RegisterRoutes(api)
 	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
 	subscriptionsHandler.RegisterRoute(api)
+	stripeHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

@@ -50,3 +50,7 @@ func (r *Repository) UpdateSubscriptionStatus(ctx context.Context, arg db.Update
 func (r *Repository) CancelSubscription(ctx context.Context, id pgtype.UUID) error {
 	return r.queries().CancelSubscription(ctx, id)
 }
+
+func (r *Repository) GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionId pgtype.Text) (db.Subscription, error) {
+	return r.queries().GetSubscriptionByExternalSubscriptionId(ctx, externalSubscriptionId)
+}
