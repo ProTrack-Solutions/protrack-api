@@ -31,7 +31,7 @@ func sampleCompanyResponse(id uuid.UUID, name string) domain.CompanyResponse {
 		ID:                  id,
 		Name:                name,
 		TradeName:           "Trade " + name,
-		Document:            "123.456.789-00",
+		Document:            "00000000000191",
 		DocumentType:        "CNPJ",
 		Email:               "empresa@email.com",
 		Phone:               "+5511999999999",
@@ -124,7 +124,7 @@ func TestServiceContract_GetCompanyByDocument_Success(t *testing.T) {
 
 	mockSvc := mocks.NewMockServiceInterface(ctrl)
 	id := uuid.New()
-	doc := "12.345.678/0001-90"
+	doc := "00000000000191"
 	expected := sampleCompanyResponse(id, "Empresa Doc")
 
 	mockSvc.EXPECT().
@@ -353,7 +353,7 @@ func TestHTTP_GetCompanyByDocument_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockSvc := mocks.NewMockServiceInterface(ctrl)
-	doc := "123.456.789-00"
+	doc := "00000000000191"
 	expected := sampleCompanyResponse(uuid.New(), "Empresa Doc HTTP")
 
 	mockSvc.EXPECT().
