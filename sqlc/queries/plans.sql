@@ -1,6 +1,7 @@
 -- name: CreatePlan :one
 INSERT INTO plans (
     external_id,
+    external_price_id,
     name,
     description,
     price_cents,
@@ -11,7 +12,7 @@ INSERT INTO plans (
     icon,
     created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()
 )
 RETURNING id;
 
@@ -30,7 +31,7 @@ FROM plans
 WHERE active = $1;
 
 -- name: UpdatePlan :exec
-UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8 ,updated_at = NOW()
+UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8, external_price_id=$9, updated_at = NOW()
 WHERE id = $1;
 
 -- name: TogglePlanActiveStatus :exec

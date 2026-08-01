@@ -14,6 +14,7 @@ import (
 const createPlan = `-- name: CreatePlan :one
 INSERT INTO plans (
     external_id,
+    external_price_id,
     name,
     description,
     price_cents,
@@ -24,26 +25,28 @@ INSERT INTO plans (
     icon,
     created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()
 )
 RETURNING id
 `
 
 type CreatePlanParams struct {
-	ExternalID   string      `json:"external_id"`
-	Name         string      `json:"name"`
-	Description  pgtype.Text `json:"description"`
-	PriceCents   int32       `json:"price_cents"`
-	Currency     pgtype.Text `json:"currency"`
-	BillingCycle string      `json:"billing_cycle"`
-	Active       pgtype.Bool `json:"active"`
-	Highlight    bool        `json:"highlight"`
-	Icon         string      `json:"icon"`
+	ExternalID      string      `json:"external_id"`
+	ExternalPriceID string      `json:"external_price_id"`
+	Name            string      `json:"name"`
+	Description     pgtype.Text `json:"description"`
+	PriceCents      int32       `json:"price_cents"`
+	Currency        pgtype.Text `json:"currency"`
+	BillingCycle    string      `json:"billing_cycle"`
+	Active          pgtype.Bool `json:"active"`
+	Highlight       bool        `json:"highlight"`
+	Icon            string      `json:"icon"`
 }
 
 func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, createPlan,
 		arg.ExternalID,
+		arg.ExternalPriceID,
 		arg.Name,
 		arg.Description,
 		arg.PriceCents,
@@ -59,7 +62,7 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.
 }
 
 const getPlanByID = `-- name: GetPlanByID :one
-SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
 FROM plans
 WHERE id = $1
 `
@@ -70,6 +73,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 	err := row.Scan(
 		&i.ID,
 		&i.ExternalID,
+		&i.ExternalPriceID,
 		&i.Name,
 		&i.Description,
 		&i.PriceCents,
@@ -85,7 +89,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 }
 
 const listPlans = `-- name: ListPlans :many
-SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
 FROM plans
 `
 
@@ -101,6 +105,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
+			&i.ExternalPriceID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,
@@ -123,7 +128,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 }
 
 const listPlansByActiveStatus = `-- name: ListPlansByActiveStatus :many
-SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
 FROM plans
 WHERE active = $1
 `
@@ -140,6 +145,7 @@ func (q *Queries) ListPlansByActiveStatus(ctx context.Context, active pgtype.Boo
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
+			&i.ExternalPriceID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,
@@ -177,19 +183,20 @@ func (q *Queries) TogglePlanActiveStatus(ctx context.Context, arg TogglePlanActi
 }
 
 const updatePlan = `-- name: UpdatePlan :exec
-UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8 ,updated_at = NOW()
+UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8, external_price_id=$9, updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdatePlanParams struct {
-	ID           pgtype.UUID `json:"id"`
-	Name         string      `json:"name"`
-	Description  pgtype.Text `json:"description"`
-	PriceCents   int32       `json:"price_cents"`
-	Currency     pgtype.Text `json:"currency"`
-	BillingCycle string      `json:"billing_cycle"`
-	Highlight    bool        `json:"highlight"`
-	Icon         string      `json:"icon"`
+	ID              pgtype.UUID `json:"id"`
+	Name            string      `json:"name"`
+	Description     pgtype.Text `json:"description"`
+	PriceCents      int32       `json:"price_cents"`
+	Currency        pgtype.Text `json:"currency"`
+	BillingCycle    string      `json:"billing_cycle"`
+	Highlight       bool        `json:"highlight"`
+	Icon            string      `json:"icon"`
+	ExternalPriceID string      `json:"external_price_id"`
 }
 
 func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) error {
@@ -202,6 +209,7 @@ func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) error {
 		arg.BillingCycle,
 		arg.Highlight,
 		arg.Icon,
+		arg.ExternalPriceID,
 	)
 	return err
 }

@@ -18,11 +18,13 @@ import (
 )
 
 type Service struct {
-	secretKey           string
+	secretKey string
+
 	subscriptionService *subscriptionService.Service
 }
 
 func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service) *Service {
+	stripe.Key = cfg.StripeSecretKey
 	return &Service{
 		secretKey:           cfg.StripeSecretKey,
 		subscriptionService: subscriptionService,
@@ -30,21 +32,32 @@ func NewService(cfg *config.Config, subscriptionService *subscriptionService.Ser
 }
 
 func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*domain.CreateSubscriptionOutput, error) {
-	stripe.Key = s.secretKey
-
 	customerParams := &stripe.CustomerParams{
 		Name:  stripe.String(input.Name),
 		Email: stripe.String(input.Email),
 	}
+
+	customerParams.SetIdempotencyKey(input.IdempotencyKey + "-customer")
 	cust, err := customer.New(customerParams)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar cliente no Stripe: %w", err)
 	}
 
-	pmParams := &stripe.PaymentMethodAttachParams{
-		Customer: stripe.String(cust.ID),
+	pmParams := &stripe.PaymentMethodParams{
+		Type: stripe.String("card"),
+		Card: &stripe.PaymentMethodCardParams{
+			Token: stripe.String(input.CardToken),
+		},
 	}
-	pm, err := paymentmethod.Attach(input.CardToken, pmParams)
+
+	pmParams.SetIdempotencyKey(input.IdempotencyKey + "-payment-method")
+	pm, err := paymentmethod.New(pmParams)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao criar payment method: %w", err)
+	}
+
+	attachParams := &stripe.PaymentMethodAttachParams{Customer: stripe.String(cust.ID)}
+	_, err = paymentmethod.Attach(pm.ID, attachParams)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao vincular cartão ao cliente: %w", err)
 	}
@@ -67,20 +80,29 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 				Price: stripe.String(input.PriceID),
 			},
 		},
+		PaymentBehavior: stripe.String("default_incomplete"),
 	}
 
-	subParams.AddExpand("latest_invoice.payment_intent")
+	subParams.AddExpand("latest_invoice.confirmation_secret")
 
+	subParams.SetIdempotencyKey(input.IdempotencyKey + "-subscription")
 	sub, err := subscription.New(subParams)
 	if err != nil {
+		customer.Del(cust.ID, nil)
 		return nil, fmt.Errorf("erro ao criar assinatura no Stripe: %w", err)
 	}
 
-	return &domain.CreateSubscriptionOutput{
+	output := &domain.CreateSubscriptionOutput{
 		CustomerID:     cust.ID,
 		SubscriptionID: sub.ID,
-		Status:         string(sub.Status), // "active", "incomplete", etc.
-	}, nil
+		Status:         string(sub.Status),
+	}
+
+	if sub.LatestInvoice != nil && sub.LatestInvoice.ConfirmationSecret != nil {
+		output.ClientSecret = sub.LatestInvoice.ConfirmationSecret.ClientSecret
+	}
+
+	return output, nil
 }
 
 func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Event) error {
@@ -124,11 +146,11 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			return fmt.Errorf("erro ao deserializar invoice.payment_failed: %w", err)
 		}
 
-		if invoice.Customer.Subscriptions == nil {
+		if invoice.Parent == nil || invoice.Parent.Type != stripe.InvoiceParentTypeSubscriptionDetails ||
+			invoice.Parent.SubscriptionDetails == nil || invoice.Parent.SubscriptionDetails.Subscription == nil {
 			return nil
 		}
-		// Atualiza o banco: Pagamento Falhou
-		subID := invoice.Customer.Subscriptions.Data[0].ID
+		subID := invoice.Parent.SubscriptionDetails.Subscription.ID
 
 		subscription, err := s.subscriptionService.GetSubscriptionByExternalSubscriptionId(ctx, subID)
 		if err != nil {

@@ -57,7 +57,6 @@ func TestCreatePlans_Success(t *testing.T) {
 		ValueAmount:  29.90,
 		Currency:     "BRL",
 		BillingCycle: "MONTHLY",
-		ExternalID:   "ext_basico",
 		Highlight:    true,
 		Icon:         "star",
 	}
@@ -73,9 +72,6 @@ func TestCreatePlans_Success(t *testing.T) {
 			}
 			if arg.BillingCycle != "MONTHLY" {
 				t.Errorf("BillingCycle incorreto: %s", arg.BillingCycle)
-			}
-			if arg.ExternalID != "ext_basico" {
-				t.Errorf("ExternalID incorreto: %s", arg.ExternalID)
 			}
 			if !arg.Highlight {
 				t.Errorf("Highlight deveria ser true")
@@ -104,8 +100,9 @@ func TestCreatePlans_RepositoryError(t *testing.T) {
 		Return(pgtype.UUID{}, errDatabase)
 
 	err := svc.CreatePlans(context.Background(), domain.CreatePlanRequest{
-		Name:        "Plano Erro",
-		ValueAmount: 10.00,
+		Name:         "Plano Erro",
+		ValueAmount:  10.00,
+		BillingCycle: "monthly",
 	})
 
 	if err == nil {
@@ -352,7 +349,6 @@ func TestUpdatePlan_Success(t *testing.T) {
 		Name:        "Plano Atualizado",
 		ValueAmount: 49.90,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -386,7 +382,6 @@ func TestUpdatePlan_ZeroValueAmount_KeepsCurrentPrice(t *testing.T) {
 		Name:        "Plano Novo Nome Apenas",
 		ValueAmount: 0,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
