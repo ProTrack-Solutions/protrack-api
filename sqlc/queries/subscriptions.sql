@@ -21,6 +21,9 @@ VALUES(
 -- name: GetSubscriptionById :one
 SELECT * FROM subscriptions WHERE id = $1;
 
+-- name: GetSubscriptionByExternalSubscriptionId :one
+SELECT * FROM subscriptions WHERE external_subscription_id = $1;
+
 -- name: UpdateSubscriptionPlan :exec
 UPDATE subscriptions
 SET
@@ -39,6 +42,7 @@ WHERE id = $1;
 UPDATE subscriptions
 SET
     status = $2,
+    current_period_end = $3,
     updated_at = NOW()
 WHERE id = $1;
 
