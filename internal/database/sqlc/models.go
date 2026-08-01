@@ -234,6 +234,18 @@ type Plan struct {
 	Currency     pgtype.Text        `json:"currency"`
 	BillingCycle string             `json:"billing_cycle"`
 	Active       pgtype.Bool        `json:"active"`
+	Highlight    bool               `json:"highlight"`
+	Icon         string             `json:"icon"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PlanFeature struct {
+	ID           pgtype.UUID        `json:"id"`
+	PlanID       pgtype.UUID        `json:"plan_id"`
+	Name         string             `json:"name"`
+	IsEnabled    bool               `json:"is_enabled"`
+	DisplayOrder int32              `json:"display_order"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }

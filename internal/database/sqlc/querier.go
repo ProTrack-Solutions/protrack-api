@@ -35,7 +35,8 @@ type Querier interface {
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
-	CreatePlan(ctx context.Context, arg CreatePlanParams) error
+	CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.UUID, error)
+	CreatePlanFeature(ctx context.Context, arg CreatePlanFeatureParams) error
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductCategory(ctx context.Context, arg CreateProductCategoryParams) (ProductCategory, error)
 	CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error)
@@ -52,6 +53,7 @@ type Querier interface {
 	DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error
 	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
 	DeleteItemsBySale(ctx context.Context, saleID pgtype.UUID) error
+	DeletePlanFeature(ctx context.Context, id pgtype.UUID) error
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) error
 	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) error
 	DeleteSale(ctx context.Context, arg DeleteSaleParams) error
@@ -123,6 +125,7 @@ type Querier interface {
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]Customer, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
+	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)

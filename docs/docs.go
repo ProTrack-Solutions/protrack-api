@@ -5348,9 +5348,20 @@ const docTemplate = `{
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest": {
             "type": "object",
+            "required": [
+                "company",
+                "payment",
+                "user"
+            ],
             "properties": {
                 "company": {
                     "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "phone"
+                    ],
                     "properties": {
                         "address_city": {
                             "type": "string"
@@ -5399,8 +5410,50 @@ const docTemplate = `{
                         }
                     }
                 },
+                "payment": {
+                    "type": "object",
+                    "required": [
+                        "card_brand",
+                        "card_exp_month",
+                        "card_exp_year",
+                        "card_last_four",
+                        "card_token",
+                        "plan_id",
+                        "type"
+                    ],
+                    "properties": {
+                        "card_brand": {
+                            "type": "string"
+                        },
+                        "card_exp_month": {
+                            "type": "integer"
+                        },
+                        "card_exp_year": {
+                            "type": "integer"
+                        },
+                        "card_last_four": {
+                            "type": "string"
+                        },
+                        "card_token": {
+                            "type": "string"
+                        },
+                        "plan_id": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                },
                 "user": {
                     "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "password",
+                        "username"
+                    ],
                     "properties": {
                         "document": {
                             "type": "string"
@@ -5412,7 +5465,8 @@ const docTemplate = `{
                             "type": "string"
                         },
                         "password": {
-                            "type": "string"
+                            "type": "string",
+                            "minLength": 8
                         },
                         "username": {
                             "type": "string"
@@ -6543,12 +6597,56 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.CreatePlanFeatureRequest": {
+            "type": "object",
+            "properties": {
+                "display_order": {
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.CreatePlanRequest": {
             "type": "object",
             "required": [
                 "billing_cycle",
                 "currency",
                 "description",
+                "external_id",
+                "features",
+                "highlight",
+                "icon",
                 "name",
                 "value_amount"
             ],
@@ -6560,6 +6658,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.CreatePlanFeatureRequest"
+                    }
+                },
+                "highlight": {
+                    "type": "boolean"
+                },
+                "icon": {
                     "type": "string"
                 },
                 "name": {
@@ -6587,6 +6700,15 @@ const docTemplate = `{
                 },
                 "description": {
                     "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse"
+                    }
                 },
                 "id": {
                     "type": "string"
@@ -7209,10 +7331,10 @@ const docTemplate = `{
                 "current_period_start": {
                     "type": "string"
                 },
-                "id": {
+                "external_subscription_id": {
                     "type": "string"
                 },
-                "mp_subscription_id": {
+                "id": {
                     "type": "string"
                 },
                 "payment_method_id": {
