@@ -33,7 +33,7 @@ func buildDbCompany(id uuid.UUID, name string) db.Company {
 		ID:                  pgconv.ParseUUIDToPgType(id),
 		Name:                name,
 		TradeName:           pgtype.Text{String: "Trade " + name, Valid: true},
-		Document:            pgtype.Text{String: "123.456.789-00", Valid: true},
+		Document:            pgtype.Text{String: "00000000000191", Valid: true},
 		DocumentType:        pgtype.Text{String: "CNPJ", Valid: true},
 		Email:               pgtype.Text{String: "empresa@email.com", Valid: true},
 		Phone:               pgtype.Text{String: "+5511999999999", Valid: true},
@@ -138,7 +138,7 @@ func TestGetCompanyByID_Success(t *testing.T) {
 	if resp.Name != "Empresa Alpha" {
 		t.Errorf("Name incorreto: '%s'", resp.Name)
 	}
-	if resp.Document != "12.345.678/0001-90" {
+	if resp.Document != "00000000000191" {
 		t.Errorf("Document incorreto: '%s'", resp.Document)
 	}
 }
@@ -173,7 +173,7 @@ func TestGetCompanyByDocument_Success(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	id := uuid.New()
-	document := "123.456.789-00"
+	document := "00000000000191"
 	expected := buildDbCompany(id, "Empresa Beta")
 
 	repo.EXPECT().
@@ -215,7 +215,7 @@ func TestGetCompanyByDocument_RepositoryError(t *testing.T) {
 	repo := mocks.NewMockRepositoryInterface(ctrl)
 	svc := newSvc(t, repo)
 
-	document := "123.456.789-00"
+	document := "00000000000191"
 
 	repo.EXPECT().
 		GetCompanyByDocument(gomock.Any(), gomock.Any()).
