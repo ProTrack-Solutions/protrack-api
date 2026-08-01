@@ -67,6 +67,7 @@ import (
 	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
 	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	clientStripe "github.com/ProTrack-Solutions/protrack-api/internal/stripe/client"
 	stripeHandler "github.com/ProTrack-Solutions/protrack-api/internal/stripe/handler"
 	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
@@ -169,6 +170,8 @@ func main() {
 	}
 	defer ch.Close()
 
+	clientStripe := clientStripe.NewStripeClient(cfg)
+
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
@@ -197,7 +200,7 @@ func main() {
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
-	plansService := plansService.NewService(plansRepository, plansFeatureSvc, db.Pool)
+	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
