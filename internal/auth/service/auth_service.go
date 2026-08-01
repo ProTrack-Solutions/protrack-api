@@ -157,7 +157,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		Email:     req.Company.Email,
 		Name:      req.Company.TradeName,
 		CardToken: req.Payment.CardToken,
-		PriceID:   plan.ExternalId,
+		PriceID:   plan.ExternalPriceId,
 	})
 
 	tx, err := s.pool.Begin(ctx)

@@ -226,18 +226,19 @@ type PaymentMethod struct {
 }
 
 type Plan struct {
-	ID           pgtype.UUID        `json:"id"`
-	ExternalID   string             `json:"external_id"`
-	Name         string             `json:"name"`
-	Description  pgtype.Text        `json:"description"`
-	PriceCents   int32              `json:"price_cents"`
-	Currency     pgtype.Text        `json:"currency"`
-	BillingCycle string             `json:"billing_cycle"`
-	Active       pgtype.Bool        `json:"active"`
-	Highlight    bool               `json:"highlight"`
-	Icon         string             `json:"icon"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ID              pgtype.UUID        `json:"id"`
+	ExternalID      string             `json:"external_id"`
+	ExternalPriceID string             `json:"external_price_id"`
+	Name            string             `json:"name"`
+	Description     pgtype.Text        `json:"description"`
+	PriceCents      int32              `json:"price_cents"`
+	Currency        pgtype.Text        `json:"currency"`
+	BillingCycle    string             `json:"billing_cycle"`
+	Active          pgtype.Bool        `json:"active"`
+	Highlight       bool               `json:"highlight"`
+	Icon            string             `json:"icon"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PlanFeature struct {
