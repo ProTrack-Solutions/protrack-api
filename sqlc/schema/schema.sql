@@ -346,7 +346,9 @@ CREATE TABLE IF NOT EXISTS plans (
     price_cents INT NOT NULL,                -- ex: 4990 (R$ 49,90 - gravado em centavos para evitar erros de arredondamento)
     currency VARCHAR(3) DEFAULT 'BRL',       -- 'BRL'
     billing_cycle VARCHAR(20) NOT NULL,      -- 'monthly', 'yearly'
-    active BOOLEAN DEFAULT true,             -- Se o plano ainda pode ser assinado por novos usuários
+    active BOOLEAN DEFAULT true,
+    highlight BOOLEAN DEFAULT FALSE NOT NULL,
+    icon VARCHAR(255) DEFAULT 'check' NOT NULL,             -- Se o plano ainda pode ser assinado por novos usuários
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -401,4 +403,17 @@ CREATE TABLE IF NOT EXISTS invoice_history (
     paid_at TIMESTAMPTZ,                           -- Data/hora da confirmação do pagamento
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS plan_features (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id UUID NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    is_enabled BOOLEAN DEFAULT true NOT NULL,
+    display_order INT DEFAULT 0 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_plan_features_plan
+        FOREIGN KEY (plan_id) 
+        REFERENCES plans(id) 
+        ON DELETE CASCADE
 );

@@ -5,28 +5,36 @@ import (
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	plansFeatures "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/domain"
 	"github.com/google/uuid"
 )
 
 type CreatePlanRequest struct {
-	Name         string  `json:"name" validate:"required"`
-	Description  string  `json:"description" validate:"required"`
-	ValueAmount  float64 `json:"value_amount" validate:"required"`
-	Currency     string  `json:"currency" validate:"required"`
-	BillingCycle string  `json:"billing_cycle" validate:"required"`
+	Name         string                                   `json:"name" validate:"required"`
+	Description  string                                   `json:"description" validate:"required"`
+	ValueAmount  float64                                  `json:"value_amount" validate:"required"`
+	Currency     string                                   `json:"currency" validate:"required"`
+	BillingCycle string                                   `json:"billing_cycle" validate:"required"`
+	ExternalID   string                                   `json:"external_id" validate:"required"`
+	Highlight    bool                                     `json:"highlight" validate:"required"`
+	Icon         string                                   `json:"icon" validate:"required"`
+	Features     []plansFeatures.CreatePlanFeatureRequest `json:"features" validate:"required"`
 }
 
 type PlanResponse struct {
-	ID           uuid.UUID `json:"id"`
-	Name         string    `json:"name"`
-	Description  string    `json:"description"`
-	PriceCents   int32     `json:"price_cents"`
-	Currency     string    `json:"currency"`
-	BillingCycle string    `json:"billing_cycle"`
-	Active       bool      `json:"active"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	ExternalId   string    `json:"external_id"`
+	ID           uuid.UUID                           `json:"id"`
+	Name         string                              `json:"name"`
+	Description  string                              `json:"description"`
+	PriceCents   int32                               `json:"price_cents"`
+	Currency     string                              `json:"currency"`
+	BillingCycle string                              `json:"billing_cycle"`
+	Active       bool                                `json:"active"`
+	CreatedAt    time.Time                           `json:"created_at"`
+	UpdatedAt    time.Time                           `json:"updated_at"`
+	ExternalId   string                              `json:"external_id"`
+	Highlight    bool                                `json:"highlight"`
+	Icon         string                              `json:"icon"`
+	Features     []plansFeatures.PlanFeatureResponse `json:"features"`
 }
 
 type UpdatePlanParams struct {
