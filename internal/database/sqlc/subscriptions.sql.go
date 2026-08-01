@@ -69,6 +69,29 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 	return err
 }
 
+const getSubscriptionByExternalSubscriptionId = `-- name: GetSubscriptionByExternalSubscriptionId :one
+SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE external_subscription_id = $1
+`
+
+func (q *Queries) GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error) {
+	row := q.db.QueryRow(ctx, getSubscriptionByExternalSubscriptionId, externalSubscriptionID)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.PlanID,
+		&i.PaymentMethodID,
+		&i.ExternalSubscriptionID,
+		&i.Status,
+		&i.CurrentPeriodStart,
+		&i.CurrentPeriodEnd,
+		&i.CanceledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSubscriptionById = `-- name: GetSubscriptionById :one
 SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE id = $1
 `
@@ -132,16 +155,18 @@ const updateSubscriptionStatus = `-- name: UpdateSubscriptionStatus :exec
 UPDATE subscriptions
 SET
     status = $2,
+    current_period_end = $3,
     updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateSubscriptionStatusParams struct {
-	ID     pgtype.UUID `json:"id"`
-	Status string      `json:"status"`
+	ID               pgtype.UUID        `json:"id"`
+	Status           string             `json:"status"`
+	CurrentPeriodEnd pgtype.Timestamptz `json:"current_period_end"`
 }
 
 func (q *Queries) UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error {
-	_, err := q.db.Exec(ctx, updateSubscriptionStatus, arg.ID, arg.Status)
+	_, err := q.db.Exec(ctx, updateSubscriptionStatus, arg.ID, arg.Status, arg.CurrentPeriodEnd)
 	return err
 }

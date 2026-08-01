@@ -98,6 +98,7 @@ type Querier interface {
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
+	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)
 	GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error)
 	GetSubscriptionPaymentMethodById(ctx context.Context, id pgtype.UUID) (SubscriptionPaymentMethod, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)

@@ -38,5 +38,6 @@ type UpdateSubscriptionMethodRequest struct {
 }
 
 type UpdateSubscriptionStatusRequest struct {
-	Status string `json:"status"`
+	Status           string    `json:"status"`
+	CurrentPeriodEnd time.Time `json:"current_period_end"`
 }
