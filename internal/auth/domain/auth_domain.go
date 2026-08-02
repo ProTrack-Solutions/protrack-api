@@ -54,4 +54,5 @@ type RegisterRequest struct {
 		CardExpMonth int32     `json:"card_exp_month" validate:"required"`
 		CardExpYear  int32     `json:"card_exp_year" validate:"required"`
 	} `json:"payment" validate:"required"`
+	IdempotencyKey string `json:"idempotency_key" validate:"required"`
 }
