@@ -154,11 +154,15 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	}
 
 	stripe, err := s.stripeService.CreateSubscription(stripeDomain.CreateSubscriptionInput{
-		Email:     req.Company.Email,
-		Name:      req.Company.TradeName,
-		CardToken: req.Payment.CardToken,
-		PriceID:   plan.ExternalPriceId,
+		Email:          req.Company.Email,
+		Name:           req.Company.TradeName,
+		CardToken:      req.Payment.CardToken,
+		PriceID:        plan.ExternalPriceId,
+		IdempotencyKey: req.IdempotencyKey,
 	})
+	if err != nil {
+		return err
+	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -186,10 +190,10 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		CreatedBy:           uuid.Nil,
 	})
 	if err != nil {
+		log.Debug().Err(err).Msg("Erro company")
+
 		return err
 	}
-
-	log.Debug().Err(err).Msg("Erro company")
 
 	userId, err := s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
 		Name:         req.User.Name,
@@ -201,9 +205,10 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		CompanyID:    companyId,
 	})
 	if err != nil {
+		log.Debug().Err(err).Msg("Erro user")
+
 		return err
 	}
-	log.Debug().Err(err).Msg("Erro user")
 
 	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
 		GatewayPaymentMethodId: stripe.CustomerID,
@@ -214,15 +219,24 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		CardExpYear:            req.Payment.CardExpYear,
 		IsDefault:              true,
 	})
+	if err != nil {
+		log.Debug().Err(err).Msg("Erro payment method")
+		return err
+	}
 
 	err = s.subscriptionService.CreateSubscription(ctx, tx, companyId, subscriptionDomain.CreateSubscriptionRequest{
 		PlanId:                 req.Payment.PlanID,
 		PaymentMethodsId:       paymentId,
 		ExternalSubscriptionID: stripe.SubscriptionID,
-		Status:                 stripe.Status,
-		CurrentPeriodStart:     periodStart,
-		CurrentPeriodEnd:       periodEnd,
+
+		Status:             stripe.Status,
+		CurrentPeriodStart: periodStart,
+		CurrentPeriodEnd:   periodEnd,
 	})
+	if err != nil {
+		log.Debug().Err(err).Msg("Erro subscription")
+		return err
+	}
 
 	return tx.Commit(ctx)
 }
