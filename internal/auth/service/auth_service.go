@@ -58,6 +58,23 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		return &domain.LoginResponse{}, err
 	}
 
+	subscription, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, user.CompanyID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get subscription")
+		return nil, err
+	}
+
+	switch subscription.Status {
+	case "canceled":
+		return nil, fmt.Errorf("subscription canceled")
+	case "paused":
+		return nil, fmt.Errorf("subscription paused")
+	}
+
+	if subscription.CurrentPeriodEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("subscription expired")
+	}
+
 	var hasCompany bool
 
 	if user.CompanyID != uuid.Nil {
@@ -81,7 +98,29 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 	}, nil
 }
 
-func (s *Service) RefreshToken(ctx context.Context, refreshToken string) (*domain.LoginResponse, error) {
+func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID uuid.UUID) (*domain.LoginResponse, error) {
+	user, err := s.userService.GetUserByID(ctx, userID)
+	if err != nil {
+		return &domain.LoginResponse{}, err
+	}
+
+	subscription, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, user.CompanyID)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get subscription")
+		return nil, err
+	}
+
+	switch subscription.Status {
+	case "canceled":
+		return nil, fmt.Errorf("subscription canceled")
+	case "paused":
+		return nil, fmt.Errorf("subscription paused")
+	}
+
+	if subscription.CurrentPeriodEnd.Before(time.Now()) {
+		return nil, fmt.Errorf("subscription expired")
+	}
+
 	tokenPair, err := s.jwtManager.RefreshToken(refreshToken)
 	if err != nil {
 		return nil, err

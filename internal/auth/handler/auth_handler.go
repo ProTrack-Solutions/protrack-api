@@ -46,7 +46,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	response, err := h.service.Login(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -99,13 +99,19 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		return
 	}
 
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
 	tokenID := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
 	expiresIn := time.Until(claims.ExpiresAt.Time)
 	if expiresIn > 0 {
 		_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
 	}
 
-	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
+	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken, userID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
