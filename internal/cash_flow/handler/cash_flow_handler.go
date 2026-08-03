@@ -156,7 +156,7 @@ func (h *Handler) GetCashFlowPeriod(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"cash_flow_month": cashFlowMonth})
+	c.JSON(http.StatusOK, cashFlowMonth)
 }
 
 // GetCashFlow godoc
@@ -182,4 +182,40 @@ func (h *Handler) GetCashFlow(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, cashFlow)
+}
+
+// GetTotalSummary godoc
+// @Summary      Resumo total
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Param        query query domain.GetTotalSummaryParams true "Parâmetros de busca"
+// @Success      200 {object} []domain.GetTotalSummaryResponse
+// @Failure      400 {object} map[string]string "Erro de validação"
+// @Failure      401 {object} map[string]string "Não autorizado"
+// @Failure      500 {object} map[string]string "Erro interno"
+// @Router       /cash-flow/total-summary [get]
+func (h *Handler) GetTotalSummary(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	var params domain.GetTotalSummaryParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	totalSummary, err := h.service.GetTotalSummary(c.Request.Context(), params, companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, totalSummary)
 }

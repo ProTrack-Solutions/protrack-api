@@ -11,14 +11,20 @@ import (
 )
 
 type Querier interface {
+	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountInvoices(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CreateAccountReceivable(ctx context.Context, arg CreateAccountReceivableParams) error
 	CreateAnnouncements(ctx context.Context, arg CreateAnnouncementsParams) error
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error
@@ -26,12 +32,17 @@ type Querier interface {
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
 	CreateCustomers(ctx context.Context, arg CreateCustomersParams) (pgtype.UUID, error)
 	CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error)
+	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
+	CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.UUID, error)
+	CreatePlanFeature(ctx context.Context, arg CreatePlanFeatureParams) error
 	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
 	CreateProductCategory(ctx context.Context, arg CreateProductCategoryParams) (ProductCategory, error)
 	CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error)
 	CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) error
+	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
+	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
@@ -42,17 +53,21 @@ type Querier interface {
 	DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error
 	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
 	DeleteItemsBySale(ctx context.Context, saleID pgtype.UUID) error
+	DeletePlanFeature(ctx context.Context, id pgtype.UUID) error
 	DeleteProduct(ctx context.Context, arg DeleteProductParams) error
 	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) error
 	DeleteSale(ctx context.Context, arg DeleteSaleParams) error
 	DeleteSaleItem(ctx context.Context, id pgtype.UUID) error
+	DeleteSubscriptionPaymentMethod(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	GetBillCategoriesById(ctx context.Context, id pgtype.UUID) (BillCategory, error)
 	GetBillsById(ctx context.Context, arg GetBillsByIdParams) (BillsPayable, error)
 	GetBillsByStatus(ctx context.Context, arg GetBillsByStatusParams) ([]BillsPayable, error)
 	GetBillsPayableSummary(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableSummaryRow, error)
 	GetCashInFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashInFlowByCategoryRow, error)
+	GetCashInFlowCategoryByPeriod(ctx context.Context, arg GetCashInFlowCategoryByPeriodParams) ([]GetCashInFlowCategoryByPeriodRow, error)
 	GetCashOutFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashOutFlowByCategoryRow, error)
+	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
@@ -61,7 +76,11 @@ type Querier interface {
 	GetCustomerDebtSummary(ctx context.Context, customerID pgtype.UUID) (GetCustomerDebtSummaryRow, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetCustomersPerformanceSummaryRow, error)
 	GetDepartmentById(ctx context.Context, id pgtype.UUID) (Department, error)
+	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
+	GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHistory, error)
+	GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -70,17 +89,25 @@ type Querier interface {
 	GetPaymentsHistoryReport(ctx context.Context, arg GetPaymentsHistoryReportParams) ([]GetPaymentsHistoryReportRow, error)
 	GetPendingReceivablesByCustomer(ctx context.Context, arg GetPendingReceivablesByCustomerParams) ([]AccountsReceivable, error)
 	GetPendingSalesDetailedReport(ctx context.Context, arg GetPendingSalesDetailedReportParams) ([]GetPendingSalesDetailedReportRow, error)
+	GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 	GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (Product, error)
 	GetProductCategoryById(ctx context.Context, id pgtype.UUID) (ProductCategory, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetProductsPerformanceSummaryRow, error)
 	GetReceivablesBySale(ctx context.Context, saleID pgtype.UUID) ([]AccountsReceivable, error)
+	GetReceivablesSummary(ctx context.Context, companyID pgtype.UUID) (GetReceivablesSummaryRow, error)
 	GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSaleByIdRow, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
+	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error)
+	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)
+	GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error)
+	GetSubscriptionPaymentMethodById(ctx context.Context, id pgtype.UUID) (SubscriptionPaymentMethod, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)
 	GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error)
+	GetTotalAmountPaid(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	GetTotalAmountPending(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetTotalAmountSummary(ctx context.Context, companyID pgtype.UUID) (GetTotalAmountSummaryRow, error)
 	GetTotalInflowByPeriod(ctx context.Context, arg GetTotalInflowByPeriodParams) (float64, error)
 	GetTotalOpenAmountByCompany(ctx context.Context, companyID pgtype.UUID) (GetTotalOpenAmountByCompanyRow, error)
@@ -88,8 +115,9 @@ type Querier interface {
 	GetTotalOverdueAmountByCompany(ctx context.Context, companyID pgtype.UUID) (GetTotalOverdueAmountByCompanyRow, error)
 	GetTotalReceivedByPeriod(ctx context.Context, arg GetTotalReceivedByPeriodParams) (pgtype.Numeric, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
-	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
+	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
 	ListBillCategories(ctx context.Context, companyID pgtype.UUID) ([]BillCategory, error)
 	ListBillCategoriesActive(ctx context.Context, id pgtype.UUID) ([]BillCategory, error)
@@ -98,6 +126,8 @@ type Querier interface {
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]Customer, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
+	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
+	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
 	ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UUID) ([]ListItemsFromPendingSaleRow, error)
@@ -105,6 +135,8 @@ type Querier interface {
 	ListPaymentHistory(ctx context.Context, companyID pgtype.UUID) ([]ListPaymentHistoryRow, error)
 	ListPaymentMethod(ctx context.Context, companyID pgtype.UUID) ([]PaymentMethod, error)
 	ListPaymentMethodIsActive(ctx context.Context, companyID pgtype.UUID) ([]PaymentMethod, error)
+	ListPlans(ctx context.Context) ([]Plan, error)
+	ListPlansByActiveStatus(ctx context.Context, active pgtype.Bool) ([]Plan, error)
 	ListProductCategoryByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]ProductCategory, error)
 	ListProductsByCategoryAndDate(ctx context.Context, arg ListProductsByCategoryAndDateParams) ([]ListProductsByCategoryAndDateRow, error)
 	ListProductsByCategoryId(ctx context.Context, arg ListProductsByCategoryIdParams) ([]Product, error)
@@ -116,16 +148,22 @@ type Querier interface {
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsRow, error)
 	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
+	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	PayBill(ctx context.Context, arg PayBillParams) error
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
+	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
 	SetStatusDepartment(ctx context.Context, arg SetStatusDepartmentParams) (int64, error)
+	SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	ToggleBillCategoriesActive(ctx context.Context, arg ToggleBillCategoriesActiveParams) error
 	TogglePaymentMethodActive(ctx context.Context, arg TogglePaymentMethodActiveParams) error
+	TogglePlanActiveStatus(ctx context.Context, arg TogglePlanActiveStatusParams) error
 	ToggleVendorsActive(ctx context.Context, arg ToggleVendorsActiveParams) error
 	UpdateAccountReceivableBalance(ctx context.Context, arg UpdateAccountReceivableBalanceParams) (pgtype.UUID, error)
 	UpdateBalanceDueCustomer(ctx context.Context, arg UpdateBalanceDueCustomerParams) error
@@ -134,14 +172,20 @@ type Querier interface {
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) error
 	UpdateCustomerBalance(ctx context.Context, arg UpdateCustomerBalanceParams) error
 	UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error)
+	UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateOverdueBillsPayable(ctx context.Context) error
 	UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]UpdateOverdueSalesAndAccountsGlobalRow, error)
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
+	UpdatePlan(ctx context.Context, arg UpdatePlanParams) error
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateSale(ctx context.Context, arg UpdateSaleParams) error
 	UpdateSaleStatus(ctx context.Context, arg UpdateSaleStatusParams) error
+	UpdateSubscriptionMethod(ctx context.Context, arg UpdateSubscriptionMethodParams) error
+	UpdateSubscriptionPaymentMethod(ctx context.Context, arg UpdateSubscriptionPaymentMethodParams) error
+	UpdateSubscriptionPlan(ctx context.Context, arg UpdateSubscriptionPlanParams) error
+	UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error

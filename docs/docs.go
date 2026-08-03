@@ -52,6 +52,64 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts-receivable/complete/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts-receivable"
+                ],
+                "summary": "Lista as contas a receber",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "name": "Page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "Perpage",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Falha na validação dos parâmetros de paginação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "company_id não encontrado na sessão",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/accounts-receivable/customer/{customerId}": {
             "get": {
                 "security": [
@@ -474,6 +532,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/register": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Registra uma nova empresa e um usuário administrador",
+                "parameters": [
+                    {
+                        "description": "Dados de registro",
+                        "name": "register",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Empresa e usuário criados com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/bill-categories": {
             "get": {
                 "security": [
@@ -713,13 +825,27 @@ const docTemplate = `{
                     "bills-payable"
                 ],
                 "summary": "Lista contas a pagar da empresa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Número da página (padrão: 1)",
+                        "name": "page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Quantidade de registros por página (padrão: 10)",
+                        "name": "per_page",
+                        "in": "header"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.BillsPayableResponse"
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse"
                             }
                         }
                     }
@@ -1136,6 +1262,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/cash-flow/total-summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-flow"
+                ],
+                "summary": "Resumo total",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "name": "quantity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de validação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/companies": {
             "get": {
                 "security": [
@@ -1158,42 +1350,6 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
                             }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "companies"
-                ],
-                "summary": "Cria uma empresa",
-                "parameters": [
-                    {
-                        "description": "Empresa",
-                        "name": "company",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
                         }
                     }
                 }
@@ -1722,7 +1878,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/departments/list/{id}": {
+        "/departments/list": {
             "get": {
                 "produces": [
                     "application/json"
@@ -1731,15 +1887,6 @@ const docTemplate = `{
                     "departments"
                 ],
                 "summary": "Lista departamentos por empresa",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da empresa",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -1875,6 +2022,167 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/invoice-history/company": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoice-history"
+                ],
+                "summary": "Lista faturas da empresa com paginação",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "Page",
+                        "in": "header"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Itens por página",
+                        "name": "PerPage",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetros inválidos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/invoice-history/mp/{mp_payment_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoice-history"
+                ],
+                "summary": "Busca fatura por mp_payment_id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "MP Payment ID",
+                        "name": "mp_payment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/invoice-history/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "invoice-history"
+                ],
+                "summary": "Busca fatura por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da fatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "ID inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -2345,6 +2653,240 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    }
+                }
+            }
+        },
+        "/plans": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Lista planos por status ativo",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Ativo",
+                        "name": "active",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Cria um plano",
+                "parameters": [
+                    {
+                        "description": "Plano",
+                        "name": "plan",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.CreatePlanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/plans/{id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Busca um plano por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do plano",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ID do plano inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Atualiza um plano",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do plano",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Plano",
+                        "name": "plan",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.UpdatePlanParams"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida ou ID inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/plans/{id}/active": {
+            "patch": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plans"
+                ],
+                "summary": "Ativa ou desativa um plano",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do plano",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Ativo",
+                        "name": "active",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "ID do plano inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -3094,13 +3636,13 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Página",
-                        "name": "Page",
+                        "name": "page",
                         "in": "header"
                     },
                     {
                         "type": "integer",
                         "description": "Itens por página",
-                        "name": "PerPage",
+                        "name": "per_page",
                         "in": "header"
                     }
                 ],
@@ -3675,6 +4217,285 @@ const docTemplate = `{
                 }
             }
         },
+        "/subscription/cancel/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Cancela uma assinatura",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da assinatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "ID da assinatura inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/method/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Atualiza método de pagamento da assinatura",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da assinatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do novo método de pagamento",
+                        "name": "method",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/plan/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Atualiza o plano da assinatura",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da assinatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados do novo plano",
+                        "name": "plan",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/status/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Atualiza status da assinatura",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da assinatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Novo status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscriptions"
+                ],
+                "summary": "Busca assinatura por ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da assinatura",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "ID da assinatura inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/users": {
             "get": {
                 "produces": [
@@ -3990,6 +4811,92 @@ const docTemplate = `{
                 }
             }
         },
+        "/whatsapp/instance/connect": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Solicita a conexão da instância do WhatsApp para a empresa autenticada e retorna o QR Code/Payload para escaneamento.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Conecta a instância WhatsApp e retorna QR Code",
+                "responses": {
+                    "200": {
+                        "description": "Exemplo: {\\\"qr_code\\\": \\\"...\\\"}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao conectar a instância no serviço",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/whatsapp/instance/connection-state": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Consulta o status da instância na Evolution API (ex: open, connecting, close) e retorna os dados da conexão.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Obtém o estado de conexão do WhatsApp",
+                "responses": {
+                    "200": {
+                        "description": "Estado atual do WhatsApp obtido com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha na comunicação com o serviço ou Evolution API",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/whatsapp/instance/create": {
             "post": {
                 "security": [
@@ -4007,6 +4914,42 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/whatsapp/instance/delete": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove/desconecta a instância do WhatsApp associada à empresa do usuário autenticado.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Deleta a instância do WhatsApp",
+                "responses": {
+                    "204": {
+                        "description": "Instância deletada com sucesso"
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao deletar a instância no serviço",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4182,6 +5125,91 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "days_overdue": {
+                    "type": "integer"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installment_number": {
+                    "type": "integer"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "total_installments": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivablesResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_overdue": {
+                    "type": "number"
+                },
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.ListAccountsReceivables"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.CreateAnnouncementsRequest": {
             "type": "object",
             "required": [
@@ -4318,6 +5346,139 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "company",
+                "idempotency_key",
+                "payment",
+                "user"
+            ],
+            "properties": {
+                "company": {
+                    "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "phone"
+                    ],
+                    "properties": {
+                        "address_city": {
+                            "type": "string"
+                        },
+                        "address_complement": {
+                            "type": "string"
+                        },
+                        "address_country": {
+                            "type": "string"
+                        },
+                        "address_neighborhood": {
+                            "type": "string"
+                        },
+                        "address_number": {
+                            "type": "string"
+                        },
+                        "address_state": {
+                            "type": "string"
+                        },
+                        "address_street": {
+                            "type": "string"
+                        },
+                        "address_zipcode": {
+                            "type": "string"
+                        },
+                        "document": {
+                            "type": "string"
+                        },
+                        "email": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "phone": {
+                            "type": "string"
+                        },
+                        "timezone": {
+                            "type": "string"
+                        },
+                        "trade_name": {
+                            "type": "string"
+                        },
+                        "website": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "payment": {
+                    "type": "object",
+                    "required": [
+                        "card_brand",
+                        "card_exp_month",
+                        "card_exp_year",
+                        "card_last_four",
+                        "card_token",
+                        "plan_id",
+                        "type"
+                    ],
+                    "properties": {
+                        "card_brand": {
+                            "type": "string"
+                        },
+                        "card_exp_month": {
+                            "type": "integer"
+                        },
+                        "card_exp_year": {
+                            "type": "integer"
+                        },
+                        "card_last_four": {
+                            "type": "string"
+                        },
+                        "card_token": {
+                            "type": "string"
+                        },
+                        "plan_id": {
+                            "type": "string"
+                        },
+                        "type": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "user": {
+                    "type": "object",
+                    "required": [
+                        "document",
+                        "email",
+                        "name",
+                        "password",
+                        "username"
+                    ],
+                    "properties": {
+                        "document": {
+                            "type": "string"
+                        },
+                        "email": {
+                            "type": "string"
+                        },
+                        "name": {
+                            "type": "string"
+                        },
+                        "password": {
+                            "type": "string",
+                            "minLength": 8
+                        },
+                        "username": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse": {
             "type": "object",
             "properties": {
@@ -4443,9 +5604,6 @@ const docTemplate = `{
                 "payment_method_id": {
                     "type": "string"
                 },
-                "status": {
-                    "type": "string"
-                },
                 "vendor_id": {
                     "type": "string"
                 }
@@ -4468,6 +5626,97 @@ const docTemplate = `{
                 },
                 "total_to_pay": {
                     "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableRow"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_overdue": {
+                    "type": "number"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_payable": {
+                    "type": "number"
+                },
+                "total_rows": {
+                    "type": "integer"
+                },
+                "total_scheduled": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableRow": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_paid": {
+                    "type": "number"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "string"
+                },
+                "payment_method_name": {
+                    "type": "string"
+                },
+                "scheduled_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vendor_id": {
+                    "type": "string"
+                },
+                "vendor_name": {
+                    "type": "string"
                 }
             }
         },
@@ -4625,6 +5874,58 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "projection": {
+                    "type": "number"
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty"
+                    }
+                },
+                "total": {
+                    "type": "number"
+                },
+                "total_categories_in_flow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashInFlowByCategoryResponse"
+                    }
+                },
+                "total_categories_out_flow": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetCashOutFlowByCategoryResponse"
+                    }
+                },
+                "total_inflow": {
+                    "type": "number"
+                },
+                "total_outflow": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string"
+                },
+                "total_period": {
+                    "type": "number"
+                },
+                "total_period_inflow": {
+                    "type": "number"
+                },
+                "total_period_outflow": {
+                    "type": "number"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse": {
             "type": "object",
             "properties": {
@@ -4687,69 +5988,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "updated_at": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
-                },
-                "website": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CreateCompanyParams": {
-            "type": "object",
-            "properties": {
-                "address_city": {
-                    "type": "string"
-                },
-                "address_complement": {
-                    "type": "string"
-                },
-                "address_country": {
-                    "type": "string"
-                },
-                "address_neighborhood": {
-                    "type": "string"
-                },
-                "address_number": {
-                    "type": "string"
-                },
-                "address_state": {
-                    "type": "string"
-                },
-                "address_street": {
-                    "type": "string"
-                },
-                "address_zipcode": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "deleted_by": {
-                    "type": "string"
-                },
-                "document": {
-                    "type": "string"
-                },
-                "document_type": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "status": {},
-                "timezone": {
-                    "type": "string"
-                },
-                "trade_name": {
                     "type": "string"
                 },
                 "updated_by": {
@@ -5091,12 +6329,6 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams": {
             "type": "object",
             "properties": {
-                "company_id": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
                 "description": {
                     "type": "string"
                 },
@@ -5148,12 +6380,6 @@ const docTemplate = `{
             "properties": {
                 "Status": {
                     "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "updated_by": {
-                    "type": "string"
                 }
             }
         },
@@ -5163,13 +6389,7 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
                 "name": {
-                    "type": "string"
-                },
-                "updated_by": {
                     "type": "string"
                 }
             }
@@ -5378,9 +6598,165 @@ const docTemplate = `{
                 },
                 "payment_method_id": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.CreatePlanFeatureRequest": {
+            "type": "object",
+            "properties": {
+                "display_order": {
+                    "type": "integer"
                 },
-                "user_id": {
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.CreatePlanRequest": {
+            "type": "object",
+            "required": [
+                "billing_cycle",
+                "currency",
+                "description",
+                "features",
+                "highlight",
+                "icon",
+                "name",
+                "value_amount"
+            ],
+            "properties": {
+                "billing_cycle": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.CreatePlanFeatureRequest"
+                    }
+                },
+                "highlight": {
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.PlanResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "billing_cycle": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "external_price_id": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse"
+                    }
+                },
+                "highlight": {
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price_cents": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_plans_domain.UpdatePlanParams": {
+            "type": "object",
+            "required": [
+                "billing_cycle",
+                "currency",
+                "description",
+                "name",
+                "value_amount"
+            ],
+            "properties": {
+                "billing_cycle": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "value_amount": {
+                    "type": "number"
                 }
             }
         },
@@ -5946,6 +7322,71 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse": {
+            "type": "object",
+            "properties": {
+                "canceled_at": {
+                    "type": "string"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_period_end": {
+                    "type": "string"
+                },
+                "current_period_start": {
+                    "type": "string"
+                },
+                "external_subscription_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payment_method_id": {
+                    "type": "string"
+                },
+                "plan_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionMethodRequest": {
+            "type": "object",
+            "properties": {
+                "payment_mathod_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest": {
+            "type": "object",
+            "properties": {
+                "plan_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest": {
+            "type": "object",
+            "properties": {
+                "current_period_end": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams": {
             "type": "object",
             "properties": {
@@ -6036,6 +7477,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "department_id": {
+                    "type": "string"
+                },
+                "department_name": {
                     "type": "string"
                 },
                 "email": {

@@ -46,7 +46,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	response, err := h.service.Login(c.Request.Context(), req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -99,13 +99,19 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		return
 	}
 
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+
 	tokenID := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
 	expiresIn := time.Until(claims.ExpiresAt.Time)
 	if expiresIn > 0 {
 		_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
 	}
 
-	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken)
+	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken, userID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
@@ -170,7 +176,7 @@ func (h *Handler) GetUserFromContext(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"user": user})
+	c.JSON(http.StatusOK, user)
 }
 
 // Logout godoc
@@ -233,4 +239,30 @@ func (h *Handler) Logout(c *gin.Context) {
 	)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
+// Register godoc
+// @Summary      Registra uma nova empresa e um usuário administrador
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        register body domain.RegisterRequest true "Dados de registro"
+// @Success      201 {object} map[string]string "Empresa e usuário criados com sucesso"
+// @Failure      400 {object} map[string]string "Requisição inválida"
+// @Failure      500 {object} map[string]string "Erro interno do servidor"
+// @Router       /auth/register [post]
+func (h *Handler) Register(c *gin.Context) {
+	var req domain.RegisterRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.Register(c.Request.Context(), req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Status(http.StatusCreated)
 }

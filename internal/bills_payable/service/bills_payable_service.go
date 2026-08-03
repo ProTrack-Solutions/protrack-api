@@ -8,6 +8,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/repository"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,6 +25,10 @@ type RepositoryInterface interface {
 	ScheduleBill(ctx context.Context, arg db.ScheduleBillParams) error
 	GetBillsPayableSummary(ctx context.Context, companyId pgtype.UUID) (db.GetBillsPayableSummaryRow, error)
 	UpdateOverdueBillsPayable(ctx context.Context) error
+	CountBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	SumBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	SumBillsPayableOverdue(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	SumBillsPayableSchedule(ctx context.Context, companyId pgtype.UUID) (float64, error)
 }
 
 type Service struct {
@@ -46,7 +51,7 @@ func (s *Service) CreateBillPayable(ctx context.Context, companyId uuid.UUID, re
 		PaymentMethodID: pgconv.ParseUUIDToPgType(req.PaymentMethodID),
 		Amount:          pgconv.Float64ToPgNumeric(req.Amount),
 		DueDate:         pgconv.StringToPgDate(req.DueDate),
-		Status:          req.Status,
+		Status:          "pending",
 		Description:     pgconv.ParseStringToPgText(req.Description),
 		Notes:           pgconv.ParseStringToPgText(req.Notes),
 	})
@@ -148,16 +153,37 @@ func (s *Service) GetOverdueBills(ctx context.Context, companyId uuid.UUID) ([]d
 	return response, nil
 }
 
-func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID) ([]domain.ListBillsPayableRow, error) {
+func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pagination globaldomain.PaginationParams) (domain.ListBillsPayableResponse, error) {
+	total, err := s.repo.CountBillsPayableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
+
 	billsPayable, err := s.repo.ListBillsPayable(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
-		return []domain.ListBillsPayableRow{}, err
+		return domain.ListBillsPayableResponse{}, err
+	}
+
+	totalPayable, err := s.repo.SumBillsPayableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
+
+	totalOverdue, err := s.repo.SumBillsPayableOverdue(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
+	}
+
+	totalScheduled, err := s.repo.SumBillsPayableSchedule(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ListBillsPayableResponse{}, err
 	}
 
 	var response []domain.ListBillsPayableRow
 
 	for _, billPayable := range billsPayable {
 		statusStr := billPayable.Status.(string)
+
 		response = append(response, domain.ListBillsPayableRow{
 			ID:                pgconv.PgUUIDToUUID(billPayable.ID),
 			CompanyID:         pgconv.PgUUIDToUUID(billPayable.CompanyID),
@@ -180,7 +206,14 @@ func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID) ([]
 		})
 	}
 
-	return response, nil
+	paginateResponse := globaldomain.NewPaginatedResponse(response, total, pagination)
+
+	return domain.ListBillsPayableResponse{
+		PaginatedResponse: paginateResponse,
+		TotalPayable:      totalPayable,
+		TotalOverdue:      totalOverdue,
+		TotalScheduled:    totalScheduled,
+	}, nil
 }
 
 func (s *Service) PayBill(ctx context.Context, req domain.PayBillRequest) error {
