@@ -232,6 +232,8 @@ definitions:
         - name
         - phone
         type: object
+      idempotency_key:
+        type: string
       payment:
         properties:
           card_brand:
@@ -279,6 +281,7 @@ definitions:
         type: object
     required:
     - company
+    - idempotency_key
     - payment
     - user
     type: object
@@ -1060,8 +1063,6 @@ definitions:
         type: string
       description:
         type: string
-      external_id:
-        type: string
       features:
         items:
           $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.CreatePlanFeatureRequest'
@@ -1078,7 +1079,6 @@ definitions:
     - billing_cycle
     - currency
     - description
-    - external_id
     - features
     - highlight
     - icon
@@ -1099,10 +1099,16 @@ definitions:
         type: string
       external_id:
         type: string
+      external_price_id:
+        type: string
       features:
         items:
           $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse'
         type: array
+      highlight:
+        type: boolean
+      icon:
+        type: string
       id:
         type: string
       name:
@@ -1536,6 +1542,8 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest:
     properties:
+      current_period_end:
+        type: string
       status:
         type: string
     type: object
