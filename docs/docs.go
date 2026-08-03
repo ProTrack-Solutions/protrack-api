@@ -5350,6 +5350,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "company",
+                "idempotency_key",
                 "payment",
                 "user"
             ],
@@ -5409,6 +5410,9 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                },
+                "idempotency_key": {
+                    "type": "string"
                 },
                 "payment": {
                     "type": "object",
@@ -6643,7 +6647,6 @@ const docTemplate = `{
                 "billing_cycle",
                 "currency",
                 "description",
-                "external_id",
                 "features",
                 "highlight",
                 "icon",
@@ -6658,9 +6661,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "description": {
-                    "type": "string"
-                },
-                "external_id": {
                     "type": "string"
                 },
                 "features": {
@@ -6704,11 +6704,20 @@ const docTemplate = `{
                 "external_id": {
                     "type": "string"
                 },
+                "external_price_id": {
+                    "type": "string"
+                },
                 "features": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_plan_features_domain.PlanFeatureResponse"
                     }
+                },
+                "highlight": {
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "string"
@@ -7370,6 +7379,9 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest": {
             "type": "object",
             "properties": {
+                "current_period_end": {
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 }
