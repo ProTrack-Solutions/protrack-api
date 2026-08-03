@@ -1726,7 +1726,7 @@ definitions:
       updated_at:
         type: string
     type: object
-host: localhost:8080
+host: pprotrack.duckdns.org
 info:
   contact:
     email: suporte@protrack.com

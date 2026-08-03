@@ -10,7 +10,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "pprotrack.duckdns.org",
     "basePath": "/api/v1",
     "paths": {
         "/accounts-receivable": {
