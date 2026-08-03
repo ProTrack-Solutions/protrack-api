@@ -18,6 +18,9 @@ VALUES(
     $7
 );
 
+-- name: GetSubscriptionByCompanyID :one
+SELECT * FROM subscriptions WHERE company_id = $1;
+
 -- name: GetSubscriptionById :one
 SELECT * FROM subscriptions WHERE id = $1;
 
