@@ -43,6 +43,9 @@ jobs:
   # -------------------------------------------------------------
   # JOB 2: Validação da Configuração do Docker
   # -------------------------------------------------------------
+  # -------------------------------------------------------------
+  # JOB 2: Validação da Configuração do Docker
+  # -------------------------------------------------------------
   validate-docker:
     name: Validar Docker Compose
     runs-on: ubuntu-latest
@@ -50,6 +53,17 @@ jobs:
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
+
+      - name: Criar .env Dummy para Validação
+        run: |
+          touch .env
+          echo "JWT_SECRET=test" >> .env
+          echo "EVOLUTION_KEY=test" >> .env
+          echo "EVOLUTION_API=test" >> .env
+          echo "DB_USER=test" >> .env
+          echo "DB_PASSWORD=test" >> .env
+          echo "DB_HOST=test" >> .env
+          echo "DB_NAME=test" >> .env
 
       - name: Linter no Compose
         run: docker compose config -q
