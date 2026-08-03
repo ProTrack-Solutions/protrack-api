@@ -67,20 +67,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Disparar Deploy
+      - name: Disparar Webhook de Deploy
         run: |
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
-            -X POST "${{ secrets.DOKPLOY_URL }}/api/compose.deploy" \
-            -H "accept: application/json" \
+            -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-            -d "{\"composeId\":\"${{ secrets.DOKPLOY_COMPOSE_ID }}\"}")
+            -d '{"event": "push", "ref": "refs/heads/main"}')
 
           echo "Status HTTP: $HTTP_STATUS"
-          echo "Resposta da API:"
+          echo "Resposta do Dokploy:"
           cat response.json
 
-          if [ "$HTTP_STATUS" -ne 200 ] && [ "$HTTP_STATUS" -ne 201 ]; then
+          if [ "$HTTP_STATUS" -ne 200 ] && [ "$HTTP_STATUS" -ne 201 ] && [ "$HTTP_STATUS" -ne 204 ]; then
             echo "❌ Erro ao disparar o deploy no Dokploy!"
             exit 1
           fi
