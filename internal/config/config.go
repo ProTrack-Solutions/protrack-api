@@ -33,6 +33,8 @@ type Config struct {
 
 	StripeSecretKey     string
 	StripeWebhookSecret string
+
+	WebhookURLDiscord string
 }
 
 func LoadConfig() (*Config, error) {
@@ -57,6 +59,7 @@ func LoadConfig() (*Config, error) {
 		RabbitURL:           getEnv("RABBITMQ_URL"),
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),
+		WebhookURLDiscord:   getEnv("WEBHOOK_URL_DISCORD"),
 	}
 
 	return config, nil
