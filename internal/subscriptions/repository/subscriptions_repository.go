@@ -54,3 +54,7 @@ func (r *Repository) CancelSubscription(ctx context.Context, id pgtype.UUID) err
 func (r *Repository) GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionId pgtype.Text) (db.Subscription, error) {
 	return r.queries().GetSubscriptionByExternalSubscriptionId(ctx, externalSubscriptionId)
 }
+
+func (r *Repository) GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (db.Subscription, error) {
+	return r.queries().GetSubscriptionByCompanyID(ctx, companyID)
+}

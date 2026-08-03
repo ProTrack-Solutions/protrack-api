@@ -69,6 +69,29 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 	return err
 }
 
+const getSubscriptionByCompanyID = `-- name: GetSubscriptionByCompanyID :one
+SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE company_id = $1
+`
+
+func (q *Queries) GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error) {
+	row := q.db.QueryRow(ctx, getSubscriptionByCompanyID, companyID)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.PlanID,
+		&i.PaymentMethodID,
+		&i.ExternalSubscriptionID,
+		&i.Status,
+		&i.CurrentPeriodStart,
+		&i.CurrentPeriodEnd,
+		&i.CanceledAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getSubscriptionByExternalSubscriptionId = `-- name: GetSubscriptionByExternalSubscriptionId :one
 SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at FROM subscriptions WHERE external_subscription_id = $1
 `

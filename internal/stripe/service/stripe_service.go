@@ -158,7 +158,7 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 		}
 
 		if err := s.subscriptionService.UpdateSubscriptionStatus(ctx, subscription.ID, subscriptionDomain.UpdateSubscriptionStatusRequest{
-			Status:           "pause",
+			Status:           "paused",
 			CurrentPeriodEnd: subscription.CurrentPeriodEnd,
 		}); err != nil {
 			return err
