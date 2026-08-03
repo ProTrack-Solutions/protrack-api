@@ -72,7 +72,7 @@ services:
       - AUTHENTICATION_API_KEY=${EVOLUTION_KEY}
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://protrack:pr0tr@ck2026@db:5432/evolution_db?schema=public
+      - DATABASE_CONNECTION_URI=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?schema=public}
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CACHE_REDIS_ENABLED=true
       - CACHE_REDIS_URI=redis://redis:6379/0
@@ -87,8 +87,6 @@ services:
     volumes:
       - evolution_instances:/evolution/instances
     depends_on:
-      db:
-        condition: service_healthy
       redis:
         condition: service_healthy
 
