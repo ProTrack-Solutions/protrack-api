@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -127,10 +128,10 @@ func main() {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
+	origins := strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",")
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:3000",
-		},
+		AllowOrigins: origins,
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
 		},
@@ -141,7 +142,7 @@ func main() {
 			"Content-Length",
 		},
 		AllowCredentials: true,
-		MaxAge:           0,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	r.HandleMethodNotAllowed = true
