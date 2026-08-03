@@ -71,23 +71,25 @@ jobs:
   # -------------------------------------------------------------
   # JOB 3: CD (Continuous Deployment) - Disparo no Dokploy
   # -------------------------------------------------------------
-  deploy:
-    name: Deploy no Dokploy
-    needs: [go-ci, validate-docker] # Só executa se os testes e validação passarem!
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+deploy:
+  name: Deploy no Dokploy
+  needs: [go-ci, validate-docker]
+  if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  runs-on: ubuntu-latest
 
-    steps:
-      - name: Disparar Webhook do Dokploy
-        run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
-            -H "Content-Type: application/json" \
-            -d '{}')
+  steps:
+    - name: Disparar Deploy via API do Dokploy
+      run: |
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X POST "${{ secrets.DOKPLOY_URL }}/api/compose.deploy" \
+          -H "accept: application/json" \
+          -H "Content-Type: application/json" \
+          -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
+          -d "{\"composeId\": \"${{ secrets.DOKPLOY_COMPOSE_ID }}\"}")
 
-          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ] || [ "$RESPONSE" -eq 204 ]; then
-            echo "✅ Deploy iniciado com sucesso no Dokploy! (HTTP $RESPONSE)"
-          else
-            echo "❌ Erro ao disparar deploy no Dokploy. Código HTTP: $RESPONSE"
-            exit 1
-          fi
+        if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ]; then
+          echo "✅ Deploy iniciado com sucesso no Dokploy! (HTTP $RESPONSE)"
+        else
+          echo "❌ Erro ao disparar deploy no Dokploy. Código HTTP: $RESPONSE"
+          exit 1
+        fi
