@@ -78,18 +78,13 @@ deploy:
   runs-on: ubuntu-latest
 
   steps:
-    - name: Disparar Deploy via API do Dokploy
+    - name: Disparar Deploy
       run: |
-        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+        RESPONSE=$(curl -s \
           -X POST "${{ secrets.DOKPLOY_URL }}/api/compose.deploy" \
           -H "accept: application/json" \
           -H "Content-Type: application/json" \
           -H "x-api-key: ${{ secrets.DOKPLOY_API_KEY }}" \
-          -d "{\"composeId\": \"${{ secrets.DOKPLOY_COMPOSE_ID }}\"}")
+          -d "{\"composeId\":\"${{ secrets.DOKPLOY_COMPOSE_ID }}\"}")
 
-        if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ]; then
-          echo "✅ Deploy iniciado com sucesso no Dokploy! (HTTP $RESPONSE)"
-        else
-          echo "❌ Erro ao disparar deploy no Dokploy. Código HTTP: $RESPONSE"
-          exit 1
-        fi
+        echo "$RESPONSE"
