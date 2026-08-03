@@ -1,0 +1,76 @@
+name: CI/CD Pipeline - ProTrack API (Go)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  # -------------------------------------------------------------
+  # JOB 1: CI (Continuous Integration) - Validação, Lint & Testes Go
+  # -------------------------------------------------------------
+  go-ci:
+    name: Go Lint & Testes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25.2" # Ajuste para a versão do Go usada no seu go.mod
+          cache: true
+
+      - name: Baixar Dependências
+        run: go mod download
+
+      #- name: Verificar Formatação (gofmt)
+      #  run: |
+      #   if [ -n "$(gofmt -l .)" ]; then
+      #     echo "Os seguintes arquivos precisam ser formatados com gofmt:"
+      #     gofmt -l .
+      #     exit 1
+      #  fi
+
+      - name: Executar Testes Unitários
+        run: go test -v -race -cover ./...
+
+  # -------------------------------------------------------------
+  # JOB 2: Validação da Configuração do Docker
+  # -------------------------------------------------------------
+  validate-docker:
+    name: Validar Docker Compose
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do Código
+        uses: actions/checkout@v4
+
+      - name: Linter no Compose
+        run: docker compose config -q
+
+  # -------------------------------------------------------------
+  # JOB 3: CD (Continuous Deployment) - Disparo no Dokploy
+  # -------------------------------------------------------------
+  deploy:
+    name: Deploy no Dokploy
+    needs: [go-ci, validate-docker] # Só executa se os testes e validação passarem!
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Disparar Webhook do Dokploy
+        run: |
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}")
+
+          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ]; then
+            echo "✅ Deploy iniciado com sucesso no Dokploy! (HTTP $RESPONSE)"
+          else
+            echo "❌ Erro ao disparar deploy no Dokploy. Código HTTP: $RESPONSE"
+            exit 1
+          fi
