@@ -1,3 +1,11 @@
+networks:
+  protrack-net:
+    external: true
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -16,6 +24,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - protrack-net
 
   redis:
     image: redis:latest
@@ -24,11 +34,15 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     restart: always
     command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - protrack-net
 
   api:
     build:
@@ -49,49 +63,11 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
       EVOLUTION_KEY: ${EVOLUTION_KEY}
-      EVOLUTION_API: ${EVOLUTION_API}
+      EVOLUTION_API: http://evolution_api:8081
     depends_on:
       redis:
         condition: service_healthy
-      evolution-api:
-        condition: service_started
       rabbitmq:
         condition: service_healthy
-  evolution-api:
-    container_name: evolution_api
-    image: evolutionapi/evolution-api:v2.1.1
-    restart: always
-    privileged: true
-    ports:
-      - "8085:8081"
-    environment:
-      - SERVER_TYPE=http
-      - SERVER_PORT=8081
-      - SERVER_URL=http://localhost:8085
-      - AUTHENTICATION_TYPE=apikey
-      - AUTHENTICATION_API_KEY=${EVOLUTION_KEY}
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=${DATABASE_URL:-postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT:-5432}/${DB_NAME}?schema=public}
-      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
-      - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://redis:6379/0
-      - CACHE_REDIS_SAVE_INSTANCES=true
-      - CONFIG_SESSION_HTTP_BROWSER_ARGS="['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process', '--disable-gpu']"
-      - CONFIG_SESSION_PHONE_VERSION=2.3000.1043690208
-
-    security_opt:
-      - seccomp:unconfined
-    env_file:
-      - .env
-    volumes:
-      - evolution_instances:/evolution/instances
-    depends_on:
-      redis:
-        condition: service_healthy
-
-volumes:
-  postgres_data:
-  redis_data:
-  evolution_instances:
-  rabbitmq_data:
+    networks:
+      - protrack-net

@@ -1,0 +1,61 @@
+# docker-compose.evolution.yml
+networks:
+  protrack-net:
+    external: true
+
+volumes:
+  evolution_instances:
+  evolution_postgres_data:
+
+services:
+  evolution-postgres:
+    image: postgres:16
+    container_name: evolution-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - evolution_postgres_data:/var/lib/postgresql/data
+    networks:
+      - protrack-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  evolution-api:
+    container_name: evolution_api
+    image: atendai/evolution-api:v2.1.1
+    restart: always
+    privileged: true
+    ports:
+      - "8085:8081"
+    env_file:
+      - .env.evolution
+    environment:
+      - SERVER_TYPE=http
+      - SERVER_PORT=8081
+      - SERVER_URL=http://localhost:8085
+      - AUTHENTICATION_TYPE=apikey
+      - AUTHENTICATION_API_KEY=${EVOLUTION_KEY}
+      - DATABASE_ENABLED=true
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://${DB_USER}:${DB_PASSWORD}@evolution-postgres:5432/${DB_NAME}?schema=public
+      - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis:6379/0
+      - CACHE_REDIS_SAVE_INSTANCES=true
+      - CONFIG_SESSION_HTTP_BROWSER_ARGS="['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-accelerated-2d-canvas', '--no-first-run', '--no-zygote', '--single-process', '--disable-gpu']"
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1043690208
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - evolution_instances:/evolution/instances
+    networks:
+      - protrack-net
+    depends_on:
+      evolution-postgres:
+        condition: service_healthy
