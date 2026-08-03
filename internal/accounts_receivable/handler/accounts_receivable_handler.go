@@ -8,6 +8,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -17,9 +18,10 @@ type Handler struct {
 	service    *service.Service
 	jwtManager *jwt.JWTManager
 	blacklist  *cache.TokenBlacklist
+	discordLog *discord.DiscordLogger
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, discordLog *discord.DiscordLogger) *Handler {
 	return &Handler{
 		service:    service,
 		jwtManager: jwtManager,
