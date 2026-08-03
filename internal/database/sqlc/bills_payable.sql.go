@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countBillsPayableByCompany = `-- name: CountBillsPayableByCompany :one
+SELECT COUNT(*) FROM bills_payable
+WHERE company_id = $1
+`
+
+func (q *Queries) CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countBillsPayableByCompany, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createBillPayable = `-- name: CreateBillPayable :exec
 INSERT INTO bills_payable (
         company_id,
@@ -349,6 +361,45 @@ type ScheduleBillParams struct {
 func (q *Queries) ScheduleBill(ctx context.Context, arg ScheduleBillParams) error {
 	_, err := q.db.Exec(ctx, scheduleBill, arg.ID, arg.CompanyID, arg.ScheduledDate)
 	return err
+}
+
+const sumBillsPayableByCompany = `-- name: SumBillsPayableByCompany :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_amount
+FROM bills_payable 
+WHERE company_id = $1
+`
+
+func (q *Queries) SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, sumBillsPayableByCompany, companyID)
+	var total_amount float64
+	err := row.Scan(&total_amount)
+	return total_amount, err
+}
+
+const sumBillsPayableOverdue = `-- name: SumBillsPayableOverdue :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_overdue
+FROM bills_payable 
+WHERE company_id = $1 AND status = 'overdue'
+`
+
+func (q *Queries) SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, sumBillsPayableOverdue, companyID)
+	var total_overdue float64
+	err := row.Scan(&total_overdue)
+	return total_overdue, err
+}
+
+const sumBillsPayableSchedule = `-- name: SumBillsPayableSchedule :one
+SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_scheduled
+FROM bills_payable 
+WHERE company_id = $1 AND status = 'scheduled'
+`
+
+func (q *Queries) SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error) {
+	row := q.db.QueryRow(ctx, sumBillsPayableSchedule, companyID)
+	var total_scheduled float64
+	err := row.Scan(&total_scheduled)
+	return total_scheduled, err
 }
 
 const updateBillPayable = `-- name: UpdateBillPayable :exec

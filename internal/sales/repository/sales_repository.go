@@ -119,3 +119,15 @@ func (r *Repository) CountSalesByCompany(ctx context.Context, companyId pgtype.U
 func (r *Repository) UpdateSale(ctx context.Context, arg db.UpdateSaleParams) error {
 	return r.queries().UpdateSale(ctx, arg)
 }
+
+func (r *Repository) CountSalesDeletedByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
+	return r.queries().CountSalesDeletedByCompany(ctx, companyId)
+}
+
+func (r *Repository) GetTotalAmountPending(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().GetTotalAmountPending(ctx, companyId)
+}
+
+func (r *Repository) GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error) {
+	return r.queries().GetTotalAmountPaid(ctx, companyId)
+}

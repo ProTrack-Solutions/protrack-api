@@ -12,6 +12,7 @@ import (
 	accountsReceivableRepository "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/repository"
 	accountsReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
 	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
@@ -39,6 +40,8 @@ import (
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
 	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
@@ -47,6 +50,11 @@ import (
 	paymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/payment_methods/service"
 	paymentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/payments/handler"
 	paymentsService "github.com/ProTrack-Solutions/protrack-api/internal/payments/service"
+	planFeaturesRepository "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/repository"
+	planFeaturesService "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/service"
+	plansHandler "github.com/ProTrack-Solutions/protrack-api/internal/plans/handler"
+	plansRepository "github.com/ProTrack-Solutions/protrack-api/internal/plans/repository"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	productsHandler "github.com/ProTrack-Solutions/protrack-api/internal/products/handler"
 	productsRepository "github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
 	productsService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
@@ -62,6 +70,15 @@ import (
 	salesHandler "github.com/ProTrack-Solutions/protrack-api/internal/sales/handler"
 	salesRepository "github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	salesService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
+	clientStripe "github.com/ProTrack-Solutions/protrack-api/internal/stripe/client"
+	stripeHandler "github.com/ProTrack-Solutions/protrack-api/internal/stripe/handler"
+	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
+	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
+	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
+	subscriptionPaymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
+	subscriptionsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/handler"
+	subscriptionsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/repository"
+	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	usersHandler "github.com/ProTrack-Solutions/protrack-api/internal/users/handler"
 	usersRepository "github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
 	usersService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
@@ -100,6 +117,13 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal().Err(err).Msg("Error loading settings")
+	}
+
+	discordLogger := discord.NewDiscordLogger(cfg)
+
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
@@ -121,6 +145,7 @@ func main() {
 	}))
 
 	r.HandleMethodNotAllowed = true
+
 	r.Use(func(c *gin.Context) {
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)
@@ -129,39 +154,47 @@ func main() {
 		c.Next()
 	})
 
+	r.Use(middleware.GinDiscordErrorMiddleware(discordLogger))
+
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	logger.InitLogger("development")
 
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatal().Err(err).Msg("Error loading settings")
-	}
-
 	db, err := database.NewConnect(cfg)
 	if err != nil {
+		discordLogger.Send(domain.LevelError, "Failed to connect to database", err.Error())
 		log.Fatal().Err(err).Msg("Failed to connect to database")
 	}
 	defer db.Close()
+	discordLogger.Send(domain.LevelInfo, "Database connected", "Connected to the database successfully")
 
 	redis, err := redis_connection.NewRedisConnection(cfg)
 	if err != nil {
+		discordLogger.Send(domain.LevelError, "Failed to connect to redis", err.Error())
 		log.Fatal().Err(err).Msg("Failed to connect to redis")
 	}
 	defer redis.Close()
+	discordLogger.Send(domain.LevelInfo, "Redis connected", "Connected to Redis successfully")
 
 	_, ch, err := rabbitmq.InitializeRabbitMQ(cfg)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to opem channel to rabbitmq")
+		discordLogger.Send(domain.LevelError, "Failed to open channel to rabbitmq", err.Error())
+		log.Fatal().Err(err).Msg("Failed to open channel to rabbitmq")
 	}
 	defer ch.Close()
+	discordLogger.Send(domain.LevelInfo, "RabbitMQ connected", "RabbitMQ channel opened successfully")
+
+	clientStripe := clientStripe.NewStripeClient(cfg)
+	discordLogger.Send(domain.LevelInfo, "Stripe client created", "Stripe client initialized successfully")
 
 	whatsapp := whatsapp.NewWhatsapp(cfg)
+	discordLogger.Send(domain.LevelInfo, "Whatsapp initialized", "Whatsapp client initialized successfully")
 
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
 
 	blacklist := cache.NewTokenBlackList(redis)
 
+	subscriptionsRepository := subscriptionsRepository.NewRepository(db.Pool)
 	usersRepository := usersRepository.NewRepository(db.Pool)
 	companiesRepository := companiesRepository.NewRepository(db.Pool)
 	departmentsRepository := departmentsRepository.NewRepository(db.Pool)
@@ -178,14 +211,22 @@ func main() {
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
+	plansRepository := plansRepository.NewRepository(db.Pool)
+	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
+	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
+	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
+	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
+	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
+	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg)
 	companiesService := companiesService.NewService(db.Pool, companiesRepository, usersRepository)
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	authService := authService.NewService(usersService, jwtManager)
+	stripeService := stripeService.NewService(cfg, subscriptionsService)
+	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
@@ -201,10 +242,12 @@ func main() {
 	whatsappService := whatsappService.NewService(cfg, companiesService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 
+	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
+	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
 	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
-	departmentsHandler := departmentsHandler.NewHandler(departmentsService)
+	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
 	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist)
 	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist)
 	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist)
@@ -216,11 +259,13 @@ func main() {
 	billCategoriesHandler := billCategoriesHandler.NewHandler(billCategoriesService, jwtManager, blacklist)
 	billsPayableHandler := billsPayableHandler.NewHandler(billsPayableService, jwtManager, blacklist)
 	paymentHistoryHandler := paymentHistoryHandler.NewHandler(paymentHistoryService, jwtManager, blacklist)
-	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist)
+	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger)
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
+	plansHandler := plansHandler.NewHandler(plansService)
+	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -243,13 +288,17 @@ func main() {
 	cashFlowHandler.RegisterRoute(api)
 	whatsappHandler.RegisterRoute(api)
 	annoucementsHandler.RegisterRoutes(api)
+	plansHandler.RegisterRoutes(api)
+	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
+	subscriptionsHandler.RegisterRoute(api)
+	stripeHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
-	worker.StartOverdueMonitor(salesService, ch)
-	worker.StartBillPayableOverdueMonitor(billsPayableService)
+	worker.StartOverdueMonitor(salesService, ch, discordLogger)
+	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
 	consumers.StartWhatsAppConsumer(ch, whatsapp)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 
@@ -265,19 +314,24 @@ func main() {
 		log.Info().Msgf("GoFinance running at the port %s", cfg.ApiPort)
 		log.Info().Msgf("Data Base: %s@%s:%s/%s", cfg.DBUser, cfg.DBHost, cfg.DBPort, cfg.DBName)
 
+		discordLogger.Send(domain.LevelInfo, "Server started", "GoFinance running at the port "+cfg.ApiPort)
+
 		// ListenAndServe bloqueia até que o servidor seja fechado
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			discordLogger.Send(domain.LevelError, "Failed to start server", err.Error())
 			log.Fatal().Err(err).Msg("Failed to start server")
 		}
 	}()
 
 	<-sigChan
+	discordLogger.Send(domain.LevelInfo, "Shutting down server...", "Server shutting down...")
 	log.Info().Msg("Shutting down server...")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
+		discordLogger.Send(domain.LevelError, "Failed to shutdown server", err.Error())
 		log.Fatal().Err(err).Msg("Server forced to shutdown")
 	}
 

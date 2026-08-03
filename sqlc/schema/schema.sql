@@ -317,9 +317,7 @@ CREATE TABLE IF NOT EXISTS accounts_receivable (
     CONSTRAINT fk_receivable_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
     CONSTRAINT fk_receivable_sale FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
 );
-CREATE INDEX idx_receivable_customer ON accounts_receivable(customer_id);
-CREATE INDEX idx_receivable_status ON accounts_receivable(status);
-CREATE INDEX idx_receivable_due_date ON accounts_receivable(due_date);
+
 CREATE TYPE announcement_type AS ENUM ('info', 'warning', 'success', 'maintenance');
 
 CREATE TABLE IF NOT EXISTS announcements(
@@ -340,4 +338,83 @@ CREATE TABLE IF NOT EXISTS announcements(
     CONSTRAINT fk_announcements_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE -- Vírgula removida daqui
 );
 
-CREATE INDEX idx_announcements_visibility ON announcements (is_active, starts_at, expires_at);
+CREATE TABLE IF NOT EXISTS plans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    external_id VARCHAR(255) NOT NULL,
+    external_price_id VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,              -- ex: 'Plano Pro'
+    description TEXT,                        -- ex: 'Acesso total a todas as funcionalidades'
+    price_cents INT NOT NULL,                -- ex: 4990 (R$ 49,90 - gravado em centavos para evitar erros de arredondamento)
+    currency VARCHAR(3) DEFAULT 'BRL',       -- 'BRL'
+    billing_cycle VARCHAR(20) NOT NULL,      -- 'monthly', 'yearly'
+    active BOOLEAN DEFAULT true,
+    highlight BOOLEAN DEFAULT FALSE NOT NULL,
+    icon VARCHAR(255) DEFAULT 'check' NOT NULL,             -- Se o plano ainda pode ser assinado por novos usuários
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS  subscription_payment_methods (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID REFERENCES companies(id) ON DELETE CASCADE,
+    gateway_payment_method_id VARCHAR(255) NOT NULL, -- ID do cartão no Gateway
+    type VARCHAR(20) NOT NULL,                       -- 'credit_card', 'pix', etc.
+    card_brand VARCHAR(50),                          -- 'visa', 'mastercard'
+    card_last4 VARCHAR(4),                           -- '4432'
+    card_exp_month INT,                              -- 12
+    card_exp_year INT,                               -- 2028
+    is_default BOOLEAN DEFAULT true,
+    created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    updated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    plan_id UUID NOT NULL REFERENCES plans(id),
+    payment_method_id UUID REFERENCES subscription_payment_methods(id),
+    
+    -- Dados de Integração com Mercado Pago
+    external_subscription_id VARCHAR(255) UNIQUE,  -- ID do Preapproval gerado pela API do MP
+    
+    -- Controle de Status
+    -- Valores possíveis: 'authorized' (ativa/paga), 'paused', 'cancelled', 'pending'
+    status VARCHAR(50) NOT NULL DEFAULT 'pending', 
+    
+    -- Datas de Controle do Período
+    current_period_start TIMESTAMPTZ,           -- Início da vigência do mês atual
+    current_period_end TIMESTAMPTZ,             -- Fim da vigência do mês atual (data de renovação)
+    canceled_at TIMESTAMPTZ,                    -- Preenchido apenas se o cliente cancelar
+    
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS invoice_history (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id),
+    payment_method_id UUID REFERENCES subscription_payment_methods(id),
+    
+    external_payment_id VARCHAR(255) UNIQUE NOT NULL, -- ID único da transação gerado pelo MP (Payment ID)
+    amount_cents INT NOT NULL,                   -- Valor cobrado (em centavos)
+    status VARCHAR(50) NOT NULL,                 -- 'approved', 'rejected', 'refunded', 'in_process'
+    
+    paid_at TIMESTAMPTZ,                           -- Data/hora da confirmação do pagamento
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TABLE IF NOT EXISTS plan_features (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    plan_id UUID NOT NULL,
+    name VARCHAR(150) NOT NULL,
+    is_enabled BOOLEAN DEFAULT true NOT NULL,
+    display_order INT DEFAULT 0 NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT fk_plan_features_plan
+        FOREIGN KEY (plan_id) 
+        REFERENCES plans(id) 
+        ON DELETE CASCADE
+);

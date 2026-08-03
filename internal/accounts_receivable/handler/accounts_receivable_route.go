@@ -15,5 +15,6 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		accountsReceivable.GET("/total-pending", h.GetTotalOpenAmountByCompany)
 		accountsReceivable.GET("/total-overdue", h.GetTotalOverdueAmountByCompany)
 		accountsReceivable.GET("/total-pending-overdue", h.GetTotalPendingAndOverdue)
+		accountsReceivable.GET("/complete/list", h.ListAccountsReceivables)
 	}
 }

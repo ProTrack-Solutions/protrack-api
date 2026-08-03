@@ -190,6 +190,19 @@ type Department struct {
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type InvoiceHistory struct {
+	ID                pgtype.UUID        `json:"id"`
+	SubscriptionID    pgtype.UUID        `json:"subscription_id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	PaymentMethodID   pgtype.UUID        `json:"payment_method_id"`
+	ExternalPaymentID string             `json:"external_payment_id"`
+	AmountCents       int32              `json:"amount_cents"`
+	Status            string             `json:"status"`
+	PaidAt            pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PaymentHistory struct {
 	ID              pgtype.UUID        `json:"id"`
 	CompanyID       pgtype.UUID        `json:"company_id"`
@@ -210,6 +223,32 @@ type PaymentMethod struct {
 	IsActive  bool               `json:"is_active"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Plan struct {
+	ID              pgtype.UUID        `json:"id"`
+	ExternalID      string             `json:"external_id"`
+	ExternalPriceID string             `json:"external_price_id"`
+	Name            string             `json:"name"`
+	Description     pgtype.Text        `json:"description"`
+	PriceCents      int32              `json:"price_cents"`
+	Currency        pgtype.Text        `json:"currency"`
+	BillingCycle    string             `json:"billing_cycle"`
+	Active          pgtype.Bool        `json:"active"`
+	Highlight       bool               `json:"highlight"`
+	Icon            string             `json:"icon"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PlanFeature struct {
+	ID           pgtype.UUID        `json:"id"`
+	PlanID       pgtype.UUID        `json:"plan_id"`
+	Name         string             `json:"name"`
+	IsEnabled    bool               `json:"is_enabled"`
+	DisplayOrder int32              `json:"display_order"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Product struct {
@@ -274,6 +313,36 @@ type SaleItem struct {
 	UnitPrice pgtype.Numeric     `json:"unit_price"`
 	Discount  pgtype.Numeric     `json:"discount"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Subscription struct {
+	ID                     pgtype.UUID        `json:"id"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	PlanID                 pgtype.UUID        `json:"plan_id"`
+	PaymentMethodID        pgtype.UUID        `json:"payment_method_id"`
+	ExternalSubscriptionID pgtype.Text        `json:"external_subscription_id"`
+	Status                 string             `json:"status"`
+	CurrentPeriodStart     pgtype.Timestamptz `json:"current_period_start"`
+	CurrentPeriodEnd       pgtype.Timestamptz `json:"current_period_end"`
+	CanceledAt             pgtype.Timestamptz `json:"canceled_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+}
+
+type SubscriptionPaymentMethod struct {
+	ID                     pgtype.UUID        `json:"id"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	GatewayPaymentMethodID string             `json:"gateway_payment_method_id"`
+	Type                   string             `json:"type"`
+	CardBrand              pgtype.Text        `json:"card_brand"`
+	CardLast4              pgtype.Text        `json:"card_last4"`
+	CardExpMonth           pgtype.Int4        `json:"card_exp_month"`
+	CardExpYear            pgtype.Int4        `json:"card_exp_year"`
+	IsDefault              pgtype.Bool        `json:"is_default"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	UpdatedBy              pgtype.UUID        `json:"updated_by"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

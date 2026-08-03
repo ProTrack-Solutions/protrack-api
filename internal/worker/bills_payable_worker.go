@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	"github.com/rs/zerolog/log"
 )
 
-func StartBillPayableOverdueMonitor(billPayableService *service.Service) {
+func StartBillPayableOverdueMonitor(billPayableService *service.Service, discordLog *discord.DiscordLogger) {
 	ticker := time.NewTicker(1 * time.Hour)
 
 	go func() {
@@ -20,12 +22,15 @@ func StartBillPayableOverdueMonitor(billPayableService *service.Service) {
 
 			if err := billPayableService.UpdateOverdueBillsPayable(ctx); err != nil {
 				log.Error().Err(err).Msg("Erro crítico no worker de contas a pagar vencidas")
+				discordLog.Send(domain.LevelError, "Erro crítico no worker de contas a pagar vencidas", err.Error())
 			} else {
 				log.Info().Msg("Status de contas a pagar atualizado com sucesso.")
+				discordLog.Send(domain.LevelInfo, "Resumo de execução contas a pagar vencidas", "Status de contas a pagar atualizado com sucesso.")
 			}
 		}
 
 		log.Info().Msg("Serviço de Monitoramento contas a pagar iniciado")
+		discordLog.Send(domain.LevelInfo, "Worker contas a pagar iniciado", "Serviço de monitoramento de contas a pagar iniciado")
 		runUpdate()
 
 		for range ticker.C {
