@@ -72,7 +72,8 @@ jobs:
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
             -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
             -H "Content-Type: application/json" \
-            -d '{"event": "push", "ref": "refs/heads/main"}')
+            -H "X-GitHub-Event: push" \
+            -d '{"ref": "refs/heads/main"}')
 
           echo "Status HTTP: $HTTP_STATUS"
           echo "Resposta do Dokploy:"
