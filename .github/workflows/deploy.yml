@@ -80,9 +80,12 @@ jobs:
     steps:
       - name: Disparar Webhook do Dokploy
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}")
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.DOKPLOY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{}')
 
-          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ]; then
+          if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 201 ] || [ "$RESPONSE" -eq 204 ]; then
             echo "✅ Deploy iniciado com sucesso no Dokploy! (HTTP $RESPONSE)"
           else
             echo "❌ Erro ao disparar deploy no Dokploy. Código HTTP: $RESPONSE"
