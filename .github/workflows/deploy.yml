@@ -67,15 +67,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Garantir Rede Docker Compartilhada
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          script: |
-            docker network create protrack-net 2>/dev/null || true
-
       - name: Disparar Webhook de Deploy
         run: |
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
