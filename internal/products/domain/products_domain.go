@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"fmt"
+	"math/rand"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -29,7 +31,6 @@ type Product struct {
 }
 
 type CreateProductRequest struct {
-	CompanyID   uuid.UUID `json:"company_id"`
 	Name        string    `json:"name"`
 	Description string    `json:"description"`
 	CategoryID  uuid.UUID `json:"category_id"`
@@ -38,7 +39,9 @@ type CreateProductRequest struct {
 	Size        string    `json:"size"`
 	CostPrice   float64   `json:"cost_price"`
 	SalePrice   float64   `json:"sale_price"`
-	CreatedBy   uuid.UUID `json:"created_by"`
+	NotBarcode  bool      `json:"not_barcode"`
+	SellInBulk  bool      `json:"sell_in_bulk"`
+	Unit        string    `json:"unit"`
 }
 
 type DeleteProductRequest struct {
@@ -183,7 +186,7 @@ func ApplyUpdateProductParams(
 	}
 
 	if req.Quantity != 0 {
-		arg.Quantity = req.Quantity
+		arg.Quantity = pgconv.IntToPgInt4(int(req.Quantity))
 	}
 
 	if req.Size != "" {
@@ -201,4 +204,33 @@ func ApplyUpdateProductParams(
 	if req.UpdatedBy != uuid.Nil {
 		arg.UpdatedBy = pgconv.ParseUUIDToPgType(req.UpdatedBy)
 	}
+}
+
+func GerarEAN13(base string) (string, error) {
+	if base == "" {
+		rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+		for i := 0; i < 12; i++ {
+			base += fmt.Sprintf("%d", rng.Intn(10))
+		}
+	} else if len(base) != 12 {
+		return "", fmt.Errorf("a base deve conter exatamente 12 dígitos")
+	}
+
+	// Cálculo do dígito verificador (EAN-13)
+	soma := 0
+	for i, r := range base {
+		if r < '0' || r > '9' {
+			return "", fmt.Errorf("a base deve conter apenas números")
+		}
+		digito := int(r - '0')
+		if i%2 == 0 {
+			soma += digito * 1
+		} else {
+			soma += digito * 3
+		}
+	}
+
+	digitoVerificador := (10 - (soma % 10)) % 10
+
+	return fmt.Sprintf("%s%d", base, digitoVerificador), nil
 }

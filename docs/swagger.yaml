@@ -1193,21 +1193,23 @@ definitions:
         type: string
       category_id:
         type: string
-      company_id:
-        type: string
       cost_price:
         type: number
-      created_by:
-        type: string
       description:
         type: string
       name:
         type: string
+      not_barcode:
+        type: boolean
       quantity:
         type: integer
       sale_price:
         type: number
+      sell_in_bulk:
+        type: boolean
       size:
+        type: string
+      unit:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ListProductsByCompanyRow:
@@ -1726,7 +1728,7 @@ definitions:
       updated_at:
         type: string
     type: object
-host: pprotrack.duckdns.org
+host: localhost:8080
 info:
   contact:
     email: suporte@protrack.com

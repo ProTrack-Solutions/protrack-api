@@ -64,7 +64,9 @@ INSERT INTO products(
         size,
         cost_price,
         sale_price,
-        created_by
+        created_by,
+        sell_in_bulk,
+        unit
     )
 VALUES(
         $1,
@@ -76,9 +78,11 @@ VALUES(
         $7,
         $8,
         $9,
-        $10
+        $10,
+        $11,
+        $12
     )
-RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk
 `
 
 type CreateProductParams struct {
@@ -87,11 +91,13 @@ type CreateProductParams struct {
 	Description pgtype.Text    `json:"description"`
 	CategoryID  pgtype.UUID    `json:"category_id"`
 	Barcode     pgtype.Text    `json:"barcode"`
-	Quantity    int32          `json:"quantity"`
+	Quantity    pgtype.Int4    `json:"quantity"`
 	Size        pgtype.Text    `json:"size"`
 	CostPrice   pgtype.Numeric `json:"cost_price"`
 	SalePrice   pgtype.Numeric `json:"sale_price"`
 	CreatedBy   pgtype.UUID    `json:"created_by"`
+	SellInBulk  bool           `json:"sell_in_bulk"`
+	Unit        UnitOfMeasure  `json:"unit"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -106,6 +112,8 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.CostPrice,
 		arg.SalePrice,
 		arg.CreatedBy,
+		arg.SellInBulk,
+		arg.Unit,
 	)
 	var i Product
 	err := row.Scan(
@@ -125,6 +133,8 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Unit,
+		&i.SellInBulk,
 	)
 	return i, err
 }
@@ -137,7 +147,7 @@ WHERE id = $2
 `
 
 type DecrementStockParams struct {
-	Quantity int32       `json:"quantity"`
+	Quantity pgtype.Int4 `json:"quantity"`
 	ID       pgtype.UUID `json:"id"`
 }
 
@@ -233,7 +243,7 @@ type GetInventoryReportParams struct {
 type GetInventoryReportRow struct {
 	Name         string             `json:"name"`
 	CategoryName pgtype.Text        `json:"category_name"`
-	Quantity     int32              `json:"quantity"`
+	Quantity     pgtype.Int4        `json:"quantity"`
 	SalePrice    pgtype.Numeric     `json:"sale_price"`
 	TotalValue   pgtype.Numeric     `json:"total_value"`
 	CostPrice    pgtype.Numeric     `json:"cost_price"`
@@ -271,7 +281,7 @@ func (q *Queries) GetInventoryReport(ctx context.Context, arg GetInventoryReport
 }
 
 const getProductByBarcode = `-- name: GetProductByBarcode :one
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk
 FROM products
 WHERE barcode = $1
     AND deleted_at IS NULL
@@ -297,12 +307,14 @@ func (q *Queries) GetProductByBarcode(ctx context.Context, barcode pgtype.Text) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Unit,
+		&i.SellInBulk,
 	)
 	return i, err
 }
 
 const getProductById = `-- name: GetProductById :one
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk
 FROM products
 WHERE id = $1
     AND deleted_at IS NULL
@@ -328,6 +340,8 @@ func (q *Queries) GetProductById(ctx context.Context, id pgtype.UUID) (Product, 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Unit,
+		&i.SellInBulk,
 	)
 	return i, err
 }
@@ -430,7 +444,7 @@ type ListProductsByCategoryAndDateRow struct {
 	ID           pgtype.UUID        `json:"id"`
 	Name         string             `json:"name"`
 	CostPrice    pgtype.Numeric     `json:"cost_price"`
-	Quantity     int32              `json:"quantity"`
+	Quantity     pgtype.Int4        `json:"quantity"`
 	CategoryID   pgtype.UUID        `json:"category_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	CategoryName string             `json:"category_name"`
@@ -465,7 +479,7 @@ func (q *Queries) ListProductsByCategoryAndDate(ctx context.Context, arg ListPro
 }
 
 const listProductsByCategoryId = `-- name: ListProductsByCategoryId :many
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk
 FROM products
 WHERE category_id = $1
     AND company_id = $2
@@ -503,6 +517,8 @@ func (q *Queries) ListProductsByCategoryId(ctx context.Context, arg ListProducts
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Unit,
+			&i.SellInBulk,
 		); err != nil {
 			return nil, err
 		}
@@ -515,7 +531,7 @@ func (q *Queries) ListProductsByCategoryId(ctx context.Context, arg ListProducts
 }
 
 const listProductsByCompany = `-- name: ListProductsByCompany :many
-SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at,
+SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at, p.unit, p.sell_in_bulk,
     c.name AS category_name
 FROM products p
     INNER JOIN product_categories c ON p.category_id = c.id
@@ -530,7 +546,7 @@ type ListProductsByCompanyRow struct {
 	Name         string             `json:"name"`
 	Description  pgtype.Text        `json:"description"`
 	Barcode      pgtype.Text        `json:"barcode"`
-	Quantity     int32              `json:"quantity"`
+	Quantity     pgtype.Int4        `json:"quantity"`
 	Size         pgtype.Text        `json:"size"`
 	CostPrice    pgtype.Numeric     `json:"cost_price"`
 	SalePrice    pgtype.Numeric     `json:"sale_price"`
@@ -540,6 +556,8 @@ type ListProductsByCompanyRow struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	Unit         UnitOfMeasure      `json:"unit"`
+	SellInBulk   bool               `json:"sell_in_bulk"`
 	CategoryName string             `json:"category_name"`
 }
 
@@ -569,6 +587,8 @@ func (q *Queries) ListProductsByCompany(ctx context.Context, companyID pgtype.UU
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Unit,
+			&i.SellInBulk,
 			&i.CategoryName,
 		); err != nil {
 			return nil, err
@@ -610,7 +630,7 @@ type ListProductsByCompanyPaginatedRow struct {
 	Name         string             `json:"name"`
 	Description  pgtype.Text        `json:"description"`
 	Barcode      pgtype.Text        `json:"barcode"`
-	Quantity     int32              `json:"quantity"`
+	Quantity     pgtype.Int4        `json:"quantity"`
 	Size         pgtype.Text        `json:"size"`
 	CostPrice    pgtype.Numeric     `json:"cost_price"`
 	SalePrice    pgtype.Numeric     `json:"sale_price"`
@@ -687,7 +707,7 @@ type ListProductsByDateRow struct {
 	ID           pgtype.UUID        `json:"id"`
 	Name         string             `json:"name"`
 	CostPrice    pgtype.Numeric     `json:"cost_price"`
-	Quantity     int32              `json:"quantity"`
+	Quantity     pgtype.Int4        `json:"quantity"`
 	CategoryID   pgtype.UUID        `json:"category_id"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	CategoryName string             `json:"category_name"`
@@ -735,7 +755,7 @@ SET name = $2,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
-RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk
 `
 
 type UpdateProductParams struct {
@@ -744,7 +764,7 @@ type UpdateProductParams struct {
 	Description pgtype.Text    `json:"description"`
 	CategoryID  pgtype.UUID    `json:"category_id"`
 	Barcode     pgtype.Text    `json:"barcode"`
-	Quantity    int32          `json:"quantity"`
+	Quantity    pgtype.Int4    `json:"quantity"`
 	Size        pgtype.Text    `json:"size"`
 	CostPrice   pgtype.Numeric `json:"cost_price"`
 	SalePrice   pgtype.Numeric `json:"sale_price"`
@@ -782,6 +802,8 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.Unit,
+		&i.SellInBulk,
 	)
 	return i, err
 }
