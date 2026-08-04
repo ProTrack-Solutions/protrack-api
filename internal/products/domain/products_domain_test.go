@@ -29,6 +29,10 @@ func newPgNumeric(v float64) pgtype.Numeric {
 	return pgconv.Float64ToPgNumeric(v)
 }
 
+func newPgInt(v int) pgtype.Int4 {
+	return pgconv.IntToPgInt4(v)
+}
+
 // ---------------------------------------------------------------------------
 // TestApplyUpdateProductParams
 // ---------------------------------------------------------------------------
@@ -45,7 +49,7 @@ func TestApplyUpdateProductParams_UpdatesOnlyNonZeroFields(t *testing.T) {
 		Description: newPgText("Descrição original"),
 		CategoryID:  newPgUUID(originalCategoryID),
 		Barcode:     newPgText("1234567890"),
-		Quantity:    10,
+		Quantity:    newPgInt(10),
 		Size:        newPgText("M"),
 		CostPrice:   newPgNumeric(50.00),
 		SalePrice:   newPgNumeric(100.00),
@@ -76,8 +80,8 @@ func TestApplyUpdateProductParams_UpdatesOnlyNonZeroFields(t *testing.T) {
 	if arg.Barcode.String != "0987654321" {
 		t.Errorf("esperava Barcode='0987654321', obteve '%s'", arg.Barcode.String)
 	}
-	if arg.Quantity != 20 {
-		t.Errorf("esperava Quantity=20, obteve %d", arg.Quantity)
+	if arg.Quantity.Int32 != 20 {
+		t.Errorf("esperava Quantity=20, obteve %d", arg.Quantity.Int32)
 	}
 	if arg.Size.String != "L" {
 		t.Errorf("esperava Size='L', obteve '%s'", arg.Size.String)
@@ -106,7 +110,7 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 		Description: newPgText("Descrição original"),
 		CategoryID:  newPgUUID(originalCategoryID),
 		Barcode:     newPgText("1234567890"),
-		Quantity:    10,
+		Quantity:    newPgInt(10),
 		Size:        newPgText("M"),
 		CostPrice:   newPgNumeric(50.00),
 		SalePrice:   newPgNumeric(100.00),
@@ -138,8 +142,8 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 	if pgconv.PgUUIDToUUID(arg.CategoryID) != originalCategoryID {
 		t.Errorf("CategoryID não deve ter sido alterado")
 	}
-	if arg.Quantity != 10 {
-		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity)
+	if arg.Quantity.Int32 != 10 {
+		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity.Int32)
 	}
 	if arg.Barcode.String != "1234567890" {
 		t.Errorf("Barcode não deve ter sido alterado; obteve '%s'", arg.Barcode.String)
@@ -152,7 +156,7 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 func TestApplyUpdateProductParams_PartialUpdate(t *testing.T) {
 	arg := db.UpdateProductParams{
 		Name:      "Original",
-		Quantity:  5,
+		Quantity:  newPgInt(5),
 		CostPrice: newPgNumeric(10.00),
 		SalePrice: newPgNumeric(20.00),
 	}
@@ -168,8 +172,8 @@ func TestApplyUpdateProductParams_PartialUpdate(t *testing.T) {
 	if arg.Name != "Atualizado" {
 		t.Errorf("esperava Name='Atualizado', obteve '%s'", arg.Name)
 	}
-	if arg.Quantity != 5 {
-		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity)
+	if arg.Quantity.Int32 != 5 {
+		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity.Int32)
 	}
 	if pgconv.PgNumericToFloat64(arg.CostPrice) != 10.00 {
 		t.Errorf("CostPrice não deve ter sido alterado; obteve %f", pgconv.PgNumericToFloat64(arg.CostPrice))
@@ -184,12 +188,9 @@ func TestApplyUpdateProductParams_PartialUpdate(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 func TestCreateProductRequest_FieldAssignment(t *testing.T) {
-	companyID := uuid.New()
 	categoryID := uuid.New()
-	createdBy := uuid.New()
 
 	req := domain.CreateProductRequest{
-		CompanyID:   companyID,
 		Name:        "Produto Teste",
 		Description: "Descrição teste",
 		CategoryID:  categoryID,
@@ -198,12 +199,8 @@ func TestCreateProductRequest_FieldAssignment(t *testing.T) {
 		Size:        "G",
 		CostPrice:   25.50,
 		SalePrice:   59.90,
-		CreatedBy:   createdBy,
 	}
 
-	if req.CompanyID != companyID {
-		t.Errorf("CompanyID incorreto")
-	}
 	if req.Name != "Produto Teste" {
 		t.Errorf("Name incorreto: '%s'", req.Name)
 	}

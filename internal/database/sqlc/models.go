@@ -55,6 +55,51 @@ func (ns NullAnnouncementType) Value() (driver.Value, error) {
 	return string(ns.AnnouncementType), nil
 }
 
+type UnitOfMeasure string
+
+const (
+	UnitOfMeasureUN UnitOfMeasure = "UN"
+	UnitOfMeasureKG UnitOfMeasure = "KG"
+	UnitOfMeasureG  UnitOfMeasure = "G"
+	UnitOfMeasureL  UnitOfMeasure = "L"
+	UnitOfMeasureML UnitOfMeasure = "ML"
+)
+
+func (e *UnitOfMeasure) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UnitOfMeasure(s)
+	case string:
+		*e = UnitOfMeasure(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UnitOfMeasure: %T", src)
+	}
+	return nil
+}
+
+type NullUnitOfMeasure struct {
+	UnitOfMeasure UnitOfMeasure `json:"unit_of_measure"`
+	Valid         bool          `json:"valid"` // Valid is true if UnitOfMeasure is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUnitOfMeasure) Scan(value interface{}) error {
+	if value == nil {
+		ns.UnitOfMeasure, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UnitOfMeasure.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUnitOfMeasure) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UnitOfMeasure), nil
+}
+
 type AccountsReceivable struct {
 	ID                pgtype.UUID        `json:"id"`
 	CompanyID         pgtype.UUID        `json:"company_id"`
@@ -181,7 +226,7 @@ type Department struct {
 	CompanyID   pgtype.UUID        `json:"company_id"`
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
-	Status      string             `json:"status"`
+	Status      interface{}        `json:"status"`
 	CreatedBy   pgtype.UUID        `json:"created_by"`
 	UpdatedBy   pgtype.UUID        `json:"updated_by"`
 	DeletedBy   pgtype.UUID        `json:"deleted_by"`
@@ -228,17 +273,17 @@ type PaymentMethod struct {
 type Plan struct {
 	ID              pgtype.UUID        `json:"id"`
 	ExternalID      string             `json:"external_id"`
-	ExternalPriceID string             `json:"external_price_id"`
 	Name            string             `json:"name"`
 	Description     pgtype.Text        `json:"description"`
 	PriceCents      int32              `json:"price_cents"`
 	Currency        pgtype.Text        `json:"currency"`
 	BillingCycle    string             `json:"billing_cycle"`
 	Active          pgtype.Bool        `json:"active"`
-	Highlight       bool               `json:"highlight"`
-	Icon            string             `json:"icon"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	Highlight       bool               `json:"highlight"`
+	Icon            string             `json:"icon"`
+	ExternalPriceID string             `json:"external_price_id"`
 }
 
 type PlanFeature struct {
@@ -258,7 +303,7 @@ type Product struct {
 	Name        string             `json:"name"`
 	Description pgtype.Text        `json:"description"`
 	Barcode     pgtype.Text        `json:"barcode"`
-	Quantity    int32              `json:"quantity"`
+	Quantity    pgtype.Int4        `json:"quantity"`
 	Size        pgtype.Text        `json:"size"`
 	CostPrice   pgtype.Numeric     `json:"cost_price"`
 	SalePrice   pgtype.Numeric     `json:"sale_price"`
@@ -268,6 +313,8 @@ type Product struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	Unit        UnitOfMeasure      `json:"unit"`
+	SellInBulk  bool               `json:"sell_in_bulk"`
 }
 
 type ProductCategory struct {

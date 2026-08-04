@@ -59,16 +59,12 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 
 	var req domain.CreateProductRequest
 
-	req.CompanyID = companyId
-
-	req.CreatedBy = userId
-
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	product, err := h.service.CreateProduct(c.Request.Context(), req)
+	product, err := h.service.CreateProduct(c.Request.Context(), userId, companyId, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

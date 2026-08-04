@@ -9,7 +9,9 @@ INSERT INTO products(
         size,
         cost_price,
         sale_price,
-        created_by
+        created_by,
+        sell_in_bulk,
+        unit
     )
 VALUES(
         $1,
@@ -21,7 +23,9 @@ VALUES(
         $7,
         $8,
         $9,
-        $10
+        $10,
+        $11,
+        $12
     )
 RETURNING *;
 -- name: GetProductById :one
