@@ -28,7 +28,7 @@ services:
 
   evolution-api:
     container_name: evolution_api
-    image: evolutionapi/evolution-api:v2.1.1
+    image: evoapicloud/evolution-api:v2.1.1
     restart: always
     privileged: true
     ports:
