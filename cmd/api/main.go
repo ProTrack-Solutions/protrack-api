@@ -157,9 +157,11 @@ func main() {
 
 	r.Use(middleware.GinDiscordErrorMiddleware(discordLogger))
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	if cfg.AppEnv != "production" {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
-	logger.InitLogger("development")
+	logger.InitLogger(cfg.AppEnv)
 
 	db, err := database.NewConnect(cfg)
 	if err != nil {
