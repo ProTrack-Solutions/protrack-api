@@ -17,7 +17,7 @@ SELECT *
 FROM accounts_receivable
 WHERE customer_id = $1
     AND company_id = $2
-    AND status IN ('pending', 'partial')
+    AND status IN ('pending', 'partial','overdue')
     AND deleted_at IS NULL
 ORDER BY due_date ASC;
 -- name: UpdateAccountReceivableBalance :one
