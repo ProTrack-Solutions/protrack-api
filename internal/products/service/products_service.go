@@ -50,18 +50,28 @@ func NewService(repo *repository.Repository, pool *pgxpool.Pool) *Service {
 	}
 }
 
-func (s *Service) CreateProduct(ctx context.Context, req domain.CreateProductRequest) (domain.ProductResponse, error) {
+func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateProductRequest) (domain.ProductResponse, error) {
+	if req.NotBarcode {
+		barcode, err := domain.GerarEAN13("")
+		if err != nil {
+			return domain.ProductResponse{}, err
+		}
+		req.Barcode = barcode
+	}
+
 	product, err := s.repo.CreateProduct(ctx, db.CreateProductParams{
-		CompanyID:   pgconv.ParseUUIDToPgType(req.CompanyID),
+		CompanyID:   pgconv.ParseUUIDToPgType(companyId),
 		Name:        req.Name,
 		Description: pgconv.ParseStringToPgText(req.Description),
 		CategoryID:  pgconv.ParseUUIDToPgType(req.CategoryID),
 		Barcode:     pgconv.ParseStringToPgText(req.Barcode),
-		Quantity:    req.Quantity,
+		Quantity:    pgconv.IntToPgInt4(int(req.Quantity)),
 		Size:        pgconv.ParseStringToPgText(req.Size),
 		CostPrice:   pgconv.Float64ToPgNumeric(req.CostPrice),
 		SalePrice:   pgconv.Float64ToPgNumeric(req.SalePrice),
-		CreatedBy:   pgconv.ParseUUIDToPgType(req.CreatedBy),
+		CreatedBy:   pgconv.ParseUUIDToPgType(userId),
+		SellInBulk:  req.SellInBulk,
+		Unit:        db.UnitOfMeasure(req.Unit),
 	})
 	if err != nil {
 		return domain.ProductResponse{}, err
@@ -74,7 +84,7 @@ func (s *Service) CreateProduct(ctx context.Context, req domain.CreateProductReq
 		Name:        product.Name,
 		Description: pgconv.ParsePgTextToString(product.Description),
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-		Quantity:    product.Quantity,
+		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -103,7 +113,7 @@ func (s *Service) GetProductByBarcode(ctx context.Context, barcode string) (doma
 		Name:        product.Name,
 		Description: pgconv.ParsePgTextToString(product.Description),
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-		Quantity:    product.Quantity,
+		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -129,7 +139,7 @@ func (s *Service) GetProductById(ctx context.Context, id uuid.UUID) (domain.Prod
 		Name:        product.Name,
 		Description: pgconv.ParsePgTextToString(product.Description),
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-		Quantity:    product.Quantity,
+		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -157,7 +167,7 @@ func (s *Service) GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID
 		Name:        product.Name,
 		Description: pgconv.ParsePgTextToString(product.Description),
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-		Quantity:    product.Quantity,
+		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -189,7 +199,7 @@ func (s *Service) ListProductsByCategoryId(ctx context.Context, categoryId, comp
 			Name:        product.Name,
 			Description: pgconv.ParsePgTextToString(product.Description),
 			Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-			Quantity:    product.Quantity,
+			Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 			Size:        pgconv.ParsePgTextToString(product.Size),
 			CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 			SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -221,7 +231,7 @@ func (s *Service) ListProductsByCompany(ctx context.Context, companyId uuid.UUID
 			Name:         product.Name,
 			Description:  pgconv.ParsePgTextToString(product.Description),
 			Barcode:      pgconv.ParsePgTextToString(product.Barcode),
-			Quantity:     product.Quantity,
+			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
 			Size:         pgconv.ParsePgTextToString(product.Size),
 			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
 			SalePrice:    pgconv.PgNumericToFloat64(product.SalePrice),
@@ -278,7 +288,7 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 			Name:         product.Name,
 			Description:  pgconv.ParsePgTextToString(product.Description),
 			Barcode:      pgconv.ParsePgTextToString(product.Barcode),
-			Quantity:     product.Quantity,
+			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
 			Size:         pgconv.ParsePgTextToString(product.Size),
 			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
 			SalePrice:    pgconv.PgNumericToFloat64(product.SalePrice),
@@ -289,6 +299,8 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 			UpdatedAt:    pgconv.PgTimestamptzToTime(product.UpdatedAt),
 			DeletedAt:    pgconv.PgTimestamptzToTime(product.DeletedAt),
 			CategoryName: product.CategoryName,
+			SellInBulk:   product.SellInBulk,
+			Unit:         string(product.Unit),
 		})
 	}
 
@@ -319,6 +331,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		CostPrice:   currentProduct.CostPrice,
 		SalePrice:   currentProduct.SalePrice,
 		UpdatedBy:   currentProduct.UpdatedBy,
+		Unit:        currentProduct.Unit,
 	}
 
 	domain.ApplyUpdateProductParams(req, &arg)
@@ -335,7 +348,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		Name:        product.Name,
 		Description: pgconv.ParsePgTextToString(product.Description),
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
-		Quantity:    product.Quantity,
+		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
@@ -347,7 +360,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 func (s *Service) DecrementStock(ctx context.Context, req domain.DecrementStockRequest) error {
 	if err := s.repo.DecrementStock(ctx, db.DecrementStockParams{
 		ID:       pgconv.ParseUUIDToPgType(req.ID),
-		Quantity: req.Quantity,
+		Quantity: pgconv.IntToPgInt4(int(req.Quantity)),
 	}); err != nil {
 		return err
 	}
@@ -428,7 +441,7 @@ func (s *Service) GetInventoryReport(ctx context.Context, companyId uuid.UUID, s
 		response = append(response, domain.GetInventoryReportResponse{
 			Name:         product.Name,
 			CategoryName: pgconv.ParsePgTextToString(product.CategoryName),
-			Quantity:     product.Quantity,
+			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
 			SalePrice:    pgconv.PgNumericToFloat64(product.SalePrice),
 			TotalValue:   pgconv.PgNumericToFloat64(product.TotalValue),
 			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
@@ -457,7 +470,7 @@ func (s *Service) ListProductsByDate(ctx context.Context, companyId uuid.UUID, s
 			ID:           pgconv.PgUUIDToUUID(product.ID),
 			CategoryID:   pgconv.PgUUIDToUUID(product.CategoryID),
 			Name:         product.Name,
-			Quantity:     product.Quantity,
+			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
 			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
 			CreatedAt:    pgconv.PgTimestamptzToTime(product.CreatedAt),
 			CategoryName: product.CategoryName,
@@ -484,7 +497,7 @@ func (s *Service) ListProductBuCategoryIdAndDate(ctx context.Context, categoryId
 			ID:           pgconv.PgUUIDToUUID(product.ID),
 			Name:         product.Name,
 			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
-			Quantity:     product.Quantity,
+			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
 			CategoryID:   pgconv.PgUUIDToUUID(product.CategoryID),
 			CreatedAt:    pgconv.PgTimestamptzToTime(product.CreatedAt),
 			CategoryName: product.CategoryName,

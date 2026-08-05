@@ -55,7 +55,6 @@ func TestServiceContract_CreateProduct(t *testing.T) {
 
 	mockSvc := mocks.NewMockServiceInterface(ctrl)
 	companyID := uuid.New()
-	createdBy := uuid.New()
 	productID := uuid.New()
 
 	expectedResp := sampleProductResponse(productID, companyID, uuid.New())
@@ -67,7 +66,6 @@ func TestServiceContract_CreateProduct(t *testing.T) {
 	resp, err := mockSvc.CreateProduct(
 		ginCtxBackground(),
 		domain.CreateProductRequest{
-			CompanyID:   companyID,
 			Name:        "Produto Teste",
 			Description: "Descrição",
 			CategoryID:  uuid.New(),
@@ -76,10 +74,8 @@ func TestServiceContract_CreateProduct(t *testing.T) {
 			Size:        "M",
 			CostPrice:   25.00,
 			SalePrice:   50.00,
-			CreatedBy:   createdBy,
 		},
 	)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -107,7 +103,6 @@ func TestServiceContract_DeleteProduct(t *testing.T) {
 		ID:        productID,
 		DeletedBy: uuid.Nil,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -128,7 +123,6 @@ func TestServiceContract_GetProductByBarcode_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := mockSvc.GetProductByBarcode(ginCtxBackground(), barcode)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -174,7 +168,6 @@ func TestServiceContract_GetProductById_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := mockSvc.GetProductById(ginCtxBackground(), id)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -202,7 +195,6 @@ func TestServiceContract_ListProductsByCategoryId_Success(t *testing.T) {
 		Return(products, nil)
 
 	resp, err := mockSvc.ListProductsByCategoryId(ginCtxBackground(), categoryID, companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -238,7 +230,6 @@ func TestServiceContract_ListProductsByCompanyPaginated_Success(t *testing.T) {
 		Return(paginatedResponse, nil)
 
 	resp, err := mockSvc.ListProductsByCompanyPaginated(ginCtxBackground(), companyID, pagination)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -268,7 +259,6 @@ func TestServiceContract_UpdateProduct_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := mockSvc.UpdateProduct(ginCtxBackground(), id, updateReq)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -290,7 +280,6 @@ func TestServiceContract_CountProducts_Success(t *testing.T) {
 		Return(int64(25), nil)
 
 	count, err := mockSvc.CountProducts(ginCtxBackground(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -312,7 +301,6 @@ func TestServiceContract_GetProductsPerformanceSummary_Success(t *testing.T) {
 		Return(35.5, nil)
 
 	percentage, err := mockSvc.GetProductsPerformanceSummary(ginCtxBackground(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -334,7 +322,6 @@ func TestServiceContract_GetCostTotalStock_Success(t *testing.T) {
 		Return(12500.75, nil)
 
 	total, err := mockSvc.GetCostTotalStock(ginCtxBackground(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -361,7 +348,6 @@ func TestServiceContract_GetTop5BestSellingProducts_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := mockSvc.GetTop5BestSellingProducts(ginCtxBackground(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}

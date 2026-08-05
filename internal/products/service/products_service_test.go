@@ -37,7 +37,7 @@ func buildDbProduct(id, companyID, categoryID, createdBy uuid.UUID) db.Product {
 		Name:        "Camiseta Polo",
 		Description: pgconv.ParseStringToPgText("Camiseta de algodão"),
 		Barcode:     pgconv.ParseStringToPgText("BAR0001"),
-		Quantity:    50,
+		Quantity:    pgconv.IntToPgInt4(50),
 		Size:        pgconv.ParseStringToPgText("M"),
 		CostPrice:   pgconv.Float64ToPgNumeric(30.00),
 		SalePrice:   pgconv.Float64ToPgNumeric(79.90),
@@ -60,7 +60,7 @@ func buildDbProductCompanyRow(id, companyID, categoryID uuid.UUID) db.ListProduc
 		Name:         "Calça Jeans",
 		Description:  pgconv.ParseStringToPgText("Calça slim"),
 		Barcode:      pgconv.ParseStringToPgText("BAR0002"),
-		Quantity:     20,
+		Quantity:     pgconv.IntToPgInt4(20),
 		Size:         pgconv.ParseStringToPgText("42"),
 		CostPrice:    pgconv.Float64ToPgNumeric(45.00),
 		SalePrice:    pgconv.Float64ToPgNumeric(99.90),
@@ -84,7 +84,7 @@ func buildDbProductPaginatedRow(id, companyID, categoryID uuid.UUID, qty int32) 
 		Name:         "Produto Paginado",
 		Description:  pgconv.ParseStringToPgText("Desc paginada"),
 		Barcode:      pgconv.ParseStringToPgText("BAR0003"),
-		Quantity:     qty,
+		Quantity:     pgconv.IntToPgInt4(int(qty)),
 		Size:         pgconv.ParseStringToPgText("G"),
 		CostPrice:    pgconv.Float64ToPgNumeric(20.00),
 		SalePrice:    pgconv.Float64ToPgNumeric(40.00),
@@ -111,19 +111,18 @@ func TestCreateProduct_Success(t *testing.T) {
 	repo := mocks.NewMockRepositoryInterface(ctrl)
 	svc := newService(t, repo)
 
-	companyID := uuid.New()
+	companyId := uuid.New()
 	categoryID := uuid.New()
-	createdBy := uuid.New()
+	userId := uuid.New()
 	productID := uuid.New()
 
-	expectedProduct := buildDbProduct(productID, companyID, categoryID, createdBy)
+	expectedProduct := buildDbProduct(productID, companyId, categoryID, userId)
 
 	repo.EXPECT().
 		CreateProduct(gomock.Any(), gomock.Any()).
 		Return(expectedProduct, nil)
 
 	req := domain.CreateProductRequest{
-		CompanyID:   companyID,
 		Name:        "Camiseta Polo",
 		Description: "Camiseta de algodão",
 		CategoryID:  categoryID,
@@ -132,17 +131,16 @@ func TestCreateProduct_Success(t *testing.T) {
 		Size:        "M",
 		CostPrice:   30.00,
 		SalePrice:   79.90,
-		CreatedBy:   createdBy,
 	}
 
-	resp, err := svc.CreateProduct(context.Background(), req)
+	resp, err := svc.CreateProduct(context.Background(), userId, companyId, req)
 	if err != nil {
 		t.Fatalf("esperava sem erro, obteve: %v", err)
 	}
 	if resp.Name != "Camiseta Polo" {
 		t.Errorf("esperava Name='Camiseta Polo', obteve '%s'", resp.Name)
 	}
-	if resp.CompanyID != companyID {
+	if resp.CompanyID != companyId {
 		t.Errorf("CompanyID não confere")
 	}
 	if resp.CostPrice != 30.00 {
@@ -164,9 +162,8 @@ func TestCreateProduct_RepositoryError(t *testing.T) {
 		CreateProduct(gomock.Any(), gomock.Any()).
 		Return(db.Product{}, errDatabase)
 
-	_, err := svc.CreateProduct(context.Background(), domain.CreateProductRequest{
-		CompanyID: uuid.New(),
-		Name:      "X",
+	_, err := svc.CreateProduct(context.Background(), uuid.New(), uuid.New(), domain.CreateProductRequest{
+		Name: "X",
 	})
 
 	if err == nil {
@@ -733,7 +730,7 @@ func TestDecrementStock_Success(t *testing.T) {
 	repo.EXPECT().
 		DecrementStock(gomock.Any(), db.DecrementStockParams{
 			ID:       pgconv.ParseUUIDToPgType(productID),
-			Quantity: 3,
+			Quantity: pgconv.IntToPgInt4(3),
 		}).
 		Return(nil)
 
@@ -1053,7 +1050,7 @@ func TestGetInventoryReport_Success(t *testing.T) {
 		{
 			Name:         "Produto Inventário",
 			CategoryName: pgconv.ParseStringToPgText("Categoria A"),
-			Quantity:     30,
+			Quantity:     pgconv.IntToPgInt4(30),
 			SalePrice:    pgconv.Float64ToPgNumeric(50.00),
 			TotalValue:   pgconv.Float64ToPgNumeric(1500.00),
 			CostPrice:    pgconv.Float64ToPgNumeric(25.00),
@@ -1126,7 +1123,7 @@ func TestListProductsByDate_Success(t *testing.T) {
 			ID:           pgconv.ParseUUIDToPgType(uuid.New()),
 			Name:         "Produto Data",
 			CostPrice:    pgconv.Float64ToPgNumeric(40.00),
-			Quantity:     15,
+			Quantity:     pgconv.IntToPgInt4(15),
 			CategoryID:   pgconv.ParseUUIDToPgType(categoryID),
 			CreatedAt:    pgconv.TimeToPgTimestamptz(now),
 			CategoryName: "Data Categoria",
@@ -1196,7 +1193,7 @@ func TestListProductBuCategoryIdAndDate_Success(t *testing.T) {
 			ID:           pgconv.ParseUUIDToPgType(uuid.New()),
 			Name:         "Produto Cat+Data",
 			CostPrice:    pgconv.Float64ToPgNumeric(30.00),
-			Quantity:     8,
+			Quantity:     pgconv.IntToPgInt4(8),
 			CategoryID:   pgconv.ParseUUIDToPgType(categoryID),
 			CreatedAt:    pgconv.TimeToPgTimestamptz(now),
 			CategoryName: "Categoria Filtrada",

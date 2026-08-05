@@ -11,15 +11,15 @@ services:
     container_name: evolution-postgres
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${EVOLUTION_DB_USER}
+      POSTGRES_PASSWORD: ${EVOLUTION_DB_PASSWORD}
+      POSTGRES_DB: ${EVOLUTION_DB_NAME}
     volumes:
       - evolution_postgres_data:/var/lib/postgresql/data
     networks:
       - protrack-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready -U ${EVOLUTION_DB_USER}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -36,7 +36,7 @@ services:
     ports:
       - "8085:8081"
     env_file:
-      - .env.evolution
+      - .env
     environment:
       - SERVER_TYPE=http
       - SERVER_PORT=8081
@@ -45,7 +45,7 @@ services:
       - AUTHENTICATION_API_KEY=${EVOLUTION_KEY}
       - DATABASE_ENABLED=true
       - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://${DB_USER}:${DB_PASSWORD}@evolution-postgres:5432/${DB_NAME}?schema=public
+      - DATABASE_CONNECTION_URI=postgresql://${EVOLUTION_DB_USER}:${EVOLUTION_DB_PASSWORD}@evolution-postgres:5432/${EVOLUTION_DB_NAME}?schema=public
       - DATABASE_CONNECTION_CLIENT_NAME=evolution_api
       - CACHE_REDIS_ENABLED=true
       - CACHE_REDIS_URI=redis://redis:6379/0

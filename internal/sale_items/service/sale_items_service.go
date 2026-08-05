@@ -55,24 +55,28 @@ func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain
 		return errors.New("The product does not belong to the company selling it.")
 	}
 
-	if product.Quantity < req.Quantity {
-		return errors.New("insufficient quantity")
-	}
+	if !product.SellInBulk {
+		if int32(pgconv.PgInt4ToInt(product.Quantity)) < req.Quantity {
+			return errors.New("insufficient quantity")
+		}
+		if err := txProductRepo.DecrementStock(ctx, db.DecrementStockParams{
+			ID:       pgconv.ParseUUIDToPgType(req.ProductID),
+			Quantity: pgconv.IntToPgInt4(int(req.Quantity)),
+		}); err != nil {
+			return err
+		}
 
-	if err := txProductRepo.DecrementStock(ctx, db.DecrementStockParams{
-		ID:       pgconv.ParseUUIDToPgType(req.ProductID),
-		Quantity: req.Quantity,
-	}); err != nil {
-		return err
-	}
+		// Verifica se o decremento realmente ocorreu (evita falha silenciosa em condição de corrida)
+		productAfter, err := txProductRepo.GetProductById(ctx, pgconv.ParseUUIDToPgType(req.ProductID))
+		if err != nil {
+			return err
+		}
 
-	// Verifica se o decremento realmente ocorreu (evita falha silenciosa em condição de corrida)
-	productAfter, err := txProductRepo.GetProductById(ctx, pgconv.ParseUUIDToPgType(req.ProductID))
-	if err != nil {
-		return err
-	}
-	if productAfter.Quantity != product.Quantity-req.Quantity {
-		return errors.New("insufficient quantity")
+		quantityBefore := int32(pgconv.PgInt4ToInt(product.Quantity))
+
+		if productAfter.Quantity != pgconv.IntToPgInt4(int(quantityBefore-req.Quantity)) {
+			return errors.New("insufficient quantity")
+		}
 	}
 
 	return txRepo.CreateSaleItem(ctx, db.CreateSaleItemParams{

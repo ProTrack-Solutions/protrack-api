@@ -111,7 +111,7 @@ import (
 // @contact.name   Suporte ProTrack
 // @contact.email  suporte@protrack.com
 
-// @host      pprotrack.duckdns.org
+// @host      localhost:8080
 // @BasePath  /api/v1
 
 // @securityDefinitions.apikey BearerAuth

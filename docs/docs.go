@@ -6846,14 +6846,8 @@ const docTemplate = `{
                 "category_id": {
                     "type": "string"
                 },
-                "company_id": {
-                    "type": "string"
-                },
                 "cost_price": {
                     "type": "number"
-                },
-                "created_by": {
-                    "type": "string"
                 },
                 "description": {
                     "type": "string"
@@ -6861,13 +6855,22 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "not_barcode": {
+                    "type": "boolean"
+                },
                 "quantity": {
                     "type": "integer"
                 },
                 "sale_price": {
                     "type": "number"
                 },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
                 "size": {
+                    "type": "string"
+                },
+                "unit": {
                     "type": "string"
                 }
             }
@@ -7671,7 +7674,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "pprotrack.duckdns.org",
+	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{},
 	Title:            "ProTrack API",

@@ -62,7 +62,7 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.
 }
 
 const getPlanByID = `-- name: GetPlanByID :one
-SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at, highlight, icon, external_price_id
 FROM plans
 WHERE id = $1
 `
@@ -73,23 +73,23 @@ func (q *Queries) GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 	err := row.Scan(
 		&i.ID,
 		&i.ExternalID,
-		&i.ExternalPriceID,
 		&i.Name,
 		&i.Description,
 		&i.PriceCents,
 		&i.Currency,
 		&i.BillingCycle,
 		&i.Active,
-		&i.Highlight,
-		&i.Icon,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.Highlight,
+		&i.Icon,
+		&i.ExternalPriceID,
 	)
 	return i, err
 }
 
 const listPlans = `-- name: ListPlans :many
-SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at, highlight, icon, external_price_id
 FROM plans
 `
 
@@ -105,17 +105,17 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
-			&i.ExternalPriceID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,
 			&i.Currency,
 			&i.BillingCycle,
 			&i.Active,
-			&i.Highlight,
-			&i.Icon,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Highlight,
+			&i.Icon,
+			&i.ExternalPriceID,
 		); err != nil {
 			return nil, err
 		}
@@ -128,7 +128,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 }
 
 const listPlansByActiveStatus = `-- name: ListPlansByActiveStatus :many
-SELECT id, external_id, external_price_id, name, description, price_cents, currency, billing_cycle, active, highlight, icon, created_at, updated_at
+SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at, highlight, icon, external_price_id
 FROM plans
 WHERE active = $1
 `
@@ -145,17 +145,17 @@ func (q *Queries) ListPlansByActiveStatus(ctx context.Context, active pgtype.Boo
 		if err := rows.Scan(
 			&i.ID,
 			&i.ExternalID,
-			&i.ExternalPriceID,
 			&i.Name,
 			&i.Description,
 			&i.PriceCents,
 			&i.Currency,
 			&i.BillingCycle,
 			&i.Active,
-			&i.Highlight,
-			&i.Icon,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.Highlight,
+			&i.Icon,
+			&i.ExternalPriceID,
 		); err != nil {
 			return nil, err
 		}
