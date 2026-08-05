@@ -62,6 +62,7 @@ SET name = $2,
     cost_price = $8,
     sale_price = $9,
     updated_by = $10,
+    unit = $11,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -170,6 +171,7 @@ SELECT
     p.quantity, p.size, p.cost_price, p.sale_price,
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
+    p.sell_in_bulk, p.unit,
     c.name AS category_name
 FROM products p
 JOIN product_categories c ON c.id = p.category_id
