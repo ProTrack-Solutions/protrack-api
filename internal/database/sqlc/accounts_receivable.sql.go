@@ -113,7 +113,7 @@ SELECT id, company_id, customer_id, sale_id, total_amount, balance, due_date, in
 FROM accounts_receivable
 WHERE customer_id = $1
     AND company_id = $2
-    AND status IN ('pending', 'partial')
+    AND status IN ('pending', 'partial','overdue')
     AND deleted_at IS NULL
 ORDER BY due_date ASC
 `

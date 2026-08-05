@@ -2187,6 +2187,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/label/download": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "label"
+                ],
+                "summary": "Gera PDF de etiquetas de produtos",
+                "parameters": [
+                    {
+                        "description": "Lista de produtos para gerar etiquetas",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/gin.H"
+                        }
+                    }
+                }
+            }
+        },
         "/logout": {
             "post": {
                 "security": [
@@ -5064,6 +5117,10 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "gin.H": {
+            "type": "object",
+            "additionalProperties": {}
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse": {
             "type": "object",
             "properties": {
@@ -6466,6 +6523,14 @@ const docTemplate = `{
                 "StatusDeleted"
             ]
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest": {
+            "type": "object",
+            "properties": {
+                "products_id": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest": {
             "type": "object",
             "properties": {
@@ -6920,7 +6985,13 @@ const docTemplate = `{
                 "sale_price": {
                     "type": "number"
                 },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
                 "size": {
+                    "type": "string"
+                },
+                "unit": {
                     "type": "string"
                 },
                 "updated_at": {
@@ -7044,6 +7115,9 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "size": {
+                    "type": "string"
+                },
+                "unit": {
                     "type": "string"
                 },
                 "updated_by": {

@@ -40,6 +40,8 @@ import (
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
+	labelHandler "github.com/ProTrack-Solutions/protrack-api/internal/label/handler"
+	labelService "github.com/ProTrack-Solutions/protrack-api/internal/label/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
@@ -244,6 +246,7 @@ func main() {
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	whatsappService := whatsappService.NewService(cfg, companiesService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
+	labelService := labelService.NewService(productsService)
 
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
@@ -269,6 +272,7 @@ func main() {
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService)
 	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
+	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -295,6 +299,7 @@ func main() {
 	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
 	subscriptionsHandler.RegisterRoute(api)
 	stripeHandler.RegisterRoutes(api)
+	labelHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

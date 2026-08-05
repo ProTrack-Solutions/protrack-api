@@ -1,5 +1,8 @@
 basePath: /api/v1
 definitions:
+  gin.H:
+    additionalProperties: {}
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_accounts_receivable_domain.AccountsReceivableResponse:
     properties:
       balance:
@@ -941,6 +944,11 @@ definitions:
     - StatusActive
     - StatusInactive
     - StatusDeleted
+  github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest:
+    properties:
+      products_id:
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest:
     properties:
       amount_paid:
@@ -1242,7 +1250,11 @@ definitions:
         type: integer
       sale_price:
         type: number
+      sell_in_bulk:
+        type: boolean
       size:
+        type: string
+      unit:
         type: string
       updated_at:
         type: string
@@ -1324,6 +1336,8 @@ definitions:
       sale_price:
         type: number
       size:
+        type: string
+      unit:
         type: string
       updated_by:
         type: string
@@ -3144,6 +3158,39 @@ paths:
       summary: Busca fatura por mp_payment_id
       tags:
       - invoice-history
+  /label/download:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Lista de produtos para gerar etiquetas
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest'
+          type: array
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/gin.H'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/gin.H'
+      security:
+      - BearerAuth: []
+      summary: Gera PDF de etiquetas de produtos
+      tags:
+      - label
   /logout:
     post:
       produces:
