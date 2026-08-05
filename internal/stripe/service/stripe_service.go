@@ -57,6 +57,7 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 
 	_, err = customer.Update(cust.ID, customerUpdateParams)
 	if err != nil {
+		customer.Del(cust.ID, nil)
 		return nil, fmt.Errorf("erro ao definir método padrão de pagamento: %w", err)
 	}
 
