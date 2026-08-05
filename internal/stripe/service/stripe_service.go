@@ -43,28 +43,15 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 		return nil, fmt.Errorf("erro ao criar cliente no Stripe: %w", err)
 	}
 
-	pmParams := &stripe.PaymentMethodParams{
-		Type: stripe.String("card"),
-		Card: &stripe.PaymentMethodCardParams{
-			Token: stripe.String(input.CardToken),
-		},
-	}
-
-	pmParams.SetIdempotencyKey(input.IdempotencyKey + "-payment-method")
-	pm, err := paymentmethod.New(pmParams)
-	if err != nil {
-		return nil, fmt.Errorf("erro ao criar payment method: %w", err)
-	}
-
 	attachParams := &stripe.PaymentMethodAttachParams{Customer: stripe.String(cust.ID)}
-	_, err = paymentmethod.Attach(pm.ID, attachParams)
+	_, err = paymentmethod.Attach(input.CardToken, attachParams)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao vincular cartão ao cliente: %w", err)
 	}
 
 	customerUpdateParams := &stripe.CustomerParams{
 		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
-			DefaultPaymentMethod: stripe.String(pm.ID),
+			DefaultPaymentMethod: stripe.String(input.CardToken),
 		},
 	}
 
