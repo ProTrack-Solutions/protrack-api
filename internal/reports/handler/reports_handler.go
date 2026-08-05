@@ -6,7 +6,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
-	"github.com/ProTrack-Solutions/protrack-api/internal/reports"
+	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	"github.com/ProTrack-Solutions/protrack-api/internal/reports/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	"github.com/gin-gonic/gin"
@@ -69,7 +69,7 @@ func (h *Handler) GenerateReports(c *gin.Context) {
 	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 	if req.Format == "xlsx" {
-		err = reports.GenerateExcel(c.Writer, report.FileName, report.Headers, report.Rows)
+		err = generator.GenerateExcel(c.Writer, report.FileName, report.Headers, report.Rows)
 		if err != nil {
 			log.Error().Err(err).Msg("erro ao gerar relatório")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
