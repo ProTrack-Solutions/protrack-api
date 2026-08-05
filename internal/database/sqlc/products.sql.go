@@ -607,6 +607,7 @@ SELECT
     p.quantity, p.size, p.cost_price, p.sale_price,
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
+    p.sell_in_bulk, p.unit,
     c.name AS category_name
 FROM products p
 JOIN product_categories c ON c.id = p.category_id
@@ -640,6 +641,8 @@ type ListProductsByCompanyPaginatedRow struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+	SellInBulk   bool               `json:"sell_in_bulk"`
+	Unit         UnitOfMeasure      `json:"unit"`
 	CategoryName string             `json:"category_name"`
 }
 
@@ -669,6 +672,8 @@ func (q *Queries) ListProductsByCompanyPaginated(ctx context.Context, arg ListPr
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.SellInBulk,
+			&i.Unit,
 			&i.CategoryName,
 		); err != nil {
 			return nil, err
@@ -752,6 +757,7 @@ SET name = $2,
     cost_price = $8,
     sale_price = $9,
     updated_by = $10,
+    unit = $11,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -769,6 +775,7 @@ type UpdateProductParams struct {
 	CostPrice   pgtype.Numeric `json:"cost_price"`
 	SalePrice   pgtype.Numeric `json:"sale_price"`
 	UpdatedBy   pgtype.UUID    `json:"updated_by"`
+	Unit        UnitOfMeasure  `json:"unit"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
@@ -783,6 +790,7 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		arg.CostPrice,
 		arg.SalePrice,
 		arg.UpdatedBy,
+		arg.Unit,
 	)
 	var i Product
 	err := row.Scan(

@@ -299,6 +299,8 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 			UpdatedAt:    pgconv.PgTimestamptzToTime(product.UpdatedAt),
 			DeletedAt:    pgconv.PgTimestamptzToTime(product.DeletedAt),
 			CategoryName: product.CategoryName,
+			SellInBulk:   product.SellInBulk,
+			Unit:         string(product.Unit),
 		})
 	}
 
@@ -329,6 +331,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		CostPrice:   currentProduct.CostPrice,
 		SalePrice:   currentProduct.SalePrice,
 		UpdatedBy:   currentProduct.UpdatedBy,
+		Unit:        currentProduct.Unit,
 	}
 
 	domain.ApplyUpdateProductParams(req, &arg)

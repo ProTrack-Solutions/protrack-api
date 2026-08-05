@@ -65,6 +65,7 @@ type UpdateProductRequest struct {
 	CostPrice   float64   `json:"cost_price"`
 	SalePrice   float64   `json:"sale_price"`
 	UpdatedBy   uuid.UUID `json:"updated_by"`
+	Unit        string    `json:"unit"`
 }
 
 type ProductResponse struct {
@@ -104,6 +105,8 @@ type ListProductsByCompanyRow struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 	DeletedAt    time.Time `json:"deleted_at"`
 	CategoryName string    `json:"category_name"`
+	SellInBulk   bool      `json:"sell_in_bulk"`
+	Unit         string    `json:"unit"`
 }
 
 type DecrementStockRequest struct {
@@ -203,6 +206,10 @@ func ApplyUpdateProductParams(
 
 	if req.UpdatedBy != uuid.Nil {
 		arg.UpdatedBy = pgconv.ParseUUIDToPgType(req.UpdatedBy)
+	}
+
+	if req.Unit != "" {
+		arg.Unit = db.UnitOfMeasure(req.Unit)
 	}
 }
 
