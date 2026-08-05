@@ -8,8 +8,8 @@ import (
 
 	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
-	"github.com/ProTrack-Solutions/protrack-api/internal/reports"
 	"github.com/ProTrack-Solutions/protrack-api/internal/reports/domain"
 	saleService "github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/google/uuid"
@@ -86,7 +86,7 @@ func (s *Service) GenerateReports(ctx context.Context, reportType string, compan
 			})
 		}
 
-		rows = reports.AddRow(rows, "total sale:", 1)
+		rows = generator.AddRow(rows, "total sale:", 1)
 		fileName = fmt.Sprintf("sales_%s.xlsx", At.Format("02-01-2006"))
 		response = domain.ReportResponse{
 			Headers:  headers,
@@ -102,7 +102,7 @@ func (s *Service) GenerateReports(ctx context.Context, reportType string, compan
 
 		headers, rows = domain.MapStructToReport(history)
 
-		rows = reports.AddRow(rows, "TOTAL PAYMENTS:", 0)
+		rows = generator.AddRow(rows, "TOTAL PAYMENTS:", 0)
 
 		fileName = fmt.Sprintf("paymentHistory_%s.xlsx", At.Format("02-01-2006"))
 
@@ -122,7 +122,7 @@ func (s *Service) GenerateReports(ctx context.Context, reportType string, compan
 
 		headers, rows = domain.MapStructToReport(inventory)
 
-		rows = reports.AddRow(rows, "TOTAL STOCK:", 4)
+		rows = generator.AddRow(rows, "TOTAL STOCK:", 4)
 
 		fileName = fmt.Sprintf("inventory_%s.xlsx", time.Now().Format("02-01-2006"))
 
