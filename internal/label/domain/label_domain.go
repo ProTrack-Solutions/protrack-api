@@ -32,5 +32,5 @@ var Layout5x13 = LabelLayout{
 }
 
 type GenetareTagProductRequest struct {
-	ProductId uuid.UUID `json:"products_id" form:"products_id"`
+	ProductId uuid.UUID `json:"product_id"`
 }
