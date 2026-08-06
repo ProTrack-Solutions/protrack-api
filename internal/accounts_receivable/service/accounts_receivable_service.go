@@ -403,7 +403,7 @@ func (s *Service) DeleteAccountReceivableBySaleIDTx(ctx context.Context, tx db.D
 	})
 }
 
-func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UUID, pagination globaldomain.PaginationParams) (domain.ListAccountsReceivablesResponse, error) {
+func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UUID, pagination domain.PaginationParams) (domain.ListAccountsReceivablesResponse, error) {
 	count, err := s.repo.CountAccountsReceivableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return domain.ListAccountsReceivablesResponse{}, err
@@ -414,10 +414,21 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 		return domain.ListAccountsReceivablesResponse{}, err
 	}
 
+	saleId, err := uuid.Parse(pagination.SaleID)
+
 	accountsReceivable, err := s.repo.ListAccountsReceivables(ctx, db.ListAccountsReceivablesParams{
-		CompanyID: pgconv.ParseUUIDToPgType(companyId),
-		Limit:     pagination.PerPage,
-		Offset:    (pagination.Page - 1) * pagination.PerPage,
+		CompanyID:      pgconv.ParseUUIDToPgType(companyId),
+		Limit:          pagination.PerPage,
+		Offset:         (pagination.Page - 1) * pagination.PerPage,
+		Search:         pagination.Search,
+		SaleID:         pgconv.ParseUUIDToPgType(saleId),
+		Status:         pgconv.ParseStringToPgText(pagination.Status),
+		StartDueDate:   pgconv.StringToPgDate(pagination.StartDueDate),
+		EndDueDate:     pgconv.StringToPgDate(pagination.EndDueDate),
+		StartCreatedAt: pgconv.StringToPgDate(pagination.StartDate),
+		EndCreatedAt:   pgconv.StringToPgDate(pagination.EndDate),
+		OrderField:     pagination.OrderField,
+		OrderBy:        pagination.OrderBy,
 	})
 	if err != nil {
 		return domain.ListAccountsReceivablesResponse{}, err
@@ -473,7 +484,14 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 		})
 	}
 
-	paginationResponse := globaldomain.NewPaginatedResponse(response, count, pagination)
+	paginationResponse := globaldomain.NewPaginatedResponse(response, count, globaldomain.PaginationParams{
+		Page:      pagination.Page,
+		PerPage:   pagination.PerPage,
+		Search:    pagination.Search,
+		OrderBy:   pagination.OrderBy,
+		StartDate: pagination.StartDate,
+		EndDate:   pagination.EndDate,
+	})
 
 	return domain.ListAccountsReceivablesResponse{
 		PaginatedResponse: paginationResponse,

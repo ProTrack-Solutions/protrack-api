@@ -281,44 +281,6 @@ WHERE s.company_id = $1
 ORDER BY s.sale_at DESC,
     si.id,
     ar.installment_number;
--- name: ListSalesWithDetailsPaginate :many
-SELECT -- Dados da venda
-    s.id AS sale_id,
-    s.sale_at,
-    s.subtotal,
-    s.discount_amount,
-    s.total_amount,
-    s.installments_count,
-    s.payment_method,
-    s.status AS sale_status,
-    s.down_payment,
-    -- Dados do cliente
-    c.id AS customer_id,
-    c.full_name AS customer_name,
-    -- Dados dos produtos (itens da venda)
-    si.id AS sale_item_id,
-    si.product_id,
-    si.quantity,
-    si.unit_price,
-    si.discount AS item_discount,
-    p.name AS product_name,
-    -- Parcelas (accounts_receivable)
-    ar.id AS installment_id,
-    ar.total_amount AS installment_total_amount,
-    ar.balance AS installment_balance,
-    ar.due_date,
-    ar.installment_number,
-    ar.status AS installment_status
-FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
-    INNER JOIN sale_items si ON s.id = si.sale_id
-    INNER JOIN products p ON si.product_id = p.id
-    LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
-WHERE s.company_id = $1 
-    AND s.deleted_at IS NULL
-ORDER BY p.created_at DESC, ar.installment_number ASC
-LIMIT $2
-OFFSET $3;
 -- name: CountSalesByCompany :one
 SELECT COUNT(*) FROM sales
 WHERE company_id = $1
@@ -361,3 +323,72 @@ SELECT COALESCE(
         0
     )::FLOAT AS total_pending_amount
 from sales;
+-- name: ListSalesWithDetailsPaginate :many
+SELECT
+    -- Dados da venda
+    s.id AS sale_id,
+    s.sale_at,
+    s.subtotal,
+    s.discount_amount,
+    s.total_amount,
+    s.installments_count,
+    s.payment_method,
+    s.status AS sale_status,
+    s.down_payment,
+    -- Dados do cliente
+    c.id AS customer_id,
+    c.full_name AS customer_name,
+    -- Dados dos produtos (itens da venda)
+    si.id AS sale_item_id,
+    si.product_id,
+    si.quantity,
+    si.unit_price,
+    si.discount AS item_discount,
+    p.name AS product_name,
+    -- Parcelas (accounts_receivable)
+    ar.id AS installment_id,
+    ar.total_amount AS installment_total_amount,
+    ar.balance AS installment_balance,
+    ar.due_date,
+    ar.installment_number,
+    ar.status AS installment_status,
+    count(DISTINCT s.id) OVER() AS total_count
+FROM sales s
+    INNER JOIN customers c ON s.customer_id = c.id
+    INNER JOIN sale_items si ON s.id = si.sale_id
+    INNER JOIN products p ON si.product_id = p.id
+    LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
+WHERE s.company_id = $1
+    AND s.deleted_at IS NULL
+    -- Busca livre: nome do cliente ou nome do produto
+    AND (
+        sqlc.arg(search)::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+            @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+        OR to_tsvector(
+            'portuguese_unaccent',
+            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+        ) @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+    )
+    -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
+    AND (
+        sqlc.narg(sale_status)::account_status_enum IS NULL OR
+        s.status = sqlc.narg(sale_status)::account_status_enum
+    )
+    -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
+    AND (
+        sqlc.narg(payment_method)::payment_method_enum IS NULL OR
+        s.payment_method = sqlc.narg(payment_method)::payment_method_enum
+    )
+    -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
+    AND (sqlc.narg(payment_start_date)::date IS NULL OR ar.due_date >= sqlc.narg(payment_start_date)::date)
+    AND (sqlc.narg(payment_end_date)::date IS NULL OR ar.due_date < (sqlc.narg(payment_end_date)::date + INTERVAL '1 day'))
+    -- Data da venda (sales.sale_at)
+    AND (sqlc.narg(sale_start_date)::date IS NULL OR s.sale_at >= sqlc.narg(sale_start_date)::date)
+    AND (sqlc.narg(sale_end_date)::date IS NULL OR s.sale_at < (sqlc.narg(sale_end_date)::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN sqlc.arg(sort_by)::text = 'sale_at'    AND sqlc.arg(order_by)::text = 'asc'  THEN s.sale_at END ASC,
+    CASE WHEN sqlc.arg(sort_by)::text = 'sale_at'    AND sqlc.arg(order_by)::text = 'desc' THEN s.sale_at END DESC,
+    ar.installment_number ASC
+LIMIT $2
+OFFSET $3;

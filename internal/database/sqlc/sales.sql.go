@@ -804,7 +804,8 @@ func (q *Queries) ListSalesWithDetails(ctx context.Context, companyID pgtype.UUI
 }
 
 const listSalesWithDetailsPaginate = `-- name: ListSalesWithDetailsPaginate :many
-SELECT -- Dados da venda
+SELECT
+    -- Dados da venda
     s.id AS sale_id,
     s.sale_at,
     s.subtotal,
@@ -830,23 +831,62 @@ SELECT -- Dados da venda
     ar.balance AS installment_balance,
     ar.due_date,
     ar.installment_number,
-    ar.status AS installment_status
+    ar.status AS installment_status,
+    count(DISTINCT s.id) OVER() AS total_count
 FROM sales s
     INNER JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
-WHERE s.company_id = $1 
+WHERE s.company_id = $1
     AND s.deleted_at IS NULL
-ORDER BY p.created_at DESC, ar.installment_number ASC
+    -- Busca livre: nome do cliente ou nome do produto
+    AND (
+        $4::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+            @@ plainto_tsquery('portuguese_unaccent', $4::text)
+        OR to_tsvector(
+            'portuguese_unaccent',
+            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+        ) @@ plainto_tsquery('portuguese_unaccent', $4::text)
+    )
+    -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
+    AND (
+        $5::account_status_enum IS NULL OR
+        s.status = $5::account_status_enum
+    )
+    -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
+    AND (
+        $6::payment_method_enum IS NULL OR
+        s.payment_method = $6::payment_method_enum
+    )
+    -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
+    AND ($7::date IS NULL OR ar.due_date >= $7::date)
+    AND ($8::date IS NULL OR ar.due_date < ($8::date + INTERVAL '1 day'))
+    -- Data da venda (sales.sale_at)
+    AND ($9::date IS NULL OR s.sale_at >= $9::date)
+    AND ($10::date IS NULL OR s.sale_at < ($10::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN $11::text = 'sale_at'    AND $12::text = 'asc'  THEN s.sale_at END ASC,
+    CASE WHEN $11::text = 'sale_at'    AND $12::text = 'desc' THEN s.sale_at END DESC,
+    ar.installment_number ASC
 LIMIT $2
 OFFSET $3
 `
 
 type ListSalesWithDetailsPaginateParams struct {
-	CompanyID pgtype.UUID `json:"company_id"`
-	Limit     int32       `json:"limit"`
-	Offset    int32       `json:"offset"`
+	CompanyID        pgtype.UUID `json:"company_id"`
+	Limit            int32       `json:"limit"`
+	Offset           int32       `json:"offset"`
+	Search           string      `json:"search"`
+	SaleStatus       interface{} `json:"sale_status"`
+	PaymentMethod    interface{} `json:"payment_method"`
+	PaymentStartDate pgtype.Date `json:"payment_start_date"`
+	PaymentEndDate   pgtype.Date `json:"payment_end_date"`
+	SaleStartDate    pgtype.Date `json:"sale_start_date"`
+	SaleEndDate      pgtype.Date `json:"sale_end_date"`
+	SortBy           string      `json:"sort_by"`
+	OrderBy          string      `json:"order_by"`
 }
 
 type ListSalesWithDetailsPaginateRow struct {
@@ -873,10 +913,24 @@ type ListSalesWithDetailsPaginateRow struct {
 	DueDate                pgtype.Date        `json:"due_date"`
 	InstallmentNumber      pgtype.Int4        `json:"installment_number"`
 	InstallmentStatus      pgtype.Text        `json:"installment_status"`
+	TotalCount             int64              `json:"total_count"`
 }
 
 func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error) {
-	rows, err := q.db.Query(ctx, listSalesWithDetailsPaginate, arg.CompanyID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listSalesWithDetailsPaginate,
+		arg.CompanyID,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.SaleStatus,
+		arg.PaymentMethod,
+		arg.PaymentStartDate,
+		arg.PaymentEndDate,
+		arg.SaleStartDate,
+		arg.SaleEndDate,
+		arg.SortBy,
+		arg.OrderBy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -908,6 +962,7 @@ func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSale
 			&i.DueDate,
 			&i.InstallmentNumber,
 			&i.InstallmentStatus,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

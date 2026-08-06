@@ -9,6 +9,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type PaginationParams struct {
+	globaldomain.PaginationParams
+	Status             string `header:"Status"             validate:"omitempty,oneof=pending paid overdue partial cancelled"`
+	StartDueDate       string `header:"StartDueDate"       validate:"omitempty,datetime=2006-01-02"`
+	EndDueDate         string `header:"EndDueDate"         validate:"omitempty,datetime=2006-01-02"`
+	StartScheduledDate string `header:"StartScheduledDate" validate:"omitempty,datetime=2006-01-02"`
+	EndScheduledDate   string `header:"EndScheduledDate"   validate:"omitempty,datetime=2006-01-02"`
+	StartPaymentDate   string `header:"StartPaymentDate"   validate:"omitempty,datetime=2006-01-02"`
+	EndPaymentDate     string `header:"EndPaymentDate"     validate:"omitempty,datetime=2006-01-02"`
+	OrderField         string `header:"OrderField"         validate:"oneof=due_date scheduled_date payment_date created_at"`
+}
+
 type CreateBillPayableRequest struct {
 	VendorID        uuid.UUID `json:"vendor_id"`
 	CategoryID      uuid.UUID `json:"category_id"`

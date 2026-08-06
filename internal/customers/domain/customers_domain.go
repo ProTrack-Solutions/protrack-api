@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type PaginationParams struct {
+	globalDomain.PaginationParams
+	// Status filters records by status when supported by the endpoint.
+	Status string `header:"Status,default=active" example:"active" validate:"oneof=active inactive all"`
+}
+
 type Customer struct {
 	ID                  uuid.UUID    `json:"id"`
 	CompanyID           uuid.UUID    `json:"company_id"`

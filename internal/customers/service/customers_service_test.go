@@ -85,18 +85,17 @@ func TestCreateCustomer_Success(t *testing.T) {
 		Return(pgconv.ParseUUIDToPgType(newID), nil)
 
 	req := domain.CreateCustomersRequest{
-		CompanyID:   companyID,
-		FullName:    "João Santos",
-		BirthDate:   "1985-03-10",
-		Cpf:         "111.222.333-44",
-		Email:       "joao@email.com",
-		Gender:      enums.GenderMale,
-		BalanceDue:  0,
-		CreatedBy:   createdBy,
+		CompanyID:  companyID,
+		FullName:   "João Santos",
+		BirthDate:  "1985-03-10",
+		Cpf:        "111.222.333-44",
+		Email:      "joao@email.com",
+		Gender:     enums.GenderMale,
+		BalanceDue: 0,
+		CreatedBy:  createdBy,
 	}
 
 	id, err := svc.CreateCustomer(context.Background(), req)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -151,7 +150,6 @@ func TestDeleteCustomer_Success(t *testing.T) {
 		ID:        id,
 		DeletedBy: deletedBy,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -201,7 +199,6 @@ func TestGetCustomerByCPF_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := svc.GetCustomerByCPF(context.Background(), cpf)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -262,7 +259,6 @@ func TestGetCustomerById_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := svc.GetCustomerById(context.Background(), id)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -319,7 +315,6 @@ func TestListCustomers_Success(t *testing.T) {
 		Return(dbCustomers, nil)
 
 	resp, err := svc.ListCustomers(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -345,7 +340,6 @@ func TestListCustomers_Empty(t *testing.T) {
 		Return([]db.Customer{}, nil)
 
 	resp, err := svc.ListCustomers(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -401,7 +395,6 @@ func TestUpdateBalanceDueCustomer_Success(t *testing.T) {
 		BalanceDue: 500.00,
 		UpdatedBy:  updatedBy,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -424,7 +417,6 @@ func TestUpdateBalanceDueCustomer_CustomerNotFound_ReturnsNil(t *testing.T) {
 	err := svc.UpdateBalanceDueCustomer(context.Background(), uuid.New(), domain.UpdateBalanceDueCustomerRequest{
 		BalanceDue: 100.00,
 	})
-
 	if err != nil {
 		t.Errorf("service retorna nil quando cliente não encontrado; obteve: %v", err)
 	}
@@ -483,7 +475,6 @@ func TestUpdateCustomer_Success(t *testing.T) {
 		Email:     "atualizado@email.com",
 		UpdatedBy: updatedBy,
 	})
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -504,7 +495,6 @@ func TestUpdateCustomer_CustomerNotFound_ReturnsNil(t *testing.T) {
 	err := svc.UpdateCustomer(context.Background(), uuid.New(), domain.UpdateCustomerRequest{
 		FullName: "Teste",
 	})
-
 	if err != nil {
 		t.Errorf("service retorna nil quando cliente não encontrado; obteve: %v", err)
 	}
@@ -554,7 +544,6 @@ func TestCountCustomers_Success(t *testing.T) {
 		Return(int64(15), nil)
 
 	count, err := svc.CountCustomers(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -603,7 +592,6 @@ func TestGetCustomersPerformanceSummary_PositiveGrowth(t *testing.T) {
 
 	// percentage = ((120 - 100) / 100) * 100 = 20%
 	percentage, err := svc.GetCustomersPerformanceSummary(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -628,7 +616,6 @@ func TestGetCustomersPerformanceSummary_NegativeGrowth(t *testing.T) {
 
 	// percentage = ((60 - 100) / 100) * 100 = -40%
 	percentage, err := svc.GetCustomersPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -653,7 +640,6 @@ func TestGetCustomersPerformanceSummary_NoLastMonth_HasCurrent(t *testing.T) {
 
 	// lastMonthCount == 0 e currentMonthCount > 0 → 100%
 	percentage, err := svc.GetCustomersPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -677,7 +663,6 @@ func TestGetCustomersPerformanceSummary_BothZero(t *testing.T) {
 		}, nil)
 
 	percentage, err := svc.GetCustomersPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -716,7 +701,7 @@ func TestListCustomersPaginated_Success(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	companyID := uuid.New()
-	pagination := globalDomain.PaginationParams{Page: 1, PerPage: 10}
+	pagination := domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}}
 
 	dbCustomers := []db.Customer{
 		buildDbCustomer(uuid.New(), companyID, uuid.New()),
@@ -736,7 +721,6 @@ func TestListCustomersPaginated_Success(t *testing.T) {
 		Return(dbCustomers, nil)
 
 	resp, err := svc.ListCustomersPaginated(context.Background(), companyID, pagination)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -759,7 +743,7 @@ func TestListCustomersPaginated_SecondPage(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	companyID := uuid.New()
-	pagination := globalDomain.PaginationParams{Page: 3, PerPage: 5}
+	pagination := domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 3, PerPage: 5}}
 
 	repo.EXPECT().
 		CountCustomersByCompany(gomock.Any(), gomock.Any()).
@@ -776,7 +760,6 @@ func TestListCustomersPaginated_SecondPage(t *testing.T) {
 		}, nil)
 
 	resp, err := svc.ListCustomersPaginated(context.Background(), companyID, pagination)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -799,7 +782,7 @@ func TestListCustomersPaginated_CountError(t *testing.T) {
 		CountCustomersByCompany(gomock.Any(), gomock.Any()).
 		Return(int64(0), errDatabase)
 
-	_, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), globalDomain.PaginationParams{Page: 1, PerPage: 10})
+	_, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}})
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório")
@@ -821,7 +804,7 @@ func TestListCustomersPaginated_ListError(t *testing.T) {
 		ListCustomersPaginate(gomock.Any(), gomock.Any()).
 		Return(nil, errDatabase)
 
-	_, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), globalDomain.PaginationParams{Page: 1, PerPage: 10})
+	_, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}})
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório")
@@ -843,8 +826,7 @@ func TestListCustomersPaginated_EmptyResult(t *testing.T) {
 		ListCustomersPaginate(gomock.Any(), gomock.Any()).
 		Return([]db.Customer{}, nil)
 
-	resp, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), globalDomain.PaginationParams{Page: 1, PerPage: 10})
-
+	resp, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}})
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -905,7 +887,6 @@ func TestGetCustomerById_NullableFieldsHandled(t *testing.T) {
 		Return(dbCustomer, nil)
 
 	resp, err := svc.GetCustomerById(context.Background(), id)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}

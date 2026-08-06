@@ -176,10 +176,10 @@ func (mr *MockRepositoryInterfaceMockRecorder) UpdateCustomerBalance(ctx, arg an
 }
 
 // ListCustomersPaginate mocks o método ListCustomersPaginate.
-func (m *MockRepositoryInterface) ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.Customer, error) {
+func (m *MockRepositoryInterface) ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.ListCustomersPaginateRow, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCustomersPaginate", ctx, arg)
-	ret0, _ := ret[0].([]db.Customer)
+	ret0, _ := ret[0].([]db.ListCustomersPaginateRow)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

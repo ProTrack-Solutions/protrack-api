@@ -7,7 +7,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
-	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -234,7 +233,7 @@ func (h *Handler) GetTotalPendingAndOverdue(c *gin.Context) {
 // @Tags         accounts-receivable
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Pagination-Headers header globaldomain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
 // @Success      200 {object} domain.ListAccountsReceivablesResponse
 // @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
 // @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
@@ -249,7 +248,7 @@ func (h *Handler) ListAccountsReceivables(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	var pagination globaldomain.PaginationParams
+	var pagination domain.PaginationParams
 
 	if err := c.ShouldBindHeader(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
