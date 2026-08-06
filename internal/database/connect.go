@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -37,6 +38,9 @@ func NewConnect(cfg *config.Config) (*DB, error) {
 	config.MinConns = 5                      // Minimo de conexões simultaneas no poll
 	config.MaxConnLifetime = 5 * time.Minute // Tempo máximo de vida de uma conexão
 
+	if cfg.DBSimpleProtocol {
+		config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	}
 	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create connection pool to database '%s': %w", cfg.DBName, err)

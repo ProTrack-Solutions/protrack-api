@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -10,12 +11,13 @@ import (
 type Config struct {
 	AppEnv string
 
-	DBHost     string
-	DBPort     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBSSLMode  string
+	DBSimpleProtocol bool
+	DBHost           string
+	DBPort           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBSSLMode        string
 
 	ApiPort string
 
@@ -63,6 +65,7 @@ func LoadConfig() (*Config, error) {
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),
 		WebhookURLDiscord:   getEnv("WEBHOOK_URL_DISCORD"),
+		DBSimpleProtocol:    getEnvBool("DB_SIMPLE_PROTOCOL"),
 	}
 
 	return config, nil
@@ -80,4 +83,19 @@ func getEnv(key string) string {
 	}
 
 	return ""
+}
+
+func getEnvBool(key string) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return false
+	}
+
+	// ParseBool aceita: 1, t, T, TRUE, true, True, 0, f, F, FALSE, false, False
+	b, err := strconv.ParseBool(value)
+	if err != nil {
+		return false
+	}
+
+	return b
 }
