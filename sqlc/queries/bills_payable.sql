@@ -34,16 +34,45 @@ SET status = 'paid',
 WHERE id = $1
     AND company_id = $2;
 -- name: ListBillsPayable :many
-SELECT b.*,
-    v.name as vendor_name,
-    c.name as category_name,
-    pm.name as payment_method_name
+SELECT
+    b.*,
+    v.name AS vendor_name,
+    c.name AS category_name,
+    pm.name AS payment_method_name,
+    count(*) OVER() AS total_count
 FROM bills_payable b
     LEFT JOIN vendors v ON b.vendor_id = v.id
     LEFT JOIN bill_categories c ON b.category_id = c.id
     LEFT JOIN payment_methods pm ON b.payment_method_id = pm.id
 WHERE b.company_id = $1
-ORDER BY b.due_date ASC;
+    AND (
+        sqlc.arg(search)::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(b.description, ''))
+            @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+        OR v.name ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.name ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR pm.name ILIKE '%' || sqlc.arg(search)::text || '%'
+    )
+    AND (sqlc.narg(status)::account_status_enum IS NULL OR b.status = sqlc.narg(status)::account_status_enum)
+    AND (sqlc.narg(start_due_date)::date IS NULL OR b.due_date >= sqlc.narg(start_due_date)::date)
+    AND (sqlc.narg(end_due_date)::date IS NULL OR b.due_date < (sqlc.narg(end_due_date)::date + INTERVAL '1 day'))
+    AND (sqlc.narg(start_scheduled_date)::date IS NULL OR b.scheduled_date >= sqlc.narg(start_scheduled_date)::date)
+    AND (sqlc.narg(end_scheduled_date)::date IS NULL OR b.scheduled_date < (sqlc.narg(end_scheduled_date)::date + INTERVAL '1 day'))
+    AND (sqlc.narg(start_payment_date)::date IS NULL OR b.payment_date >= sqlc.narg(start_payment_date)::date)
+    AND (sqlc.narg(end_payment_date)::date IS NULL OR b.payment_date < (sqlc.narg(end_payment_date)::date + INTERVAL '1 day'))
+    AND (sqlc.narg(start_created_at)::date IS NULL OR b.created_at >= sqlc.narg(start_created_at)::date)
+    AND (sqlc.narg(end_created_at)::date IS NULL OR b.created_at < (sqlc.narg(end_created_at)::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN sqlc.arg(order_field)::text = 'due_date'       AND sqlc.arg(order_by)::text = 'asc'  THEN b.due_date::timestamptz END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'due_date'       AND sqlc.arg(order_by)::text = 'desc' THEN b.due_date::timestamptz END DESC,
+    CASE WHEN sqlc.arg(order_field)::text = 'scheduled_date' AND sqlc.arg(order_by)::text = 'asc'  THEN b.scheduled_date::timestamptz END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'scheduled_date' AND sqlc.arg(order_by)::text = 'desc' THEN b.scheduled_date::timestamptz END DESC,
+    CASE WHEN sqlc.arg(order_field)::text = 'payment_date'   AND sqlc.arg(order_by)::text = 'asc'  THEN b.payment_date::timestamptz END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'payment_date'   AND sqlc.arg(order_by)::text = 'desc' THEN b.payment_date::timestamptz END DESC,
+    CASE WHEN sqlc.arg(order_field)::text = 'created_at'     AND sqlc.arg(order_by)::text = 'asc'  THEN b.created_at END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'created_at'     AND sqlc.arg(order_by)::text = 'desc' THEN b.created_at END DESC
+LIMIT $2
+OFFSET $3;
 -- name: GetBillsByStatus :many
 SELECT *
 FROM bills_payable

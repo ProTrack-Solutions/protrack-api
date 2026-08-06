@@ -1020,7 +1020,7 @@ func (s *Service) GetPendingSalesDetailedReport(ctx context.Context, companyId u
 	return response, nil
 }
 
-func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.SaleResponsePaginate, error) {
+func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uuid.UUID, pagination domain.PaginationParams) (domain.SaleResponsePaginate, error) {
 	total, err := s.repo.CountSalesByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return domain.SaleResponsePaginate{}, err
@@ -1042,9 +1042,18 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 	}
 
 	rows, err := s.repo.ListSalesWithDetailsPaginate(ctx, db.ListSalesWithDetailsPaginateParams{
-		CompanyID: pgconv.ParseUUIDToPgType(companyId),
-		Limit:     pagination.PerPage,
-		Offset:    (pagination.Page - 1) * pagination.PerPage,
+		CompanyID:        pgconv.ParseUUIDToPgType(companyId),
+		Limit:            pagination.PerPage,
+		Offset:           (pagination.Page - 1) * pagination.PerPage,
+		Search:           pagination.Search,
+		SaleStatus:       pagination.SaleStatus,
+		PaymentMethod:    pagination.PaymentMethod,
+		PaymentStartDate: pgconv.StringToPgDate(pagination.PaymentStartDate),
+		PaymentEndDate:   pgconv.StringToPgDate(pagination.PaymentEndDate),
+		SaleStartDate:    pgconv.StringToPgDate(pagination.SaleStartDate),
+		SaleEndDate:      pgconv.StringToPgDate(pagination.SaleEndDate),
+		SortBy:           pagination.SortBy,
+		OrderBy:          pagination.OrderBy,
 	})
 
 	var response []domain.ListSalesWithInstallmentsResponse
@@ -1122,7 +1131,14 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		response = append(response, *salesMap[id])
 	}
 
-	paginationResponse := globalDomain.NewPaginatedResponse(response, total, pagination)
+	paginationResponse := globalDomain.NewPaginatedResponse(response, total, globalDomain.PaginationParams{
+		Page:      pagination.Page,
+		PerPage:   pagination.PerPage,
+		Search:    pagination.Search,
+		OrderBy:   pagination.OrderBy,
+		StartDate: pagination.StartDate,
+		EndDate:   pagination.EndDate,
+	})
 
 	return domain.SaleResponsePaginate{
 		PaginatedResponse: paginationResponse,

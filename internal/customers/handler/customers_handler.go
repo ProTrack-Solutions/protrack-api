@@ -7,7 +7,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
-	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -165,12 +164,15 @@ func (h *Handler) GetCustomerById(c *gin.Context) {
 
 // ListCustomers godoc
 // @Summary      Lista clientes da empresa com paginação
+// @Description  Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados no cabeçalho.
 // @Tags         customers
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Page header int false "Página"
-// @Param        PerPage header int false "Itens por página"
+// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
 // @Success      200 {object} domain.CustomerPaginatedResponse
+// @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
+// @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
+// @Failure      500 {object} map[string]interface{} "Erro interno do servidor"
 // @Router       /customers/list [get]
 func (h *Handler) ListCustomers(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
@@ -181,7 +183,7 @@ func (h *Handler) ListCustomers(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	var pagination globalDomain.PaginationParams
+	var pagination domain.PaginationParams
 	if err := c.ShouldBindHeader(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

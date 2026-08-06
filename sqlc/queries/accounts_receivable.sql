@@ -80,13 +80,30 @@ DELETE FROM accounts_receivable
 WHERE sale_id = $1 
     AND company_id = $2;
 -- name: ListAccountsReceivables :many
-SELECT ar.*,
-    c.full_name as customer_name
+-- name: ListAccountsReceivableByCompanyPaginated :many
+SELECT
+    ar.*,
+    c.full_name AS customer_name,
+    count(*) OVER() AS total_count
 FROM accounts_receivable ar
-JOIN customers c ON ar.customer_id = c.id
+JOIN customers c ON c.id = ar.customer_id
 WHERE ar.company_id = $1
     AND ar.deleted_at IS NULL
-ORDER BY ar.due_date ASC
+    AND (
+        sqlc.arg(search)::text = '' OR
+        c.full_name ILIKE '%' || sqlc.arg(search)::text || '%'
+    )
+    AND (sqlc.narg(sale_id)::uuid IS NULL OR ar.sale_id = sqlc.narg(sale_id)::uuid)
+    AND (sqlc.narg(status)::text IS NULL OR ar.status = sqlc.narg(status)::text)
+    AND (sqlc.narg(start_due_date)::date IS NULL OR ar.due_date >= sqlc.narg(start_due_date)::date)
+    AND (sqlc.narg(end_due_date)::date IS NULL OR ar.due_date < (sqlc.narg(end_due_date)::date + INTERVAL '1 day'))
+    AND (sqlc.narg(start_created_at)::date IS NULL OR ar.created_at >= sqlc.narg(start_created_at)::date)
+    AND (sqlc.narg(end_created_at)::date IS NULL OR ar.created_at < (sqlc.narg(end_created_at)::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN sqlc.arg(order_field)::text = 'due_date'   AND sqlc.arg(order_by)::text = 'asc'  THEN ar.due_date::timestamptz END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'due_date'   AND sqlc.arg(order_by)::text = 'desc' THEN ar.due_date::timestamptz END DESC,
+    CASE WHEN sqlc.arg(order_field)::text = 'created_at' AND sqlc.arg(order_by)::text = 'asc'  THEN ar.created_at END ASC,
+    CASE WHEN sqlc.arg(order_field)::text = 'created_at' AND sqlc.arg(order_by)::text = 'desc' THEN ar.created_at END DESC
 LIMIT $2
 OFFSET $3;
 -- name: CountAccountsReceivableByCompany :one

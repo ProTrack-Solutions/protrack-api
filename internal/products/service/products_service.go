@@ -268,6 +268,10 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 		Limit:     pagination.PerPage,
 		Offset:    (pagination.Page - 1) * pagination.PerPage,
+		Search:    pagination.Search,
+		StartDate: pgconv.StringToPgDate(pagination.StartDate),
+		EndDate:   pgconv.StringToPgDate(pagination.EndDate),
+		OrderBy:   pagination.OrderBy,
 	})
 	if err != nil {
 		return domain.ProductPaginatedResponse{}, err

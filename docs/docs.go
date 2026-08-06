@@ -69,13 +69,87 @@ const docTemplate = `{
                 "summary": "Lista as contas a receber",
                 "parameters": [
                     {
+                        "type": "string",
+                        "example": "2024-12-31",
+                        "description": "EndDate filters records created until this date.",
+                        "name": "EndDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "EndDueDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "due_date",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "name": "OrderField",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "example": "asc",
+                        "description": "OrderBy defines the ordering direction for the results.",
+                        "name": "OrderBy",
+                        "in": "header"
+                    },
+                    {
+                        "minimum": 1,
                         "type": "integer",
+                        "example": 1,
+                        "description": "Page is the page number to retrieve.",
                         "name": "Page",
                         "in": "header"
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
+                        "example": 10,
+                        "description": "PerPage is the number of items per page.",
                         "name": "Perpage",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "SaleId",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "joao",
+                        "description": "Search filters the list by a text term.",
+                        "name": "Search",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-01-01",
+                        "description": "StartDate filters records created from this date.",
+                        "name": "StartDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "StartDueDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "overdue",
+                            "partial",
+                            "cancelled"
+                        ],
+                        "type": "string",
+                        "name": "Status",
                         "in": "header"
                     }
                 ],
@@ -818,6 +892,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
                 "produces": [
                     "application/json"
                 ],
@@ -827,15 +902,104 @@ const docTemplate = `{
                 "summary": "Lista contas a pagar da empresa",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Número da página (padrão: 1)",
-                        "name": "page",
+                        "type": "string",
+                        "example": "2024-12-31",
+                        "description": "EndDate filters records created until this date.",
+                        "name": "EndDate",
                         "in": "header"
                     },
                     {
+                        "type": "string",
+                        "name": "EndDueDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "EndPaymentDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "EndScheduledDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "due_date",
+                            "scheduled_date",
+                            "payment_date",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "name": "OrderField",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "example": "asc",
+                        "description": "OrderBy defines the ordering direction for the results.",
+                        "name": "OrderBy",
+                        "in": "header"
+                    },
+                    {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Quantidade de registros por página (padrão: 10)",
-                        "name": "per_page",
+                        "example": 1,
+                        "description": "Page is the page number to retrieve.",
+                        "name": "Page",
+                        "in": "header"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 10,
+                        "description": "PerPage is the number of items per page.",
+                        "name": "Perpage",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "joao",
+                        "description": "Search filters the list by a text term.",
+                        "name": "Search",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-01-01",
+                        "description": "StartDate filters records created from this date.",
+                        "name": "StartDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "StartDueDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "StartPaymentDate",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "name": "StartScheduledDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "overdue",
+                            "partial",
+                            "cancelled"
+                        ],
+                        "type": "string",
+                        "name": "Status",
                         "in": "header"
                     }
                 ],
@@ -847,6 +1011,27 @@ const docTemplate = `{
                             "items": {
                                 "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Falha na validação dos parâmetros de paginação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "company_id não encontrado na sessão",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -1685,6 +1870,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
                 "produces": [
                     "application/json"
                 ],
@@ -1694,15 +1880,63 @@ const docTemplate = `{
                 "summary": "Lista clientes da empresa com paginação",
                 "parameters": [
                     {
+                        "type": "string",
+                        "example": "2024-12-31",
+                        "description": "EndDate filters records created until this date.",
+                        "name": "EndDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "example": "asc",
+                        "description": "OrderBy defines the ordering direction for the results.",
+                        "name": "OrderBy",
+                        "in": "header"
+                    },
+                    {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Página",
+                        "example": 1,
+                        "description": "Page is the page number to retrieve.",
                         "name": "Page",
                         "in": "header"
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Itens por página",
-                        "name": "PerPage",
+                        "example": 10,
+                        "description": "PerPage is the number of items per page.",
+                        "name": "Perpage",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "joao",
+                        "description": "Search filters the list by a text term.",
+                        "name": "Search",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-01-01",
+                        "description": "StartDate filters records created from this date.",
+                        "name": "StartDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "all"
+                        ],
+                        "type": "string",
+                        "example": "active",
+                        "description": "Status filters records by status when supported by the endpoint.",
+                        "name": "Status",
                         "in": "header"
                     }
                 ],
@@ -1711,6 +1945,27 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerPaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Falha na validação dos parâmetros de paginação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "company_id não encontrado na sessão",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -3058,6 +3313,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
                 "produces": [
                     "application/json"
                 ],
@@ -3067,15 +3323,51 @@ const docTemplate = `{
                 "summary": "Lista produtos da empresa com paginação",
                 "parameters": [
                     {
+                        "type": "string",
+                        "example": "2024-12-31",
+                        "description": "EndDate filters records created until this date.",
+                        "name": "EndDate",
+                        "in": "header"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "example": "asc",
+                        "description": "OrderBy defines the ordering direction for the results.",
+                        "name": "OrderBy",
+                        "in": "header"
+                    },
+                    {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Página",
+                        "example": 1,
+                        "description": "Page is the page number to retrieve.",
                         "name": "Page",
                         "in": "header"
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "Itens por página",
-                        "name": "PerPage",
+                        "example": 10,
+                        "description": "PerPage is the number of items per page.",
+                        "name": "Perpage",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "joao",
+                        "description": "Search filters the list by a text term.",
+                        "name": "Search",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-01-01",
+                        "description": "StartDate filters records created from this date.",
+                        "name": "StartDate",
                         "in": "header"
                     }
                 ],
@@ -3084,6 +3376,27 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductPaginatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Falha na validação dos parâmetros de paginação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "company_id não encontrado na sessão",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -6526,7 +6839,7 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest": {
             "type": "object",
             "properties": {
-                "products_id": {
+                "product_id": {
                     "type": "string"
                 }
             }

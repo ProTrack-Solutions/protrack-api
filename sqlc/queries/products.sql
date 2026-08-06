@@ -166,18 +166,32 @@ SELECT COUNT(*) FROM products
 WHERE company_id = $1
     AND deleted_at IS NULL;
 -- name: ListProductsByCompanyPaginated :many
-SELECT 
+SELECT
     p.id, p.company_id, p.category_id, p.name, p.description, p.barcode,
     p.quantity, p.size, p.cost_price, p.sale_price,
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
     p.sell_in_bulk, p.unit,
-    c.name AS category_name
+    c.name AS category_name,
+    count(*) OVER() AS total_count
 FROM products p
 JOIN product_categories c ON c.id = p.category_id
 WHERE p.company_id = $1
     AND p.deleted_at IS NULL
-ORDER BY p.created_at DESC
+    AND (
+        sqlc.arg(search)::text = '' OR
+        to_tsvector(
+            'portuguese_unaccent',
+            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+        ) @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+        OR p.barcode ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.name ILIKE '%' || sqlc.arg(search)::text || '%'
+    )
+    AND (sqlc.narg(start_date)::date IS NULL OR p.created_at >= sqlc.narg(start_date)::date)
+    AND (sqlc.narg(end_date)::date IS NULL OR p.created_at < (sqlc.narg(end_date)::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN sqlc.arg(order_by)::text = 'asc'  THEN p.created_at END ASC,
+    CASE WHEN sqlc.arg(order_by)::text = 'desc' THEN p.created_at END DESC
 LIMIT $2
 OFFSET $3;
 -- name: CountLowStockProductsByCompany :one

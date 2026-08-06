@@ -18,7 +18,7 @@ type RepositoryInterface interface {
 	CreateBillsPayable(ctx context.Context, arg db.CreateBillPayableParams) error
 	GetBillsByStatus(ctx context.Context, arg db.GetBillsByStatusParams) ([]db.BillsPayable, error)
 	GetOverdueBills(ctx context.Context, companyId pgtype.UUID) ([]db.BillsPayable, error)
-	ListBillsPayable(ctx context.Context, companyId pgtype.UUID) ([]db.ListBillsPayableRow, error)
+	ListBillsPayable(ctx context.Context, arg db.ListBillsPayableParams) ([]db.ListBillsPayableRow, error)
 	PayBill(ctx context.Context, arg db.PayBillParams) error
 	UpdateBillPayable(ctx context.Context, arg db.UpdateBillPayableParams) error
 	GetBillsById(ctx context.Context, arg db.GetBillsByIdParams) (db.BillsPayable, error)
@@ -153,13 +153,29 @@ func (s *Service) GetOverdueBills(ctx context.Context, companyId uuid.UUID) ([]d
 	return response, nil
 }
 
-func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pagination globaldomain.PaginationParams) (domain.ListBillsPayableResponse, error) {
+func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pagination domain.PaginationParams) (domain.ListBillsPayableResponse, error) {
 	total, err := s.repo.CountBillsPayableByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return domain.ListBillsPayableResponse{}, err
 	}
 
-	billsPayable, err := s.repo.ListBillsPayable(ctx, pgconv.ParseUUIDToPgType(companyId))
+	billsPayable, err := s.repo.ListBillsPayable(ctx, db.ListBillsPayableParams{
+		CompanyID:          pgconv.ParseUUIDToPgType(companyId),
+		Limit:              pagination.PerPage,
+		Offset:             (pagination.Page - 1) * pagination.PerPage,
+		Search:             pagination.Search,
+		OrderBy:            pagination.OrderBy,
+		Status:             pagination.Status,
+		StartDueDate:       pgconv.StringToPgDate(pagination.StartDueDate),
+		EndDueDate:         pgconv.StringToPgDate(pagination.EndDueDate),
+		StartScheduledDate: pgconv.StringToPgDate(pagination.StartScheduledDate),
+		EndScheduledDate:   pgconv.StringToPgDate(pagination.EndScheduledDate),
+		StartPaymentDate:   pgconv.StringToPgDate(pagination.StartPaymentDate),
+		EndPaymentDate:     pgconv.StringToPgDate(pagination.EndPaymentDate),
+		StartCreatedAt:     pgconv.StringToPgDate(pagination.StartDate),
+		EndCreatedAt:       pgconv.StringToPgDate(pagination.EndDate),
+		OrderField:         pagination.OrderField,
+	})
 	if err != nil {
 		return domain.ListBillsPayableResponse{}, err
 	}
@@ -206,7 +222,14 @@ func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pag
 		})
 	}
 
-	paginateResponse := globaldomain.NewPaginatedResponse(response, total, pagination)
+	paginateResponse := globaldomain.NewPaginatedResponse(response, total, globaldomain.PaginationParams{
+		Page:      pagination.Page,
+		PerPage:   pagination.PerPage,
+		Search:    pagination.Search,
+		OrderBy:   pagination.OrderBy,
+		StartDate: pagination.StartDate,
+		EndDate:   pagination.EndDate,
+	})
 
 	return domain.ListBillsPayableResponse{
 		PaginatedResponse: paginateResponse,

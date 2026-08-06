@@ -33,8 +33,8 @@ func (r *Repository) GetOverdueBills(ctx context.Context, companyId pgtype.UUID)
 	return r.queries().GetOverdueBills(ctx, companyId)
 }
 
-func (r *Repository) ListBillsPayable(ctx context.Context, companyId pgtype.UUID) ([]db.ListBillsPayableRow, error) {
-	return r.queries().ListBillsPayable(ctx, companyId)
+func (r *Repository) ListBillsPayable(ctx context.Context, arg db.ListBillsPayableParams) ([]db.ListBillsPayableRow, error) {
+	return r.queries().ListBillsPayable(ctx, arg)
 }
 
 func (r *Repository) PayBill(ctx context.Context, arg db.PayBillParams) error {
