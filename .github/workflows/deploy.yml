@@ -1,5 +1,4 @@
 name: CI/CD Pipeline - ProTrack API (Go)
-
 on:
   push:
     branches:
@@ -7,7 +6,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   # -------------------------------------------------------------
   # JOB 1: CI (Continuous Integration) - Validação, Lint & Testes Go
@@ -15,20 +13,16 @@ jobs:
   go-ci:
     name: Go Lint & Testes
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
-
       - name: Configurar Go
         uses: actions/setup-go@v5
         with:
           go-version: "1.25.2"
           cache: true
-
       - name: Baixar Dependências
         run: go mod download
-
       - name: Executar Testes Unitários
         run: go test -v -race -cover ./...
 
@@ -38,11 +32,9 @@ jobs:
   validate-docker:
     name: Validar Docker Compose
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout do Código
         uses: actions/checkout@v4
-
       - name: Criar .env Dummy para Validação
         run: |
           touch .env
@@ -53,20 +45,25 @@ jobs:
           echo "DB_PASSWORD=test" >> .env
           echo "DB_HOST=test" >> .env
           echo "DB_NAME=test" >> .env
-
       - name: Linter no Compose
         run: docker compose config -q
 
   # -------------------------------------------------------------
-  # JOB 3: CD (Continuous Deployment) - Disparo no Dokploy
+  # JOB 3: CD (Continuous Deployment) - Disparo no Dokploy via VPN
   # -------------------------------------------------------------
   deploy:
     name: Deploy no Dokploy
     needs: [go-ci, validate-docker]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-
     steps:
+      - name: Conectar na Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
       - name: Disparar Webhook de Deploy
         run: |
           HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" \
@@ -74,11 +71,9 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-GitHub-Event: push" \
             -d '{"ref": "refs/heads/main"}')
-
           echo "Status HTTP: $HTTP_STATUS"
           echo "Resposta do Dokploy:"
           cat response.json
-
           if [ "$HTTP_STATUS" -ne 200 ] && [ "$HTTP_STATUS" -ne 201 ] && [ "$HTTP_STATUS" -ne 204 ]; then
             echo "❌ Erro ao disparar o deploy no Dokploy!"
             exit 1
