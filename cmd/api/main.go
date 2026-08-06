@@ -138,7 +138,13 @@ func main() {
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
 		},
 		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization", "Accept", "Page", "PerPage",
+			"Origin", "Content-Type", "Authorization", "Accept",
+			"Page", "PerPage", "Search", "OrderBy", "OrderField",
+			"StartDate", "EndDate",
+			"StartDueDate", "EndDueDate",
+			"StartScheduledDate", "EndScheduledDate",
+			"StartPaymentDate", "EndPaymentDate",
+			"SaleId", "Status",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
