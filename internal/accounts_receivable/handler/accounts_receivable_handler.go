@@ -229,11 +229,11 @@ func (h *Handler) GetTotalPendingAndOverdue(c *gin.Context) {
 
 // ListAccountsReceivables godoc
 // @Summary      Lista as contas a receber
-// @Description  Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.
+// @Description  Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados via query string.
 // @Tags         accounts-receivable
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Param        Pagination-Query query domain.PaginationParams false "Parâmetros de paginação enviados via query string"
 // @Success      200 {object} domain.ListAccountsReceivablesResponse
 // @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
 // @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
@@ -250,7 +250,7 @@ func (h *Handler) ListAccountsReceivables(c *gin.Context) {
 
 	var pagination domain.PaginationParams
 
-	if err := c.ShouldBindHeader(&pagination); err != nil {
+	if err := c.ShouldBindQuery(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}

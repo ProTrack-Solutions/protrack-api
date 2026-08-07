@@ -14,7 +14,7 @@ import (
 type PaginationParams struct {
 	globalDomain.PaginationParams
 	// Status filters records by status when supported by the endpoint.
-	Status string `header:"Status,default=active" example:"active" validate:"oneof=active inactive all"`
+	Status string `form:"status,default=active" example:"active" validate:"oneof=active inactive all"`
 }
 
 type Customer struct {

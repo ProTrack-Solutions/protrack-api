@@ -159,13 +159,18 @@ func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pag
 		return domain.ListBillsPayableResponse{}, err
 	}
 
+	var status interface{}
+	if pagination.Status != "" {
+		status = pagination.Status
+	}
+
 	billsPayable, err := s.repo.ListBillsPayable(ctx, db.ListBillsPayableParams{
 		CompanyID:          pgconv.ParseUUIDToPgType(companyId),
 		Limit:              pagination.PerPage,
 		Offset:             (pagination.Page - 1) * pagination.PerPage,
 		Search:             pagination.Search,
 		OrderBy:            pagination.OrderBy,
-		Status:             pagination.Status,
+		Status:             status,
 		StartDueDate:       pgconv.StringToPgDate(pagination.StartDueDate),
 		EndDueDate:         pgconv.StringToPgDate(pagination.EndDueDate),
 		StartScheduledDate: pgconv.StringToPgDate(pagination.StartScheduledDate),
