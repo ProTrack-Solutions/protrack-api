@@ -1521,6 +1521,34 @@ definitions:
       updated_by:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest:
+    properties:
+      idempotency_key:
+        type: string
+      set_as_default:
+        type: boolean
+      stripe_payment_method_id:
+        type: string
+    required:
+    - idempotency_key
+    - stripe_payment_method_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest:
+    properties:
+      cancel_at_period_end:
+        type: boolean
+      idempotency_key:
+        type: string
+      reason:
+        type: string
+    required:
+    - idempotency_key
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest:
+    properties:
+      idempotency_key:
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse:
     properties:
       canceled_at:
@@ -1554,13 +1582,6 @@ definitions:
   github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest:
     properties:
       plan_id:
-        type: string
-    type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest:
-    properties:
-      current_period_end:
-        type: string
-      status:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams:
@@ -4706,6 +4727,128 @@ paths:
       summary: Total de vendas pendentes
       tags:
       - sales
+  /subscription-management/payment-methods:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do novo método de pagamento
+        in: body
+        name: payment_method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Adiciona um método de pagamento à assinatura
+      tags:
+      - subscription-management
+  /subscription-management/payment-methods/{id}/default:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do método de pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da atualização
+        in: body
+        name: payment_method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Define o método de pagamento padrão da assinatura
+      tags:
+      - subscription-management
+  /subscription-management/subscription/cancel:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do cancelamento
+        in: body
+        name: cancel
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancela a assinatura da empresa autenticada
+      tags:
+      - subscription-management
   /subscription/{id}:
     get:
       parameters:
@@ -4842,44 +4985,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza o plano da assinatura
-      tags:
-      - subscriptions
-  /subscription/status/{id}:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID da assinatura
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Novo status
-        in: body
-        name: status
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Requisição inválida
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Erro interno do servidor
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Atualiza status da assinatura
       tags:
       - subscriptions
   /users:
