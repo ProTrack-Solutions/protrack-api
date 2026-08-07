@@ -125,42 +125,6 @@ func (h *Handler) UpdateSubscriptionMethod(c *gin.Context) {
 	c.Status(http.StatusOK)
 }
 
-// UpdateSubscriptionStatus godoc
-// @Summary      Atualiza status da assinatura
-// @Tags         subscriptions
-// @Accept       json
-// @Produce      json
-// @Security     BearerAuth
-// @Param        id path string true "ID da assinatura"
-// @Param        status body domain.UpdateSubscriptionStatusRequest true "Novo status"
-// @Success      200
-// @Failure      400 {object} map[string]string "Requisição inválida"
-// @Failure      500 {object} map[string]string "Erro interno do servidor"
-// @Router       /subscription/status/{id} [put]
-func (h *Handler) UpdateSubscriptionStatus(c *gin.Context) {
-	idStr := c.Param("id")
-
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	var req domain.UpdateSubscriptionStatusRequest
-
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := h.service.UpdateSubscriptionStatus(c.Request.Context(), id, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.Status(http.StatusOK)
-}
-
 // CancelSubscription godoc
 // @Summary      Cancela uma assinatura
 // @Tags         subscriptions
