@@ -14,6 +14,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type PaginationParams struct {
+	globalDomain.PaginationParams
+	SaleStatus       string `header:"SaleStatus" validate:"omitempty,oneof=pending paid overdue scheduled canceled partial"`
+	PaymentMethod    string `header:"PaymentMethod" validate:"omitempty,oneof=cash credit_card debit_card pix bank_transfer installments other"`
+	PaymentStartDate string `header:"PaymentStartDate" validate:"omitempty,datetime=2006-01-02"`
+	PaymentEndDate   string `header:"PaymentEndDate" validate:"omitempty,datetime=2006-01-02"`
+	SaleStartDate    string `header:"SaleStartDate" validate:"omitempty,datetime=2006-01-02"`
+	SaleEndDate      string `header:"SaleEndDate" validate:"omitempty,datetime=2006-01-02"`
+	SortBy           string `header:"SortBy,default=sale_at" validate:"oneof=sale_at created_at"`
+}
+
 type CreateSaleRequest struct {
 	CustomerID        uuid.UUID               `json:"customer_id"`
 	DiscountAmount    float64                 `json:"discount_amount"`

@@ -602,18 +602,32 @@ func (q *Queries) ListProductsByCompany(ctx context.Context, companyID pgtype.UU
 }
 
 const listProductsByCompanyPaginated = `-- name: ListProductsByCompanyPaginated :many
-SELECT 
+SELECT
     p.id, p.company_id, p.category_id, p.name, p.description, p.barcode,
     p.quantity, p.size, p.cost_price, p.sale_price,
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
     p.sell_in_bulk, p.unit,
-    c.name AS category_name
+    c.name AS category_name,
+    count(*) OVER() AS total_count
 FROM products p
 JOIN product_categories c ON c.id = p.category_id
 WHERE p.company_id = $1
     AND p.deleted_at IS NULL
-ORDER BY p.created_at DESC
+    AND (
+        $4::text = '' OR
+        to_tsvector(
+            'portuguese_unaccent',
+            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+        ) @@ plainto_tsquery('portuguese_unaccent', $4::text)
+        OR p.barcode ILIKE '%' || $4::text || '%'
+        OR c.name ILIKE '%' || $4::text || '%'
+    )
+    AND ($5::date IS NULL OR p.created_at >= $5::date)
+    AND ($6::date IS NULL OR p.created_at < ($6::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN $7::text = 'asc'  THEN p.created_at END ASC,
+    CASE WHEN $7::text = 'desc' THEN p.created_at END DESC
 LIMIT $2
 OFFSET $3
 `
@@ -622,6 +636,10 @@ type ListProductsByCompanyPaginatedParams struct {
 	CompanyID pgtype.UUID `json:"company_id"`
 	Limit     int32       `json:"limit"`
 	Offset    int32       `json:"offset"`
+	Search    string      `json:"search"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+	OrderBy   string      `json:"order_by"`
 }
 
 type ListProductsByCompanyPaginatedRow struct {
@@ -644,10 +662,19 @@ type ListProductsByCompanyPaginatedRow struct {
 	SellInBulk   bool               `json:"sell_in_bulk"`
 	Unit         UnitOfMeasure      `json:"unit"`
 	CategoryName string             `json:"category_name"`
+	TotalCount   int64              `json:"total_count"`
 }
 
 func (q *Queries) ListProductsByCompanyPaginated(ctx context.Context, arg ListProductsByCompanyPaginatedParams) ([]ListProductsByCompanyPaginatedRow, error) {
-	rows, err := q.db.Query(ctx, listProductsByCompanyPaginated, arg.CompanyID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listProductsByCompanyPaginated,
+		arg.CompanyID,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.StartDate,
+		arg.EndDate,
+		arg.OrderBy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -675,6 +702,7 @@ func (q *Queries) ListProductsByCompanyPaginated(ctx context.Context, arg ListPr
 			&i.SellInBulk,
 			&i.Unit,
 			&i.CategoryName,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

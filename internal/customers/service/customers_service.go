@@ -26,7 +26,7 @@ type RepositoryInterface interface {
 	CountCustomers(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyId pgtype.UUID) (db.GetCustomersPerformanceSummaryRow, error)
 	UpdateCustomerBalance(ctx context.Context, arg db.UpdateCustomerBalanceParams) error
-	ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.Customer, error)
+	ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.ListCustomersPaginateRow, error)
 	CountCustomersByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
@@ -387,7 +387,7 @@ func (s *Service) GetCustomersPerformanceSummary(ctx context.Context, companyId 
 	return percentage, nil
 }
 
-func (s *Service) ListCustomersPaginated(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.CustomerPaginatedResponse, error) {
+func (s *Service) ListCustomersPaginated(ctx context.Context, companyId uuid.UUID, pagination domain.PaginationParams) (domain.CustomerPaginatedResponse, error) {
 	total, err := s.repo.CountCustomersByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return domain.CustomerPaginatedResponse{}, err
@@ -397,6 +397,11 @@ func (s *Service) ListCustomersPaginated(ctx context.Context, companyId uuid.UUI
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 		Limit:     pagination.PerPage,
 		Offset:    (pagination.Page - 1) * pagination.PerPage,
+		Search:    pagination.Search,
+		StartDate: pgconv.StringToPgDate(pagination.StartDate),
+		EndDate:   pgconv.StringToPgDate(pagination.EndDate),
+		OrderBy:   pagination.OrderBy,
+		Status:    pagination.Status,
 	})
 	if err != nil {
 		return domain.CustomerPaginatedResponse{}, err
@@ -436,7 +441,14 @@ func (s *Service) ListCustomersPaginated(ctx context.Context, companyId uuid.UUI
 		})
 	}
 
-	paginationResponse := globalDomain.NewPaginatedResponse(response, total, pagination)
+	paginationResponse := globalDomain.NewPaginatedResponse(response, total, globalDomain.PaginationParams{
+		Page:      pagination.Page,
+		PerPage:   pagination.PerPage,
+		Search:    pagination.Search,
+		OrderBy:   pagination.OrderBy,
+		StartDate: pagination.StartDate,
+		EndDate:   pagination.EndDate,
+	})
 
 	return domain.CustomerPaginatedResponse{
 		PaginatedResponse: paginationResponse,

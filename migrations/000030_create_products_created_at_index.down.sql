@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS idx_products_company_created_at;

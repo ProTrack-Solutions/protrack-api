@@ -282,21 +282,46 @@ func (q *Queries) GetTotalOverdueAmountByCompany(ctx context.Context, companyID 
 }
 
 const listAccountsReceivables = `-- name: ListAccountsReceivables :many
-SELECT ar.id, ar.company_id, ar.customer_id, ar.sale_id, ar.total_amount, ar.balance, ar.due_date, ar.installment_number, ar.total_installments, ar.status, ar.created_at, ar.created_by, ar.updated_at, ar.updated_by, ar.deleted_at,
-    c.full_name as customer_name
+SELECT
+    ar.id, ar.company_id, ar.customer_id, ar.sale_id, ar.total_amount, ar.balance, ar.due_date, ar.installment_number, ar.total_installments, ar.status, ar.created_at, ar.created_by, ar.updated_at, ar.updated_by, ar.deleted_at,
+    c.full_name AS customer_name,
+    count(*) OVER() AS total_count
 FROM accounts_receivable ar
-JOIN customers c ON ar.customer_id = c.id
+JOIN customers c ON c.id = ar.customer_id
 WHERE ar.company_id = $1
     AND ar.deleted_at IS NULL
-ORDER BY ar.due_date ASC
+    AND (
+        $4::text = '' OR
+        c.full_name ILIKE '%' || $4::text || '%'
+    )
+    AND ($5::uuid IS NULL OR ar.sale_id = $5::uuid)
+    AND ($6::text IS NULL OR ar.status = $6::text)
+    AND ($7::date IS NULL OR ar.due_date >= $7::date)
+    AND ($8::date IS NULL OR ar.due_date < ($8::date + INTERVAL '1 day'))
+    AND ($9::date IS NULL OR ar.created_at >= $9::date)
+    AND ($10::date IS NULL OR ar.created_at < ($10::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN $11::text = 'due_date'   AND $12::text = 'asc'  THEN ar.due_date::timestamptz END ASC,
+    CASE WHEN $11::text = 'due_date'   AND $12::text = 'desc' THEN ar.due_date::timestamptz END DESC,
+    CASE WHEN $11::text = 'created_at' AND $12::text = 'asc'  THEN ar.created_at END ASC,
+    CASE WHEN $11::text = 'created_at' AND $12::text = 'desc' THEN ar.created_at END DESC
 LIMIT $2
 OFFSET $3
 `
 
 type ListAccountsReceivablesParams struct {
-	CompanyID pgtype.UUID `json:"company_id"`
-	Limit     int32       `json:"limit"`
-	Offset    int32       `json:"offset"`
+	CompanyID      pgtype.UUID `json:"company_id"`
+	Limit          int32       `json:"limit"`
+	Offset         int32       `json:"offset"`
+	Search         string      `json:"search"`
+	SaleID         pgtype.UUID `json:"sale_id"`
+	Status         pgtype.Text `json:"status"`
+	StartDueDate   pgtype.Date `json:"start_due_date"`
+	EndDueDate     pgtype.Date `json:"end_due_date"`
+	StartCreatedAt pgtype.Date `json:"start_created_at"`
+	EndCreatedAt   pgtype.Date `json:"end_created_at"`
+	OrderField     string      `json:"order_field"`
+	OrderBy        string      `json:"order_by"`
 }
 
 type ListAccountsReceivablesRow struct {
@@ -316,10 +341,24 @@ type ListAccountsReceivablesRow struct {
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CustomerName      string             `json:"customer_name"`
+	TotalCount        int64              `json:"total_count"`
 }
 
 func (q *Queries) ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error) {
-	rows, err := q.db.Query(ctx, listAccountsReceivables, arg.CompanyID, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listAccountsReceivables,
+		arg.CompanyID,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.SaleID,
+		arg.Status,
+		arg.StartDueDate,
+		arg.EndDueDate,
+		arg.StartCreatedAt,
+		arg.EndCreatedAt,
+		arg.OrderField,
+		arg.OrderBy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -344,6 +383,7 @@ func (q *Queries) ListAccountsReceivables(ctx context.Context, arg ListAccountsR
 			&i.UpdatedBy,
 			&i.DeletedAt,
 			&i.CustomerName,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

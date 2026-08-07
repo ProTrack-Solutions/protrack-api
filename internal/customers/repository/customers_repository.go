@@ -73,7 +73,7 @@ func (r *Repository) UpdateCustomerBalance(ctx context.Context, arg db.UpdateCus
 	return q.UpdateCustomerBalance(ctx, arg)
 }
 
-func (r *Repository) ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.Customer, error) {
+func (r *Repository) ListCustomersPaginate(ctx context.Context, arg db.ListCustomersPaginateParams) ([]db.ListCustomersPaginateRow, error) {
 	q := db.New(r.db)
 	return q.ListCustomersPaginate(ctx, arg)
 }

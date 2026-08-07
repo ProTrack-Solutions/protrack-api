@@ -124,11 +124,31 @@ SET balance_due = $2,
 WHERE id = $1
     AND deleted_at IS NULL;
 -- name: ListCustomersPaginate :many
-SELECT *
-FROM customers
-WHERE company_id = $1
-    AND deleted_at IS NULL
-ORDER BY created_at DESC
+SELECT
+    c.*,
+    count(*) OVER() AS total_count
+FROM customers c
+WHERE c.company_id = $1
+    AND (
+        sqlc.arg(status)::text = 'all'      OR
+        (sqlc.arg(status)::text = 'active'   AND c.deleted_at IS NULL) OR
+        (sqlc.arg(status)::text = 'inactive' AND c.deleted_at IS NOT NULL)
+    )
+    AND (
+        sqlc.arg(search)::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+            @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+        OR c.cpf ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.rg ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.email ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.whatsapp ILIKE '%' || sqlc.arg(search)::text || '%'
+        OR c.mobile_phone ILIKE '%' || sqlc.arg(search)::text || '%'
+    )
+    AND (sqlc.narg(start_date)::date IS NULL OR c.created_at >= sqlc.narg(start_date)::date)
+    AND (sqlc.narg(end_date)::date IS NULL OR c.created_at < (sqlc.narg(end_date)::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN sqlc.arg(order_by)::text = 'asc'  THEN c.created_at END ASC,
+    CASE WHEN sqlc.arg(order_by)::text = 'desc' THEN c.created_at END DESC
 LIMIT $2
 OFFSET $3;
 -- name: CountCustomersByCompany :one

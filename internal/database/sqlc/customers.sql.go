@@ -324,11 +324,31 @@ func (q *Queries) ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]C
 }
 
 const listCustomersPaginate = `-- name: ListCustomersPaginate :many
-SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
-FROM customers
-WHERE company_id = $1
-    AND deleted_at IS NULL
-ORDER BY created_at DESC
+SELECT
+    c.id, c.company_id, c.full_name, c.birth_date, c.cpf, c.rg, c.marital_status, c.gender, c.whatsapp, c.mobile_phone, c.home_phone, c.email, c.address_street, c.address_number, c.address_complement, c.address_neighborhood, c.address_city, c.address_state, c.address_zipcode, c.address_country, c.balance_due, c.created_by, c.updated_by, c.deleted_by, c.created_at, c.updated_at, c.deleted_at,
+    count(*) OVER() AS total_count
+FROM customers c
+WHERE c.company_id = $1
+    AND (
+        $4::text = 'all'      OR
+        ($4::text = 'active'   AND c.deleted_at IS NULL) OR
+        ($4::text = 'inactive' AND c.deleted_at IS NOT NULL)
+    )
+    AND (
+        $5::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+            @@ plainto_tsquery('portuguese_unaccent', $5::text)
+        OR c.cpf ILIKE '%' || $5::text || '%'
+        OR c.rg ILIKE '%' || $5::text || '%'
+        OR c.email ILIKE '%' || $5::text || '%'
+        OR c.whatsapp ILIKE '%' || $5::text || '%'
+        OR c.mobile_phone ILIKE '%' || $5::text || '%'
+    )
+    AND ($6::date IS NULL OR c.created_at >= $6::date)
+    AND ($7::date IS NULL OR c.created_at < ($7::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN $8::text = 'asc'  THEN c.created_at END ASC,
+    CASE WHEN $8::text = 'desc' THEN c.created_at END DESC
 LIMIT $2
 OFFSET $3
 `
@@ -337,17 +357,62 @@ type ListCustomersPaginateParams struct {
 	CompanyID pgtype.UUID `json:"company_id"`
 	Limit     int32       `json:"limit"`
 	Offset    int32       `json:"offset"`
+	Status    string      `json:"status"`
+	Search    string      `json:"search"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+	OrderBy   string      `json:"order_by"`
 }
 
-func (q *Queries) ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]Customer, error) {
-	rows, err := q.db.Query(ctx, listCustomersPaginate, arg.CompanyID, arg.Limit, arg.Offset)
+type ListCustomersPaginateRow struct {
+	ID                  pgtype.UUID        `json:"id"`
+	CompanyID           pgtype.UUID        `json:"company_id"`
+	FullName            string             `json:"full_name"`
+	BirthDate           pgtype.Date        `json:"birth_date"`
+	Cpf                 string             `json:"cpf"`
+	Rg                  pgtype.Text        `json:"rg"`
+	MaritalStatus       pgtype.Text        `json:"marital_status"`
+	Gender              interface{}        `json:"gender"`
+	Whatsapp            pgtype.Text        `json:"whatsapp"`
+	MobilePhone         pgtype.Text        `json:"mobile_phone"`
+	HomePhone           pgtype.Text        `json:"home_phone"`
+	Email               string             `json:"email"`
+	AddressStreet       pgtype.Text        `json:"address_street"`
+	AddressNumber       pgtype.Text        `json:"address_number"`
+	AddressComplement   pgtype.Text        `json:"address_complement"`
+	AddressNeighborhood pgtype.Text        `json:"address_neighborhood"`
+	AddressCity         pgtype.Text        `json:"address_city"`
+	AddressState        pgtype.Text        `json:"address_state"`
+	AddressZipcode      pgtype.Text        `json:"address_zipcode"`
+	AddressCountry      pgtype.Text        `json:"address_country"`
+	BalanceDue          pgtype.Numeric     `json:"balance_due"`
+	CreatedBy           pgtype.UUID        `json:"created_by"`
+	UpdatedBy           pgtype.UUID        `json:"updated_by"`
+	DeletedBy           pgtype.UUID        `json:"deleted_by"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	TotalCount          int64              `json:"total_count"`
+}
+
+func (q *Queries) ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error) {
+	rows, err := q.db.Query(ctx, listCustomersPaginate,
+		arg.CompanyID,
+		arg.Limit,
+		arg.Offset,
+		arg.Status,
+		arg.Search,
+		arg.StartDate,
+		arg.EndDate,
+		arg.OrderBy,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Customer{}
+	items := []ListCustomersPaginateRow{}
 	for rows.Next() {
-		var i Customer
+		var i ListCustomersPaginateRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CompanyID,
@@ -376,6 +441,7 @@ func (q *Queries) ListCustomersPaginate(ctx context.Context, arg ListCustomersPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

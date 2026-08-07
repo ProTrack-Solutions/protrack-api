@@ -7,7 +7,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
-	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -160,12 +159,15 @@ func (h *Handler) GetOverdueBills(c *gin.Context) {
 
 // ListBillsPayable godoc
 // @Summary      Lista contas a pagar da empresa
+// @Description  Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados no cabeçalho.
 // @Tags         bills-payable
 // @Produce      json
 // @Security     BearerAuth
-// @Param        page header int false "Número da página (padrão: 1)"
-// @Param        per_page header int false "Quantidade de registros por página (padrão: 10)"
+// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
 // @Success      200 {array} domain.ListBillsPayableResponse
+// @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
+// @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
+// @Failure      500 {object} map[string]interface{} "Erro interno do servidor"
 // @Router       /bills-payable/list [get]
 func (h *Handler) ListBillsPayable(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
@@ -176,7 +178,7 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	var pagination globaldomain.PaginationParams
+	var pagination domain.PaginationParams
 
 	if err := c.ShouldBindHeader(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

@@ -5,7 +5,6 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
-	globaldomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/gin-gonic/gin"
@@ -441,7 +440,7 @@ func (h *Handler) ListSalesWithDetails(c *gin.Context) {
 
 	companyId := companyIdAny.(uuid.UUID)
 
-	var pagination globaldomain.PaginationParams
+	var pagination domain.PaginationParams
 
 	if err := c.ShouldBindHeader(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})

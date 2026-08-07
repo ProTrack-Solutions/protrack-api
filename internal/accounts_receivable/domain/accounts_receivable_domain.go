@@ -7,6 +7,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type PaginationParams struct {
+	globaldomain.PaginationParams
+	SaleID       string `header:"SaleId"         validate:"omitempty,uuid"`
+	Status       string `header:"Status"         validate:"omitempty,oneof=pending paid overdue partial cancelled"`
+	StartDueDate string `header:"StartDueDate"   validate:"omitempty,datetime=2006-01-02"`
+	EndDueDate   string `header:"EndDueDate"     validate:"omitempty,datetime=2006-01-02"`
+	OrderField   string `header:"OrderField"     validate:"oneof=due_date created_at"`
+}
+
 type CreateAccountReceivableRequest struct {
 	CustomerID        uuid.UUID `json:"customer_id"`
 	SaleID            uuid.UUID `json:"sale_id"`

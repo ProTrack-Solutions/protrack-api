@@ -8,9 +8,9 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	salesDomain "github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/mocks"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
-	salesDomain "github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/mock/gomock"
@@ -80,7 +80,6 @@ func TestDeleteSale_Success(t *testing.T) {
 		Return(nil)
 
 	err := svc.DeleteSale(context.Background(), id, domainDeleteSaleRequest(deletedBy, companyID))
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -129,7 +128,6 @@ func TestGetSaleById_Success(t *testing.T) {
 		Return(expected, nil)
 
 	resp, err := svc.GetSaleById(context.Background(), domainGetSaleByIdRequest(id, companyID))
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -186,7 +184,6 @@ func TestListSales_Success(t *testing.T) {
 		Return(dbSales, nil)
 
 	resp, err := svc.ListSales(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -207,7 +204,6 @@ func TestListSales_Empty(t *testing.T) {
 		Return([]db.ListSalesRow{}, nil)
 
 	resp, err := svc.ListSales(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -252,7 +248,6 @@ func TestCountSales_Success(t *testing.T) {
 		Return(int64(10), nil)
 
 	count, err := svc.CountSales(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -301,7 +296,6 @@ func TestGetSalesPerformanceSummary_PositiveGrowth(t *testing.T) {
 
 	// percentage = ((120 - 100) / 100) * 100 = 20%
 	percentage, err := svc.GetSalesPerformanceSummary(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -326,7 +320,6 @@ func TestGetSalesPerformanceSummary_NegativeGrowth(t *testing.T) {
 
 	// percentage = ((60 - 100) / 100) * 100 = -40%
 	percentage, err := svc.GetSalesPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -351,7 +344,6 @@ func TestGetSalesPerformanceSummary_NoLastMonth_HasCurrent(t *testing.T) {
 
 	// lastMonthCount == 0 e currentMonthCount > 0 → 100%
 	percentage, err := svc.GetSalesPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -375,7 +367,6 @@ func TestGetSalesPerformanceSummary_BothZero(t *testing.T) {
 		}, nil)
 
 	percentage, err := svc.GetSalesPerformanceSummary(context.Background(), uuid.New())
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -423,7 +414,6 @@ func TestGetTotalAmountSummary_Success(t *testing.T) {
 		}, nil)
 
 	resp, err := svc.GetTotalAmountSummary(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -471,7 +461,6 @@ func TestGetTotalAmountIsPending_Success(t *testing.T) {
 		Return(3500.00, nil)
 
 	total, err := svc.GetTotalAmountIsPending(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -512,7 +501,6 @@ func TestGetTotalAmountIsOverdue_Success(t *testing.T) {
 		Return(1200.00, nil)
 
 	total, err := svc.GetTotalAmountIsOverdue(context.Background(), domainGetTotalAmountByStatusRequest(companyID))
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -539,7 +527,6 @@ func TestContSalesPendingAndOverdue_Success(t *testing.T) {
 		Return(int64(5), nil)
 
 	count, err := svc.ContSalesPendingAndOverdue(context.Background(), companyID)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -578,7 +565,7 @@ func TestListSalesWithDetailsPaginate_Success(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	companyID := uuid.New()
-	pagination := globalDomain.PaginationParams{Page: 1, PerPage: 10}
+	pagination := salesDomain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}}
 
 	repo.EXPECT().
 		CountSalesByCompany(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
@@ -598,14 +585,22 @@ func TestListSalesWithDetailsPaginate_Success(t *testing.T) {
 
 	repo.EXPECT().
 		ListSalesWithDetailsPaginate(gomock.Any(), db.ListSalesWithDetailsPaginateParams{
-			CompanyID: pgconv.ParseUUIDToPgType(companyID),
-			Limit:     10,
-			Offset:    0,
+			CompanyID:        pgconv.ParseUUIDToPgType(companyID),
+			Limit:            10,
+			Offset:           0,
+			Search:           "",
+			SaleStatus:       "",
+			PaymentMethod:    "",
+			PaymentStartDate: pgtype.Date{},
+			PaymentEndDate:   pgtype.Date{},
+			SaleStartDate:    pgtype.Date{},
+			SaleEndDate:      pgtype.Date{},
+			SortBy:           "",
+			OrderBy:          "",
 		}).
 		Return([]db.ListSalesWithDetailsPaginateRow{}, nil)
 
 	resp, err := svc.ListSalesWithDetailsPaginate(context.Background(), companyID, pagination)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -631,7 +626,7 @@ func TestListSalesWithDetailsPaginate_CountError(t *testing.T) {
 		CountSalesByCompany(gomock.Any(), gomock.Any()).
 		Return(int64(0), errDatabase)
 
-	_, err := svc.ListSalesWithDetailsPaginate(context.Background(), uuid.New(), globalDomain.PaginationParams{Page: 1, PerPage: 10})
+	_, err := svc.ListSalesWithDetailsPaginate(context.Background(), uuid.New(), salesDomain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}})
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório")
@@ -646,7 +641,7 @@ func TestListSalesWithDetailsPaginate_SecondPage(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	companyID := uuid.New()
-	pagination := globalDomain.PaginationParams{Page: 3, PerPage: 5}
+	pagination := salesDomain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 3, PerPage: 5}}
 
 	repo.EXPECT().
 		CountSalesByCompany(gomock.Any(), gomock.Any()).
@@ -666,14 +661,22 @@ func TestListSalesWithDetailsPaginate_SecondPage(t *testing.T) {
 
 	repo.EXPECT().
 		ListSalesWithDetailsPaginate(gomock.Any(), db.ListSalesWithDetailsPaginateParams{
-			CompanyID: pgconv.ParseUUIDToPgType(companyID),
-			Limit:     5,
-			Offset:    10, // (3-1) * 5 = 10
+			CompanyID:        pgconv.ParseUUIDToPgType(companyID),
+			Limit:            5,
+			Offset:           10, // (3-1) * 5 = 10
+			Search:           "",
+			SaleStatus:       "",
+			PaymentMethod:    "",
+			PaymentStartDate: pgtype.Date{},
+			PaymentEndDate:   pgtype.Date{},
+			SaleStartDate:    pgtype.Date{},
+			SaleEndDate:      pgtype.Date{},
+			SortBy:           "",
+			OrderBy:          "",
 		}).
 		Return([]db.ListSalesWithDetailsPaginateRow{}, nil)
 
 	resp, err := svc.ListSalesWithDetailsPaginate(context.Background(), companyID, pagination)
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -711,7 +714,6 @@ func TestUpdateSaleStatus_Success(t *testing.T) {
 		Return(nil)
 
 	err := svc.UpdateSaleStatus(context.Background(), id, domainUpdateSaleStatusRequest(id, companyID, "paid"))
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -782,7 +784,6 @@ func TestListSalesByCustomerAndStatus_Success(t *testing.T) {
 		}, nil)
 
 	resp, err := svc.ListSalesByCustomerAndStatus(context.Background(), domainListSalesByCompanyAndStatusRequest(companyID, "pending"))
-
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}

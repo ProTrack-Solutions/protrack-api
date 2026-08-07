@@ -241,17 +241,64 @@ func (q *Queries) GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([
 }
 
 const listBillsPayable = `-- name: ListBillsPayable :many
-SELECT b.id, b.company_id, b.vendor_id, b.category_id, b.payment_method_id, b.amount, b.due_date, b.status, b.description, b.scheduled_date, b.payment_date, b.amount_paid, b.notes, b.created_at, b.updated_at,
-    v.name as vendor_name,
-    c.name as category_name,
-    pm.name as payment_method_name
+SELECT
+    b.id, b.company_id, b.vendor_id, b.category_id, b.payment_method_id, b.amount, b.due_date, b.status, b.description, b.scheduled_date, b.payment_date, b.amount_paid, b.notes, b.created_at, b.updated_at,
+    v.name AS vendor_name,
+    c.name AS category_name,
+    pm.name AS payment_method_name,
+    count(*) OVER() AS total_count
 FROM bills_payable b
     LEFT JOIN vendors v ON b.vendor_id = v.id
     LEFT JOIN bill_categories c ON b.category_id = c.id
     LEFT JOIN payment_methods pm ON b.payment_method_id = pm.id
 WHERE b.company_id = $1
-ORDER BY b.due_date ASC
+    AND (
+        $4::text = '' OR
+        to_tsvector('portuguese_unaccent', coalesce(b.description, ''))
+            @@ plainto_tsquery('portuguese_unaccent', $4::text)
+        OR v.name ILIKE '%' || $4::text || '%'
+        OR c.name ILIKE '%' || $4::text || '%'
+        OR pm.name ILIKE '%' || $4::text || '%'
+    )
+    AND ($5::account_status_enum IS NULL OR b.status = $5::account_status_enum)
+    AND ($6::date IS NULL OR b.due_date >= $6::date)
+    AND ($7::date IS NULL OR b.due_date < ($7::date + INTERVAL '1 day'))
+    AND ($8::date IS NULL OR b.scheduled_date >= $8::date)
+    AND ($9::date IS NULL OR b.scheduled_date < ($9::date + INTERVAL '1 day'))
+    AND ($10::date IS NULL OR b.payment_date >= $10::date)
+    AND ($11::date IS NULL OR b.payment_date < ($11::date + INTERVAL '1 day'))
+    AND ($12::date IS NULL OR b.created_at >= $12::date)
+    AND ($13::date IS NULL OR b.created_at < ($13::date + INTERVAL '1 day'))
+ORDER BY
+    CASE WHEN $14::text = 'due_date'       AND $15::text = 'asc'  THEN b.due_date::timestamptz END ASC,
+    CASE WHEN $14::text = 'due_date'       AND $15::text = 'desc' THEN b.due_date::timestamptz END DESC,
+    CASE WHEN $14::text = 'scheduled_date' AND $15::text = 'asc'  THEN b.scheduled_date::timestamptz END ASC,
+    CASE WHEN $14::text = 'scheduled_date' AND $15::text = 'desc' THEN b.scheduled_date::timestamptz END DESC,
+    CASE WHEN $14::text = 'payment_date'   AND $15::text = 'asc'  THEN b.payment_date::timestamptz END ASC,
+    CASE WHEN $14::text = 'payment_date'   AND $15::text = 'desc' THEN b.payment_date::timestamptz END DESC,
+    CASE WHEN $14::text = 'created_at'     AND $15::text = 'asc'  THEN b.created_at END ASC,
+    CASE WHEN $14::text = 'created_at'     AND $15::text = 'desc' THEN b.created_at END DESC
+LIMIT $2
+OFFSET $3
 `
+
+type ListBillsPayableParams struct {
+	CompanyID          pgtype.UUID `json:"company_id"`
+	Limit              int32       `json:"limit"`
+	Offset             int32       `json:"offset"`
+	Search             string      `json:"search"`
+	Status             interface{} `json:"status"`
+	StartDueDate       pgtype.Date `json:"start_due_date"`
+	EndDueDate         pgtype.Date `json:"end_due_date"`
+	StartScheduledDate pgtype.Date `json:"start_scheduled_date"`
+	EndScheduledDate   pgtype.Date `json:"end_scheduled_date"`
+	StartPaymentDate   pgtype.Date `json:"start_payment_date"`
+	EndPaymentDate     pgtype.Date `json:"end_payment_date"`
+	StartCreatedAt     pgtype.Date `json:"start_created_at"`
+	EndCreatedAt       pgtype.Date `json:"end_created_at"`
+	OrderField         string      `json:"order_field"`
+	OrderBy            string      `json:"order_by"`
+}
 
 type ListBillsPayableRow struct {
 	ID                pgtype.UUID        `json:"id"`
@@ -272,10 +319,27 @@ type ListBillsPayableRow struct {
 	VendorName        pgtype.Text        `json:"vendor_name"`
 	CategoryName      pgtype.Text        `json:"category_name"`
 	PaymentMethodName pgtype.Text        `json:"payment_method_name"`
+	TotalCount        int64              `json:"total_count"`
 }
 
-func (q *Queries) ListBillsPayable(ctx context.Context, companyID pgtype.UUID) ([]ListBillsPayableRow, error) {
-	rows, err := q.db.Query(ctx, listBillsPayable, companyID)
+func (q *Queries) ListBillsPayable(ctx context.Context, arg ListBillsPayableParams) ([]ListBillsPayableRow, error) {
+	rows, err := q.db.Query(ctx, listBillsPayable,
+		arg.CompanyID,
+		arg.Limit,
+		arg.Offset,
+		arg.Search,
+		arg.Status,
+		arg.StartDueDate,
+		arg.EndDueDate,
+		arg.StartScheduledDate,
+		arg.EndScheduledDate,
+		arg.StartPaymentDate,
+		arg.EndPaymentDate,
+		arg.StartCreatedAt,
+		arg.EndCreatedAt,
+		arg.OrderField,
+		arg.OrderBy,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -302,6 +366,7 @@ func (q *Queries) ListBillsPayable(ctx context.Context, companyID pgtype.UUID) (
 			&i.VendorName,
 			&i.CategoryName,
 			&i.PaymentMethodName,
+			&i.TotalCount,
 		); err != nil {
 			return nil, err
 		}

@@ -946,7 +946,7 @@ definitions:
     - StatusDeleted
   github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest:
     properties:
-      products_id:
+      product_id:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest:
@@ -1841,12 +1841,65 @@ paths:
       description: Retorna a lista de contas a receber da empresa com base nos parâmetros
         de paginação enviados no cabeçalho.
       parameters:
+      - description: EndDate filters records created until this date.
+        example: "2024-12-31"
+        in: header
+        name: EndDate
+        type: string
       - in: header
+        name: EndDueDate
+        type: string
+      - enum:
+        - due_date
+        - created_at
+        in: header
+        name: OrderField
+        type: string
+      - description: OrderBy defines the ordering direction for the results.
+        enum:
+        - asc
+        - desc
+        example: asc
+        in: header
+        name: OrderBy
+        type: string
+      - description: Page is the page number to retrieve.
+        example: 1
+        in: header
+        minimum: 1
         name: Page
         type: integer
-      - in: header
+      - description: PerPage is the number of items per page.
+        example: 10
+        in: header
+        minimum: 1
         name: Perpage
         type: integer
+      - in: header
+        name: SaleId
+        type: string
+      - description: Search filters the list by a text term.
+        example: joao
+        in: header
+        name: Search
+        type: string
+      - description: StartDate filters records created from this date.
+        example: "2024-01-01"
+        in: header
+        name: StartDate
+        type: string
+      - in: header
+        name: StartDueDate
+        type: string
+      - enum:
+        - pending
+        - paid
+        - overdue
+        - partial
+        - cancelled
+        in: header
+        name: Status
+        type: string
       produces:
       - application/json
       responses:
@@ -2356,15 +2409,79 @@ paths:
       - bills-payable
   /bills-payable/list:
     get:
+      description: Retorna a lista de contas a pagar da empresa com base nos parâmetros
+        de paginação enviados no cabeçalho.
       parameters:
-      - description: 'Número da página (padrão: 1)'
+      - description: EndDate filters records created until this date.
+        example: "2024-12-31"
         in: header
-        name: page
-        type: integer
-      - description: 'Quantidade de registros por página (padrão: 10)'
+        name: EndDate
+        type: string
+      - in: header
+        name: EndDueDate
+        type: string
+      - in: header
+        name: EndPaymentDate
+        type: string
+      - in: header
+        name: EndScheduledDate
+        type: string
+      - enum:
+        - due_date
+        - scheduled_date
+        - payment_date
+        - created_at
         in: header
-        name: per_page
+        name: OrderField
+        type: string
+      - description: OrderBy defines the ordering direction for the results.
+        enum:
+        - asc
+        - desc
+        example: asc
+        in: header
+        name: OrderBy
+        type: string
+      - description: Page is the page number to retrieve.
+        example: 1
+        in: header
+        minimum: 1
+        name: Page
         type: integer
+      - description: PerPage is the number of items per page.
+        example: 10
+        in: header
+        minimum: 1
+        name: Perpage
+        type: integer
+      - description: Search filters the list by a text term.
+        example: joao
+        in: header
+        name: Search
+        type: string
+      - description: StartDate filters records created from this date.
+        example: "2024-01-01"
+        in: header
+        name: StartDate
+        type: string
+      - in: header
+        name: StartDueDate
+        type: string
+      - in: header
+        name: StartPaymentDate
+        type: string
+      - in: header
+        name: StartScheduledDate
+        type: string
+      - enum:
+        - pending
+        - paid
+        - overdue
+        - partial
+        - cancelled
+        in: header
+        name: Status
+        type: string
       produces:
       - application/json
       responses:
@@ -2374,6 +2491,21 @@ paths:
             items:
               $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.ListBillsPayableResponse'
             type: array
+        "400":
+          description: Falha na validação dos parâmetros de paginação
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: company_id não encontrado na sessão
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Lista contas a pagar da empresa
@@ -2901,15 +3033,53 @@ paths:
       - customers
   /customers/list:
     get:
+      description: Retorna a lista de clientes da empresa com base nos parâmetros
+        de paginação enviados no cabeçalho.
       parameters:
-      - description: Página
+      - description: EndDate filters records created until this date.
+        example: "2024-12-31"
         in: header
+        name: EndDate
+        type: string
+      - description: OrderBy defines the ordering direction for the results.
+        enum:
+        - asc
+        - desc
+        example: asc
+        in: header
+        name: OrderBy
+        type: string
+      - description: Page is the page number to retrieve.
+        example: 1
+        in: header
+        minimum: 1
         name: Page
         type: integer
-      - description: Itens por página
+      - description: PerPage is the number of items per page.
+        example: 10
         in: header
-        name: PerPage
+        minimum: 1
+        name: Perpage
         type: integer
+      - description: Search filters the list by a text term.
+        example: joao
+        in: header
+        name: Search
+        type: string
+      - description: StartDate filters records created from this date.
+        example: "2024-01-01"
+        in: header
+        name: StartDate
+        type: string
+      - description: Status filters records by status when supported by the endpoint.
+        enum:
+        - active
+        - inactive
+        - all
+        example: active
+        in: header
+        name: Status
+        type: string
       produces:
       - application/json
       responses:
@@ -2917,6 +3087,21 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CustomerPaginatedResponse'
+        "400":
+          description: Falha na validação dos parâmetros de paginação
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: company_id não encontrado na sessão
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Lista clientes da empresa com paginação
@@ -3761,15 +3946,44 @@ paths:
       - products
   /product/company:
     get:
+      description: Retorna a lista de produtos da empresa com base nos parâmetros
+        de paginação enviados no cabeçalho.
       parameters:
-      - description: Página
+      - description: EndDate filters records created until this date.
+        example: "2024-12-31"
         in: header
+        name: EndDate
+        type: string
+      - description: OrderBy defines the ordering direction for the results.
+        enum:
+        - asc
+        - desc
+        example: asc
+        in: header
+        name: OrderBy
+        type: string
+      - description: Page is the page number to retrieve.
+        example: 1
+        in: header
+        minimum: 1
         name: Page
         type: integer
-      - description: Itens por página
+      - description: PerPage is the number of items per page.
+        example: 10
         in: header
-        name: PerPage
+        minimum: 1
+        name: Perpage
         type: integer
+      - description: Search filters the list by a text term.
+        example: joao
+        in: header
+        name: Search
+        type: string
+      - description: StartDate filters records created from this date.
+        example: "2024-01-01"
+        in: header
+        name: StartDate
+        type: string
       produces:
       - application/json
       responses:
@@ -3777,6 +3991,21 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ProductPaginatedResponse'
+        "400":
+          description: Falha na validação dos parâmetros de paginação
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: company_id não encontrado na sessão
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties: true
+            type: object
       security:
       - BearerAuth: []
       summary: Lista produtos da empresa com paginação
