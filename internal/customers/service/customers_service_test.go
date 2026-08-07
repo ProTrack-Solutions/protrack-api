@@ -703,9 +703,9 @@ func TestListCustomersPaginated_Success(t *testing.T) {
 	companyID := uuid.New()
 	pagination := domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}}
 
-	dbCustomers := []db.Customer{
-		buildDbCustomer(uuid.New(), companyID, uuid.New()),
-		buildDbCustomer(uuid.New(), companyID, uuid.New()),
+	dbRows := []db.ListCustomersPaginateRow{
+		service.BuildListCustomersPaginateRow(uuid.New(), companyID, uuid.New(), 2),
+		service.BuildListCustomersPaginateRow(uuid.New(), companyID, uuid.New(), 2),
 	}
 
 	repo.EXPECT().
@@ -718,7 +718,7 @@ func TestListCustomersPaginated_Success(t *testing.T) {
 			Limit:     10,
 			Offset:    0,
 		}).
-		Return(dbCustomers, nil)
+		Return(dbRows, nil)
 
 	resp, err := svc.ListCustomersPaginated(context.Background(), companyID, pagination)
 	if err != nil {
@@ -755,8 +755,8 @@ func TestListCustomersPaginated_SecondPage(t *testing.T) {
 			Limit:     5,
 			Offset:    10, // (3-1) * 5 = 10
 		}).
-		Return([]db.Customer{
-			buildDbCustomer(uuid.New(), companyID, uuid.New()),
+		Return([]db.ListCustomersPaginateRow{
+			service.BuildListCustomersPaginateRow(uuid.New(), companyID, uuid.New(), 20),
 		}, nil)
 
 	resp, err := svc.ListCustomersPaginated(context.Background(), companyID, pagination)
@@ -824,7 +824,7 @@ func TestListCustomersPaginated_EmptyResult(t *testing.T) {
 
 	repo.EXPECT().
 		ListCustomersPaginate(gomock.Any(), gomock.Any()).
-		Return([]db.Customer{}, nil)
+		Return([]db.ListCustomersPaginateRow{}, nil)
 
 	resp, err := svc.ListCustomersPaginated(context.Background(), uuid.New(), domain.PaginationParams{PaginationParams: globalDomain.PaginationParams{Page: 1, PerPage: 10}})
 	if err != nil {
