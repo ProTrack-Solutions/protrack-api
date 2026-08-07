@@ -11,14 +11,14 @@ import (
 
 type PaginationParams struct {
 	globaldomain.PaginationParams
-	Status             string `header:"Status"             validate:"omitempty,oneof=pending paid overdue partial cancelled"`
-	StartDueDate       string `header:"StartDueDate"       validate:"omitempty,datetime=2006-01-02"`
-	EndDueDate         string `header:"EndDueDate"         validate:"omitempty,datetime=2006-01-02"`
-	StartScheduledDate string `header:"StartScheduledDate" validate:"omitempty,datetime=2006-01-02"`
-	EndScheduledDate   string `header:"EndScheduledDate"   validate:"omitempty,datetime=2006-01-02"`
-	StartPaymentDate   string `header:"StartPaymentDate"   validate:"omitempty,datetime=2006-01-02"`
-	EndPaymentDate     string `header:"EndPaymentDate"     validate:"omitempty,datetime=2006-01-02"`
-	OrderField         string `header:"OrderField"         validate:"oneof=due_date scheduled_date payment_date created_at"`
+	Status             string `form:"status"             validate:"omitempty,oneof=pending paid overdue partial cancelled"`
+	StartDueDate       string `form:"startDueDate"       validate:"omitempty,datetime=2006-01-02"`
+	EndDueDate         string `form:"endDueDate"         validate:"omitempty,datetime=2006-01-02"`
+	StartScheduledDate string `form:"startScheduledDate" validate:"omitempty,datetime=2006-01-02"`
+	EndScheduledDate   string `form:"endScheduledDate"   validate:"omitempty,datetime=2006-01-02"`
+	StartPaymentDate   string `form:"startPaymentDate"   validate:"omitempty,datetime=2006-01-02"`
+	EndPaymentDate     string `form:"endPaymentDate"     validate:"omitempty,datetime=2006-01-02"`
+	OrderField         string `form:"orderField"         validate:"oneof=due_date scheduled_date payment_date created_at"`
 }
 
 type CreateBillPayableRequest struct {

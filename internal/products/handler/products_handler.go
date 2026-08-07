@@ -179,11 +179,11 @@ func (h *Handler) ListProductsByCategoryId(c *gin.Context) {
 
 // ListProductsByCompany godoc
 // @Summary      Lista produtos da empresa com paginação
-// @Description  Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados no cabeçalho.
+// @Description  Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados via query string.
 // @Tags         products
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Pagination-Headers header globalDomain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Param        Pagination-Query query globalDomain.PaginationParams false "Parâmetros de paginação enviados via query string"
 // @Success      200 {object} domain.ProductPaginatedResponse
 // @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
 // @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
@@ -199,7 +199,7 @@ func (h *Handler) ListProductsByCompany(c *gin.Context) {
 	companyId := companyIdAny.(uuid.UUID)
 
 	var pagination globalDomain.PaginationParams
-	if err := c.ShouldBindHeader(&pagination); err != nil {
+	if err := c.ShouldBindQuery(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

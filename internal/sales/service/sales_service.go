@@ -1041,13 +1041,23 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		return domain.SaleResponsePaginate{}, err
 	}
 
+	var saleStatus interface{}
+	if pagination.SaleStatus != "" {
+		saleStatus = pagination.SaleStatus
+	}
+
+	var paymentMethod interface{}
+	if pagination.PaymentMethod != "" {
+		paymentMethod = pagination.PaymentMethod
+	}
+
 	rows, err := s.repo.ListSalesWithDetailsPaginate(ctx, db.ListSalesWithDetailsPaginateParams{
 		CompanyID:        pgconv.ParseUUIDToPgType(companyId),
 		Limit:            pagination.PerPage,
 		Offset:           (pagination.Page - 1) * pagination.PerPage,
 		Search:           pagination.Search,
-		SaleStatus:       pagination.SaleStatus,
-		PaymentMethod:    pagination.PaymentMethod,
+		SaleStatus:       saleStatus,
+		PaymentMethod:    paymentMethod,
 		PaymentStartDate: pgconv.StringToPgDate(pagination.PaymentStartDate),
 		PaymentEndDate:   pgconv.StringToPgDate(pagination.PaymentEndDate),
 		SaleStartDate:    pgconv.StringToPgDate(pagination.SaleStartDate),
@@ -1055,6 +1065,9 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		SortBy:           pagination.SortBy,
 		OrderBy:          pagination.OrderBy,
 	})
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
 
 	var response []domain.ListSalesWithInstallmentsResponse
 

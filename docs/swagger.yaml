@@ -1839,57 +1839,57 @@ paths:
   /accounts-receivable/complete/list:
     get:
       description: Retorna a lista de contas a receber da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
-      - in: header
-        name: EndDueDate
+      - in: query
+        name: endDueDate
         type: string
       - enum:
         - due_date
         - created_at
-        in: header
-        name: OrderField
+        in: query
+        name: orderField
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
-      - in: header
-        name: SaleId
+      - in: query
+        name: saleId
         type: string
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
-      - in: header
-        name: StartDueDate
+      - in: query
+        name: startDueDate
         type: string
       - enum:
         - pending
@@ -1897,8 +1897,8 @@ paths:
         - overdue
         - partial
         - cancelled
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -2410,68 +2410,68 @@ paths:
   /bills-payable/list:
     get:
       description: Retorna a lista de contas a pagar da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
-      - in: header
-        name: EndDueDate
+      - in: query
+        name: endDueDate
         type: string
-      - in: header
-        name: EndPaymentDate
+      - in: query
+        name: endPaymentDate
         type: string
-      - in: header
-        name: EndScheduledDate
+      - in: query
+        name: endScheduledDate
         type: string
       - enum:
         - due_date
         - scheduled_date
         - payment_date
         - created_at
-        in: header
-        name: OrderField
+        in: query
+        name: orderField
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
-      - in: header
-        name: StartDueDate
+      - in: query
+        name: startDueDate
         type: string
-      - in: header
-        name: StartPaymentDate
+      - in: query
+        name: startPaymentDate
         type: string
-      - in: header
-        name: StartScheduledDate
+      - in: query
+        name: startScheduledDate
         type: string
       - enum:
         - pending
@@ -2479,8 +2479,8 @@ paths:
         - overdue
         - partial
         - cancelled
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -3034,42 +3034,42 @@ paths:
   /customers/list:
     get:
       description: Retorna a lista de clientes da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
       - description: Status filters records by status when supported by the endpoint.
         enum:
@@ -3077,8 +3077,8 @@ paths:
         - inactive
         - all
         example: active
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -3947,42 +3947,42 @@ paths:
   /product/company:
     get:
       description: Retorna a lista de produtos da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
       produces:
       - application/json
@@ -4395,14 +4395,57 @@ paths:
   /sales/complete:
     get:
       parameters:
-      - description: Página
-        in: header
+      - default: 1
+        description: Número da página
+        in: query
         name: page
         type: integer
-      - description: Itens por página
-        in: header
-        name: per_page
+      - default: 10
+        description: Itens por página
+        in: query
+        name: perPage
         type: integer
+      - description: Busca por nome do cliente ou produto
+        in: query
+        name: search
+        type: string
+      - description: Status da venda
+        enum:
+        - pending
+        - paid
+        - overdue
+        - scheduled
+        - canceled
+        - partial
+        in: query
+        name: saleStatus
+        type: string
+      - description: Forma de pagamento
+        enum:
+        - cash
+        - credit_card
+        - debit_card
+        - pix
+        - bank_transfer
+        - installments
+        - other
+        in: query
+        name: paymentMethod
+        type: string
+      - description: Campo de ordenação
+        enum:
+        - sale_at
+        - created_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Direção
+        enum:
+        - asc
+        - desc
+        in: query
+        name: orderBy
+        type: string
       produces:
       - application/json
       responses:

@@ -59,7 +59,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -72,13 +72,13 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndDueDate",
-                        "in": "header"
+                        "name": "endDueDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -86,8 +86,8 @@ const docTemplate = `{
                             "created_at"
                         ],
                         "type": "string",
-                        "name": "OrderField",
-                        "in": "header"
+                        "name": "orderField",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -97,48 +97,48 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "SaleId",
-                        "in": "header"
+                        "name": "saleId",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartDueDate",
-                        "in": "header"
+                        "name": "startDueDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -149,8 +149,8 @@ const docTemplate = `{
                             "cancelled"
                         ],
                         "type": "string",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -892,7 +892,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -905,23 +905,23 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndDueDate",
-                        "in": "header"
+                        "name": "endDueDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndPaymentDate",
-                        "in": "header"
+                        "name": "endPaymentDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndScheduledDate",
-                        "in": "header"
+                        "name": "endScheduledDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -931,8 +931,8 @@ const docTemplate = `{
                             "created_at"
                         ],
                         "type": "string",
-                        "name": "OrderField",
-                        "in": "header"
+                        "name": "orderField",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -942,53 +942,53 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartDueDate",
-                        "in": "header"
+                        "name": "startDueDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartPaymentDate",
-                        "in": "header"
+                        "name": "startPaymentDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartScheduledDate",
-                        "in": "header"
+                        "name": "startScheduledDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -999,8 +999,8 @@ const docTemplate = `{
                             "cancelled"
                         ],
                         "type": "string",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1870,7 +1870,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -1883,8 +1883,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -1894,38 +1894,38 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -1936,8 +1936,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "active",
                         "description": "Status filters records by status when supported by the endpoint.",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3313,7 +3313,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -3326,8 +3326,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -3337,38 +3337,38 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4001,15 +4001,72 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Página",
+                        "default": 1,
+                        "description": "Número da página",
                         "name": "page",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 10,
                         "description": "Itens por página",
-                        "name": "per_page",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Busca por nome do cliente ou produto",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "overdue",
+                            "scheduled",
+                            "canceled",
+                            "partial"
+                        ],
+                        "type": "string",
+                        "description": "Status da venda",
+                        "name": "saleStatus",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "cash",
+                            "credit_card",
+                            "debit_card",
+                            "pix",
+                            "bank_transfer",
+                            "installments",
+                            "other"
+                        ],
+                        "type": "string",
+                        "description": "Forma de pagamento",
+                        "name": "paymentMethod",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "sale_at",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "description": "Campo de ordenação",
+                        "name": "sortBy",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Direção",
+                        "name": "orderBy",
+                        "in": "query"
                     }
                 ],
                 "responses": {
