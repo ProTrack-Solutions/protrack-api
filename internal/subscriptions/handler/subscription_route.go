@@ -11,7 +11,6 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		subscription.GET("/:id", h.GetSubscriptionById)
 		subscription.PUT("/plan/:id", h.UpdateSubscriptionPlan)
 		subscription.PUT("/method/:id", h.UpdateSubscriptionMethod)
-		subscription.PUT("/status/:id", h.UpdateSubscriptionStatus)
 		subscription.PUT("/cancel/:id", h.CancelSubscription)
 	}
 }

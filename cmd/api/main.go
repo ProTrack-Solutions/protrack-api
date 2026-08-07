@@ -236,7 +236,7 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	stripeService := stripeService.NewService(cfg, subscriptionsService)
+	stripeService := stripeService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService)
 	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
@@ -277,7 +277,7 @@ func main() {
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService)
-	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
+	stripeHandler := stripeHandler.NewHandler(stripeService, cfg, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
