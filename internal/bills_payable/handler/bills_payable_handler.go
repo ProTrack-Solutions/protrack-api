@@ -159,11 +159,11 @@ func (h *Handler) GetOverdueBills(c *gin.Context) {
 
 // ListBillsPayable godoc
 // @Summary      Lista contas a pagar da empresa
-// @Description  Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados no cabeçalho.
+// @Description  Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados via query string.
 // @Tags         bills-payable
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Param        Pagination-Query query domain.PaginationParams false "Parâmetros de paginação enviados via query string"
 // @Success      200 {array} domain.ListBillsPayableResponse
 // @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
 // @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
@@ -180,7 +180,7 @@ func (h *Handler) ListBillsPayable(c *gin.Context) {
 
 	var pagination domain.PaginationParams
 
-	if err := c.ShouldBindHeader(&pagination); err != nil {
+	if err := c.ShouldBindQuery(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

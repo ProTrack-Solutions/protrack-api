@@ -804,6 +804,58 @@ func (q *Queries) ListSalesWithDetails(ctx context.Context, companyID pgtype.UUI
 }
 
 const listSalesWithDetailsPaginate = `-- name: ListSalesWithDetailsPaginate :many
+WITH filtered_sales AS (
+    -- Vendas distintas que casam com os filtros (busca, status, formas de pagamento e datas).
+    -- Precisa ser resolvido antes de paginar, pois os JOINs com itens/parcelas multiplicam
+    -- as linhas por venda e "count(DISTINCT ...) OVER()" não é suportado pelo Postgres.
+    SELECT DISTINCT s.id, s.sale_at
+    FROM sales s
+        INNER JOIN customers c ON s.customer_id = c.id
+        INNER JOIN sale_items si ON s.id = si.sale_id
+        INNER JOIN products p ON si.product_id = p.id
+        LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
+    WHERE s.company_id = $1
+        AND s.deleted_at IS NULL
+        -- Busca livre: nome do cliente ou nome do produto
+        AND (
+            $6::text = '' OR
+            to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+                @@ plainto_tsquery('portuguese_unaccent', $6::text)
+            OR to_tsvector(
+                'portuguese_unaccent',
+                coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+            ) @@ plainto_tsquery('portuguese_unaccent', $6::text)
+        )
+        -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
+        AND (
+            $7::account_status_enum IS NULL OR
+            s.status = $7::account_status_enum
+        )
+        -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
+        AND (
+            $8::payment_method_enum IS NULL OR
+            s.payment_method = $8::payment_method_enum
+        )
+        -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
+        AND ($9::date IS NULL OR ar.due_date >= $9::date)
+        AND ($10::date IS NULL OR ar.due_date < ($10::date + INTERVAL '1 day'))
+        -- Data da venda (sales.sale_at)
+        AND ($11::date IS NULL OR s.sale_at >= $11::date)
+        AND ($12::date IS NULL OR s.sale_at < ($12::date + INTERVAL '1 day'))
+),
+paginated_sales AS (
+    -- Pagina por venda (não por linha), preservando o total antes do LIMIT/OFFSET.
+    SELECT
+        fs.id,
+        count(*) OVER() AS total_count
+    FROM filtered_sales fs
+    ORDER BY
+        CASE WHEN $4::text = 'sale_at' AND $5::text = 'asc'  THEN fs.sale_at END ASC,
+        CASE WHEN $4::text = 'sale_at' AND $5::text = 'desc' THEN fs.sale_at END DESC,
+        fs.sale_at DESC
+    LIMIT $2
+    OFFSET $3
+)
 SELECT
     -- Dados da venda
     s.id AS sale_id,
@@ -832,52 +884,26 @@ SELECT
     ar.due_date,
     ar.installment_number,
     ar.status AS installment_status,
-    count(DISTINCT s.id) OVER() AS total_count
-FROM sales s
+    ps.total_count
+FROM paginated_sales ps
+    INNER JOIN sales s ON s.id = ps.id
     INNER JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
-WHERE s.company_id = $1
-    AND s.deleted_at IS NULL
-    -- Busca livre: nome do cliente ou nome do produto
-    AND (
-        $4::text = '' OR
-        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
-            @@ plainto_tsquery('portuguese_unaccent', $4::text)
-        OR to_tsvector(
-            'portuguese_unaccent',
-            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
-        ) @@ plainto_tsquery('portuguese_unaccent', $4::text)
-    )
-    -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
-    AND (
-        $5::account_status_enum IS NULL OR
-        s.status = $5::account_status_enum
-    )
-    -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
-    AND (
-        $6::payment_method_enum IS NULL OR
-        s.payment_method = $6::payment_method_enum
-    )
-    -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
-    AND ($7::date IS NULL OR ar.due_date >= $7::date)
-    AND ($8::date IS NULL OR ar.due_date < ($8::date + INTERVAL '1 day'))
-    -- Data da venda (sales.sale_at)
-    AND ($9::date IS NULL OR s.sale_at >= $9::date)
-    AND ($10::date IS NULL OR s.sale_at < ($10::date + INTERVAL '1 day'))
 ORDER BY
-    CASE WHEN $11::text = 'sale_at'    AND $12::text = 'asc'  THEN s.sale_at END ASC,
-    CASE WHEN $11::text = 'sale_at'    AND $12::text = 'desc' THEN s.sale_at END DESC,
+    CASE WHEN $4::text = 'sale_at'    AND $5::text = 'asc'  THEN s.sale_at END ASC,
+    CASE WHEN $4::text = 'sale_at'    AND $5::text = 'desc' THEN s.sale_at END DESC,
+    s.sale_at DESC,
     ar.installment_number ASC
-LIMIT $2
-OFFSET $3
 `
 
 type ListSalesWithDetailsPaginateParams struct {
 	CompanyID        pgtype.UUID `json:"company_id"`
 	Limit            int32       `json:"limit"`
 	Offset           int32       `json:"offset"`
+	SortBy           string      `json:"sort_by"`
+	OrderBy          string      `json:"order_by"`
 	Search           string      `json:"search"`
 	SaleStatus       interface{} `json:"sale_status"`
 	PaymentMethod    interface{} `json:"payment_method"`
@@ -885,8 +911,6 @@ type ListSalesWithDetailsPaginateParams struct {
 	PaymentEndDate   pgtype.Date `json:"payment_end_date"`
 	SaleStartDate    pgtype.Date `json:"sale_start_date"`
 	SaleEndDate      pgtype.Date `json:"sale_end_date"`
-	SortBy           string      `json:"sort_by"`
-	OrderBy          string      `json:"order_by"`
 }
 
 type ListSalesWithDetailsPaginateRow struct {
@@ -921,6 +945,8 @@ func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSale
 		arg.CompanyID,
 		arg.Limit,
 		arg.Offset,
+		arg.SortBy,
+		arg.OrderBy,
 		arg.Search,
 		arg.SaleStatus,
 		arg.PaymentMethod,
@@ -928,8 +954,6 @@ func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSale
 		arg.PaymentEndDate,
 		arg.SaleStartDate,
 		arg.SaleEndDate,
-		arg.SortBy,
-		arg.OrderBy,
 	)
 	if err != nil {
 		return nil, err

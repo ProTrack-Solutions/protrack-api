@@ -427,8 +427,13 @@ func (h *Handler) ContSalesPendingAndOverdue(c *gin.Context) {
 // @Tags         sales
 // @Produce      json
 // @Security     BearerAuth
-// @Param        page header int false "Página"
-// @Param        per_page header int false "Itens por página"
+// @Param page query int false "Número da página" default(1)
+// @Param perPage query int false "Itens por página" default(10)
+// @Param search query string false "Busca por nome do cliente ou produto"
+// @Param saleStatus query string false "Status da venda" Enums(pending, paid, overdue, scheduled, canceled, partial)
+// @Param paymentMethod query string false "Forma de pagamento" Enums(cash, credit_card, debit_card, pix, bank_transfer, installments, other)
+// @Param sortBy query string false "Campo de ordenação" Enums(sale_at, created_at)
+// @Param orderBy query string false "Direção" Enums(asc, desc)
 // @Success      200 {object} domain.SaleResponsePaginate
 // @Router       /sales/complete [get]
 func (h *Handler) ListSalesWithDetails(c *gin.Context) {
@@ -442,7 +447,7 @@ func (h *Handler) ListSalesWithDetails(c *gin.Context) {
 
 	var pagination domain.PaginationParams
 
-	if err := c.ShouldBindHeader(&pagination); err != nil {
+	if err := c.ShouldBindQuery(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}

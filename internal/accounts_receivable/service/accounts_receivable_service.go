@@ -414,14 +414,21 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 		return domain.ListAccountsReceivablesResponse{}, err
 	}
 
-	saleId, err := uuid.Parse(pagination.SaleID)
+	var saleID pgtype.UUID
+	if pagination.SaleID != "" {
+		saleId, err := uuid.Parse(pagination.SaleID)
+		if err != nil {
+			return domain.ListAccountsReceivablesResponse{}, err
+		}
+		saleID = pgconv.ParseUUIDToPgType(saleId)
+	}
 
 	accountsReceivable, err := s.repo.ListAccountsReceivables(ctx, db.ListAccountsReceivablesParams{
 		CompanyID:      pgconv.ParseUUIDToPgType(companyId),
 		Limit:          pagination.PerPage,
 		Offset:         (pagination.Page - 1) * pagination.PerPage,
 		Search:         pagination.Search,
-		SaleID:         pgconv.ParseUUIDToPgType(saleId),
+		SaleID:         saleID,
 		Status:         pgconv.ParseStringToPgText(pagination.Status),
 		StartDueDate:   pgconv.StringToPgDate(pagination.StartDueDate),
 		EndDueDate:     pgconv.StringToPgDate(pagination.EndDueDate),

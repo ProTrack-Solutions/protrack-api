@@ -164,11 +164,11 @@ func (h *Handler) GetCustomerById(c *gin.Context) {
 
 // ListCustomers godoc
 // @Summary      Lista clientes da empresa com paginação
-// @Description  Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados no cabeçalho.
+// @Description  Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados via query string.
 // @Tags         customers
 // @Produce      json
 // @Security     BearerAuth
-// @Param        Pagination-Headers header domain.PaginationParams false "Parâmetros de paginação enviados no Header"
+// @Param        Pagination-Query query domain.PaginationParams false "Parâmetros de paginação enviados via query string"
 // @Success      200 {object} domain.CustomerPaginatedResponse
 // @Failure      400 {object} map[string]interface{} "Falha na validação dos parâmetros de paginação"
 // @Failure      401 {object} map[string]interface{} "company_id não encontrado na sessão"
@@ -184,7 +184,7 @@ func (h *Handler) ListCustomers(c *gin.Context) {
 	companyId := companyIdAny.(uuid.UUID)
 
 	var pagination domain.PaginationParams
-	if err := c.ShouldBindHeader(&pagination); err != nil {
+	if err := c.ShouldBindQuery(&pagination); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
