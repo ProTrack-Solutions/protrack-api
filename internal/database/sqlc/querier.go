@@ -103,6 +103,7 @@ type Querier interface {
 	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error)
 	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)
 	GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error)
+	GetSubscriptionDetailsByCompanyID(ctx context.Context, companyID pgtype.UUID) (GetSubscriptionDetailsByCompanyIDRow, error)
 	GetSubscriptionPaymentMethodById(ctx context.Context, id pgtype.UUID) (SubscriptionPaymentMethod, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)
 	GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error)

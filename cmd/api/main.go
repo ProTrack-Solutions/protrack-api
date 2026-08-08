@@ -76,6 +76,9 @@ import (
 	clientStripe "github.com/ProTrack-Solutions/protrack-api/internal/stripe/client"
 	stripeHandler "github.com/ProTrack-Solutions/protrack-api/internal/stripe/handler"
 	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
+	subscriptionManagementHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/handler"
+	subscriptionManagementRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/repository"
+	subscriptionManagementService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/service"
 	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
 	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
 	subscriptionPaymentMethodsService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
@@ -166,7 +169,7 @@ func main() {
 	r.Use(middleware.GinDiscordErrorMiddleware(discordLogger))
 
 	if cfg.AppEnv != "production" {
-		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
 	logger.InitLogger(cfg.AppEnv)
@@ -224,6 +227,7 @@ func main() {
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
+	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
@@ -236,7 +240,8 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	stripeService := stripeService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService)
+	stripeService := stripeService.NewService(cfg, subscriptionsService)
+	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
 	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
@@ -277,7 +282,8 @@ func main() {
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService)
-	stripeHandler := stripeHandler.NewHandler(stripeService, cfg, jwtManager, blacklist)
+	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
+	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
@@ -305,6 +311,7 @@ func main() {
 	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
 	subscriptionsHandler.RegisterRoute(api)
 	stripeHandler.RegisterRoutes(api)
+	subscriptionManagementHandler.RegisterRoutes(api)
 	labelHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
