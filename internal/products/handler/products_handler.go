@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -12,6 +13,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
+
+// respondProductError mapeia erros de domínio conhecidos para status HTTP apropriados,
+// evitando que violações de constraint (nome duplicado, categoria inexistente) virem 500.
+func respondProductError(c *gin.Context, err error) {
+	if errors.Is(err, domain.ErrProductCategoryNotFound) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+}
 
 type Handler struct {
 	service    *service.Service
@@ -66,7 +78,7 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 
 	product, err := h.service.CreateProduct(c.Request.Context(), userId, companyId, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondProductError(c, err)
 		return
 	}
 
@@ -241,7 +253,7 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 
 	product, err := h.service.UpdateProduct(c.Request.Context(), id, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondProductError(c, err)
 		return
 	}
 
