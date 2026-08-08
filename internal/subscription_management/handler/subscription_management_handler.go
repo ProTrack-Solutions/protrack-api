@@ -25,6 +25,34 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
+// GetSubscriptionDetails godoc
+// @Summary      Busca os dados completos da assinatura da empresa autenticada
+// @Description  Retorna a assinatura, o plano contratado (com valor e features) e o método de pagamento vinculado
+// @Tags         subscription-management
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.SubscriptionDetailsResponse
+// @Failure      401 {object} map[string]string "Não autenticado"
+// @Failure      500 {object} map[string]string "Erro interno do servidor"
+// @Router       /subscription-management/subscription [get]
+func (h *Handler) GetSubscriptionDetails(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	subscription, err := h.service.GetSubscriptionDetails(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, subscription)
+}
+
 // AddPaymentMethod godoc
 // @Summary      Adiciona um método de pagamento à assinatura
 // @Tags         subscription-management

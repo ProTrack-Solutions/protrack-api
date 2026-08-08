@@ -114,29 +114,28 @@ func (h *Handler) GetCompanyByDocument(c *gin.Context) {
 }
 
 // GetCompanyByID godoc
-// @Summary      Busca empresa por ID
+// @Summary      Busca a empresa autenticada
 // @Tags         companies
 // @Produce      json
 // @Security     BearerAuth
-// @Param        id path string true "ID da empresa"
 // @Success      200 {object} domain.CompanyResponse
-// @Router       /companies/{id} [get]
+// @Router       /companies/me [get]
 func (h *Handler) GetCompanyByID(c *gin.Context) {
-	idStr := c.Param("id")
-
-	id, err := uuid.Parse(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
 	}
 
-	company, err := h.service.GetCompanyByID(c.Request.Context(), id)
+	companyId := companyIdAny.(uuid.UUID)
+
+	company, err := h.service.GetCompanyByID(c.Request.Context(), companyId)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"company": company})
+	c.JSON(http.StatusOK, company)
 }
 
 // ListCompanies godoc

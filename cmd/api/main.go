@@ -77,6 +77,7 @@ import (
 	stripeHandler "github.com/ProTrack-Solutions/protrack-api/internal/stripe/handler"
 	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	subscriptionManagementHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/handler"
+	subscriptionManagementRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/repository"
 	subscriptionManagementService "github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/service"
 	subscriptionPaymentMethodsHandler "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/handler"
 	subscriptionPaymentMethodsRepository "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/repository"
@@ -226,6 +227,7 @@ func main() {
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
+	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
@@ -239,7 +241,7 @@ func main() {
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
 	stripeService := stripeService.NewService(cfg, subscriptionsService)
-	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger)
+	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
 	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)

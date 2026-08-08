@@ -2,14 +2,19 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
+	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	discordDomain "github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	subPaymentMethodDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
 	subPaymentMethod "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
@@ -21,19 +26,85 @@ import (
 	"github.com/stripe/stripe-go/v86/subscription"
 )
 
+type RepositoryInterface interface {
+	GetSubscriptionDetailsByCompanyID(ctx context.Context, companyId pgtype.UUID) (db.GetSubscriptionDetailsByCompanyIDRow, error)
+	WithTx(tx db.DBTX) *repository.Repository
+}
+
 type Service struct {
+	repo                RepositoryInterface
 	subPaymentMethod    *subPaymentMethod.Service
 	subscriptionService *subscriptionService.Service
 	loggerDiscord       *discord.DiscordLogger
 }
 
-func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, subPaymentMethod *subPaymentMethod.Service, loggerDiscord *discord.DiscordLogger) *Service {
+func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, subPaymentMethod *subPaymentMethod.Service, loggerDiscord *discord.DiscordLogger, repo *repository.Repository) *Service {
 	stripe.Key = cfg.StripeSecretKey
 	return &Service{
 		subscriptionService: subscriptionService,
 		subPaymentMethod:    subPaymentMethod,
 		loggerDiscord:       loggerDiscord,
+		repo:                repo,
 	}
+}
+
+func (s *Service) GetSubscriptionDetails(ctx context.Context, companyID uuid.UUID) (domain.SubscriptionDetailsResponse, error) {
+	row, err := s.repo.GetSubscriptionDetailsByCompanyID(ctx, pgconv.ParseUUIDToPgType(companyID))
+	if err != nil {
+		return domain.SubscriptionDetailsResponse{}, fmt.Errorf("erro ao buscar dados da assinatura: %w", err)
+	}
+
+	var features []domain.PlanFeatureResponse
+	if row.Features != nil {
+		raw, err := json.Marshal(row.Features)
+		if err != nil {
+			return domain.SubscriptionDetailsResponse{}, fmt.Errorf("erro ao processar features do plano: %w", err)
+		}
+
+		if err := json.Unmarshal(raw, &features); err != nil {
+			return domain.SubscriptionDetailsResponse{}, fmt.Errorf("erro ao processar features do plano: %w", err)
+		}
+	}
+
+	var paymentMethod *domain.PaymentMethodDetails
+	if row.PaymentMethodID.Valid {
+		paymentMethod = &domain.PaymentMethodDetails{
+			ID:           pgconv.PgUUIDToUUID(row.PaymentMethodID).String(),
+			Type:         pgconv.ParsePgTextToString(row.PaymentMethodType),
+			CardBrand:    pgconv.ParsePgTextToString(row.PaymentMethodCardBrand),
+			CardLast4:    pgconv.ParsePgTextToString(row.PaymentMethodCardLast4),
+			CardExpMonth: int32(pgconv.PgInt4ToInt(row.PaymentMethodCardExpMonth)),
+			CardExpYear:  int32(pgconv.PgInt4ToInt(row.PaymentMethodCardExpYear)),
+			IsDefault:    pgconv.PgBoolToBool(row.PaymentMethodIsDefault),
+		}
+	}
+
+	return domain.SubscriptionDetailsResponse{
+		SubscriptionID:         pgconv.PgUUIDToUUID(row.SubscriptionID).String(),
+		CompanyID:              pgconv.PgUUIDToUUID(row.CompanyID).String(),
+		Status:                 row.SubscriptionStatus,
+		CurrentPeriodStart:     pgconv.PgTimestamptzToTime(row.CurrentPeriodStart),
+		CurrentPeriodEnd:       pgconv.PgTimestamptzToTime(row.CurrentPeriodEnd),
+		CanceledAt:             pgconv.PgTimestamptzToTime(row.CanceledAt),
+		ExternalSubscriptionID: pgconv.ParsePgTextToString(row.ExternalSubscriptionID),
+		CreatedAt:              pgconv.PgTimestamptzToTime(row.SubscriptionCreatedAt),
+		UpdatedAt:              pgconv.PgTimestamptzToTime(row.SubscriptionUpdatedAt),
+		Plan: domain.PlanDetailsResponse{
+			ID:              pgconv.PgUUIDToUUID(row.PlanID).String(),
+			ExternalID:      row.PlanExternalID,
+			ExternalPriceID: row.PlanExternalPriceID,
+			Name:            row.PlanName,
+			Description:     pgconv.ParsePgTextToString(row.PlanDescription),
+			PriceCents:      row.PlanPriceCents,
+			Currency:        pgconv.ParsePgTextToString(row.PlanCurrency),
+			BillingCycle:    row.PlanBillingCycle,
+			Active:          pgconv.PgBoolToBool(row.PlanActive),
+			Highlight:       row.PlanHighlight,
+			Icon:            row.PlanIcon,
+		},
+		PaymentMethod: paymentMethod,
+		Features:      features,
+	}, nil
 }
 
 func (s *Service) UpdateDefaultPaymentMethod(ctx context.Context, companyID uuid.UUID, subPaymentMethod uuid.UUID, req domain.UpdateDefaultPaymentMethodRequest) error {
