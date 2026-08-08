@@ -59,7 +59,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de contas a receber da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -72,13 +72,13 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndDueDate",
-                        "in": "header"
+                        "name": "endDueDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -86,8 +86,8 @@ const docTemplate = `{
                             "created_at"
                         ],
                         "type": "string",
-                        "name": "OrderField",
-                        "in": "header"
+                        "name": "orderField",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -97,48 +97,48 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "SaleId",
-                        "in": "header"
+                        "name": "saleId",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartDueDate",
-                        "in": "header"
+                        "name": "startDueDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -149,8 +149,8 @@ const docTemplate = `{
                             "cancelled"
                         ],
                         "type": "string",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -892,7 +892,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de contas a pagar da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -905,23 +905,23 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndDueDate",
-                        "in": "header"
+                        "name": "endDueDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndPaymentDate",
-                        "in": "header"
+                        "name": "endPaymentDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "EndScheduledDate",
-                        "in": "header"
+                        "name": "endScheduledDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -931,8 +931,8 @@ const docTemplate = `{
                             "created_at"
                         ],
                         "type": "string",
-                        "name": "OrderField",
-                        "in": "header"
+                        "name": "orderField",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -942,53 +942,53 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartDueDate",
-                        "in": "header"
+                        "name": "startDueDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartPaymentDate",
-                        "in": "header"
+                        "name": "startPaymentDate",
+                        "in": "query"
                     },
                     {
                         "type": "string",
-                        "name": "StartScheduledDate",
-                        "in": "header"
+                        "name": "startScheduledDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -999,8 +999,8 @@ const docTemplate = `{
                             "cancelled"
                         ],
                         "type": "string",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1573,6 +1573,30 @@ const docTemplate = `{
                 }
             }
         },
+        "/companies/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "companies"
+                ],
+                "summary": "Busca a empresa autenticada",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/companies/set/": {
             "post": {
                 "security": [
@@ -1616,37 +1640,6 @@ const docTemplate = `{
             }
         },
         "/companies/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "companies"
-                ],
-                "summary": "Busca empresa por ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da empresa",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse"
-                        }
-                    }
-                }
-            },
             "put": {
                 "security": [
                     {
@@ -1870,7 +1863,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de clientes da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -1883,8 +1876,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -1894,38 +1887,38 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -1936,8 +1929,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "active",
                         "description": "Status filters records by status when supported by the endpoint.",
-                        "name": "Status",
-                        "in": "header"
+                        "name": "status",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3313,7 +3306,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados no cabeçalho.",
+                "description": "Retorna a lista de produtos da empresa com base nos parâmetros de paginação enviados via query string.",
                 "produces": [
                     "application/json"
                 ],
@@ -3326,8 +3319,8 @@ const docTemplate = `{
                         "type": "string",
                         "example": "2024-12-31",
                         "description": "EndDate filters records created until this date.",
-                        "name": "EndDate",
-                        "in": "header"
+                        "name": "endDate",
+                        "in": "query"
                     },
                     {
                         "enum": [
@@ -3337,38 +3330,38 @@ const docTemplate = `{
                         "type": "string",
                         "example": "asc",
                         "description": "OrderBy defines the ordering direction for the results.",
-                        "name": "OrderBy",
-                        "in": "header"
+                        "name": "orderBy",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 1,
                         "description": "Page is the page number to retrieve.",
-                        "name": "Page",
-                        "in": "header"
+                        "name": "page",
+                        "in": "query"
                     },
                     {
                         "minimum": 1,
                         "type": "integer",
                         "example": 10,
                         "description": "PerPage is the number of items per page.",
-                        "name": "Perpage",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "joao",
                         "description": "Search filters the list by a text term.",
-                        "name": "Search",
-                        "in": "header"
+                        "name": "search",
+                        "in": "query"
                     },
                     {
                         "type": "string",
                         "example": "2024-01-01",
                         "description": "StartDate filters records created from this date.",
-                        "name": "StartDate",
-                        "in": "header"
+                        "name": "startDate",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4001,15 +3994,72 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "Página",
+                        "default": 1,
+                        "description": "Número da página",
                         "name": "page",
-                        "in": "header"
+                        "in": "query"
                     },
                     {
                         "type": "integer",
+                        "default": 10,
                         "description": "Itens por página",
-                        "name": "per_page",
-                        "in": "header"
+                        "name": "perPage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Busca por nome do cliente ou produto",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "pending",
+                            "paid",
+                            "overdue",
+                            "scheduled",
+                            "canceled",
+                            "partial"
+                        ],
+                        "type": "string",
+                        "description": "Status da venda",
+                        "name": "saleStatus",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "cash",
+                            "credit_card",
+                            "debit_card",
+                            "pix",
+                            "bank_transfer",
+                            "installments",
+                            "other"
+                        ],
+                        "type": "string",
+                        "description": "Forma de pagamento",
+                        "name": "paymentMethod",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "sale_at",
+                            "created_at"
+                        ],
+                        "type": "string",
+                        "description": "Campo de ordenação",
+                        "name": "sortBy",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Direção",
+                        "name": "orderBy",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -4583,6 +4633,242 @@ const docTemplate = `{
                 }
             }
         },
+        "/subscription-management/payment-methods": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription-management"
+                ],
+                "summary": "Adiciona um método de pagamento à assinatura",
+                "parameters": [
+                    {
+                        "description": "Dados do novo método de pagamento",
+                        "name": "payment_method",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription-management/payment-methods/{id}/default": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription-management"
+                ],
+                "summary": "Define o método de pagamento padrão da assinatura",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do método de pagamento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados da atualização",
+                        "name": "payment_method",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription-management/subscription": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a assinatura, o plano contratado (com valor e features) e o método de pagamento vinculado",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription-management"
+                ],
+                "summary": "Busca os dados completos da assinatura da empresa autenticada",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.SubscriptionDetailsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/subscription-management/subscription/cancel": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "subscription-management"
+                ],
+                "summary": "Cancela a assinatura da empresa autenticada",
+                "parameters": [
+                    {
+                        "description": "Dados do cancelamento",
+                        "name": "cancel",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Requisição inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autenticado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/subscription/cancel/{id}": {
             "put": {
                 "security": [
@@ -4723,66 +5009,6 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    },
-                    "400": {
-                        "description": "Requisição inválida",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Erro interno do servidor",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/subscription/status/{id}": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "subscriptions"
-                ],
-                "summary": "Atualiza status da assinatura",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da assinatura",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Novo status",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest"
                         }
                     }
                 ],
@@ -7712,6 +7938,174 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest": {
+            "type": "object",
+            "required": [
+                "idempotency_key",
+                "stripe_payment_method_id"
+            ],
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "set_as_default": {
+                    "type": "boolean"
+                },
+                "stripe_payment_method_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest": {
+            "type": "object",
+            "required": [
+                "idempotency_key"
+            ],
+            "properties": {
+                "cancel_at_period_end": {
+                    "type": "boolean"
+                },
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PaymentMethodDetails": {
+            "type": "object",
+            "properties": {
+                "card_brand": {
+                    "type": "string"
+                },
+                "card_exp_month": {
+                    "type": "integer"
+                },
+                "card_exp_year": {
+                    "type": "integer"
+                },
+                "card_last4": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "billing_cycle": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "external_id": {
+                    "type": "string"
+                },
+                "external_price_id": {
+                    "type": "string"
+                },
+                "highlight": {
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price_cents": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanFeatureResponse": {
+            "type": "object",
+            "properties": {
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.SubscriptionDetailsResponse": {
+            "type": "object",
+            "properties": {
+                "canceled_at": {
+                    "type": "string"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "current_period_end": {
+                    "type": "string"
+                },
+                "current_period_start": {
+                    "type": "string"
+                },
+                "external_subscription_id": {
+                    "type": "string"
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanFeatureResponse"
+                    }
+                },
+                "payment_method": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PaymentMethodDetails"
+                },
+                "plan": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanDetailsResponse"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subscription_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest": {
+            "type": "object",
+            "properties": {
+                "idempotency_key": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse": {
             "type": "object",
             "properties": {
@@ -7762,17 +8156,6 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "plan_id": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest": {
-            "type": "object",
-            "properties": {
-                "current_period_end": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 }
             }

@@ -12,7 +12,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		// companies.POST("", h.CreateCompany)
 		companies.DELETE("/:id", h.DeleteCompany)
 		companies.GET("/document/:document", h.GetCompanyByDocument)
-		companies.GET("/:id", h.GetCompanyByID)
+		companies.GET("/me", h.GetCompanyByID)
 		companies.GET("", h.ListCompanies)
 		companies.POST("/set/", h.SetCompanyStatus)
 		companies.PUT("/:id", h.UpdateCompany)

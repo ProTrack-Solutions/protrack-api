@@ -1521,6 +1521,116 @@ definitions:
       updated_by:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest:
+    properties:
+      idempotency_key:
+        type: string
+      set_as_default:
+        type: boolean
+      stripe_payment_method_id:
+        type: string
+    required:
+    - idempotency_key
+    - stripe_payment_method_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest:
+    properties:
+      cancel_at_period_end:
+        type: boolean
+      idempotency_key:
+        type: string
+      reason:
+        type: string
+    required:
+    - idempotency_key
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PaymentMethodDetails:
+    properties:
+      card_brand:
+        type: string
+      card_exp_month:
+        type: integer
+      card_exp_year:
+        type: integer
+      card_last4:
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanDetailsResponse:
+    properties:
+      active:
+        type: boolean
+      billing_cycle:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      external_id:
+        type: string
+      external_price_id:
+        type: string
+      highlight:
+        type: boolean
+      icon:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      price_cents:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanFeatureResponse:
+    properties:
+      display_order:
+        type: integer
+      id:
+        type: string
+      is_enabled:
+        type: boolean
+      name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.SubscriptionDetailsResponse:
+    properties:
+      canceled_at:
+        type: string
+      company_id:
+        type: string
+      created_at:
+        type: string
+      current_period_end:
+        type: string
+      current_period_start:
+        type: string
+      external_subscription_id:
+        type: string
+      features:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanFeatureResponse'
+        type: array
+      payment_method:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PaymentMethodDetails'
+      plan:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanDetailsResponse'
+      status:
+        type: string
+      subscription_id:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest:
+    properties:
+      idempotency_key:
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.SubscriptionResponse:
     properties:
       canceled_at:
@@ -1554,13 +1664,6 @@ definitions:
   github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionPlanRequest:
     properties:
       plan_id:
-        type: string
-    type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest:
-    properties:
-      current_period_end:
-        type: string
-      status:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams:
@@ -1839,57 +1942,57 @@ paths:
   /accounts-receivable/complete/list:
     get:
       description: Retorna a lista de contas a receber da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
-      - in: header
-        name: EndDueDate
+      - in: query
+        name: endDueDate
         type: string
       - enum:
         - due_date
         - created_at
-        in: header
-        name: OrderField
+        in: query
+        name: orderField
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
-      - in: header
-        name: SaleId
+      - in: query
+        name: saleId
         type: string
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
-      - in: header
-        name: StartDueDate
+      - in: query
+        name: startDueDate
         type: string
       - enum:
         - pending
@@ -1897,8 +2000,8 @@ paths:
         - overdue
         - partial
         - cancelled
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -2410,68 +2513,68 @@ paths:
   /bills-payable/list:
     get:
       description: Retorna a lista de contas a pagar da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
-      - in: header
-        name: EndDueDate
+      - in: query
+        name: endDueDate
         type: string
-      - in: header
-        name: EndPaymentDate
+      - in: query
+        name: endPaymentDate
         type: string
-      - in: header
-        name: EndScheduledDate
+      - in: query
+        name: endScheduledDate
         type: string
       - enum:
         - due_date
         - scheduled_date
         - payment_date
         - created_at
-        in: header
-        name: OrderField
+        in: query
+        name: orderField
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
-      - in: header
-        name: StartDueDate
+      - in: query
+        name: startDueDate
         type: string
-      - in: header
-        name: StartPaymentDate
+      - in: query
+        name: startPaymentDate
         type: string
-      - in: header
-        name: StartScheduledDate
+      - in: query
+        name: startScheduledDate
         type: string
       - enum:
         - pending
@@ -2479,8 +2582,8 @@ paths:
         - overdue
         - partial
         - cancelled
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -2789,25 +2892,6 @@ paths:
       summary: Remove uma empresa
       tags:
       - companies
-    get:
-      parameters:
-      - description: ID da empresa
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
-      security:
-      - BearerAuth: []
-      summary: Busca empresa por ID
-      tags:
-      - companies
     put:
       consumes:
       - application/json
@@ -2853,6 +2937,20 @@ paths:
       security:
       - BearerAuth: []
       summary: Busca empresa por documento
+      tags:
+      - companies
+  /companies/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca a empresa autenticada
       tags:
       - companies
   /companies/set/:
@@ -3034,42 +3132,42 @@ paths:
   /customers/list:
     get:
       description: Retorna a lista de clientes da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
       - description: Status filters records by status when supported by the endpoint.
         enum:
@@ -3077,8 +3175,8 @@ paths:
         - inactive
         - all
         example: active
-        in: header
-        name: Status
+        in: query
+        name: status
         type: string
       produces:
       - application/json
@@ -3947,42 +4045,42 @@ paths:
   /product/company:
     get:
       description: Retorna a lista de produtos da empresa com base nos parâmetros
-        de paginação enviados no cabeçalho.
+        de paginação enviados via query string.
       parameters:
       - description: EndDate filters records created until this date.
         example: "2024-12-31"
-        in: header
-        name: EndDate
+        in: query
+        name: endDate
         type: string
       - description: OrderBy defines the ordering direction for the results.
         enum:
         - asc
         - desc
         example: asc
-        in: header
-        name: OrderBy
+        in: query
+        name: orderBy
         type: string
       - description: Page is the page number to retrieve.
         example: 1
-        in: header
+        in: query
         minimum: 1
-        name: Page
+        name: page
         type: integer
       - description: PerPage is the number of items per page.
         example: 10
-        in: header
+        in: query
         minimum: 1
-        name: Perpage
+        name: perPage
         type: integer
       - description: Search filters the list by a text term.
         example: joao
-        in: header
-        name: Search
+        in: query
+        name: search
         type: string
       - description: StartDate filters records created from this date.
         example: "2024-01-01"
-        in: header
-        name: StartDate
+        in: query
+        name: startDate
         type: string
       produces:
       - application/json
@@ -4395,14 +4493,57 @@ paths:
   /sales/complete:
     get:
       parameters:
-      - description: Página
-        in: header
+      - default: 1
+        description: Número da página
+        in: query
         name: page
         type: integer
-      - description: Itens por página
-        in: header
-        name: per_page
+      - default: 10
+        description: Itens por página
+        in: query
+        name: perPage
         type: integer
+      - description: Busca por nome do cliente ou produto
+        in: query
+        name: search
+        type: string
+      - description: Status da venda
+        enum:
+        - pending
+        - paid
+        - overdue
+        - scheduled
+        - canceled
+        - partial
+        in: query
+        name: saleStatus
+        type: string
+      - description: Forma de pagamento
+        enum:
+        - cash
+        - credit_card
+        - debit_card
+        - pix
+        - bank_transfer
+        - installments
+        - other
+        in: query
+        name: paymentMethod
+        type: string
+      - description: Campo de ordenação
+        enum:
+        - sale_at
+        - created_at
+        in: query
+        name: sortBy
+        type: string
+      - description: Direção
+        enum:
+        - asc
+        - desc
+        in: query
+        name: orderBy
+        type: string
       produces:
       - application/json
       responses:
@@ -4663,6 +4804,156 @@ paths:
       summary: Total de vendas pendentes
       tags:
       - sales
+  /subscription-management/payment-methods:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do novo método de pagamento
+        in: body
+        name: payment_method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.AddPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Adiciona um método de pagamento à assinatura
+      tags:
+      - subscription-management
+  /subscription-management/payment-methods/{id}/default:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do método de pagamento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da atualização
+        in: body
+        name: payment_method
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.UpdateDefaultPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Define o método de pagamento padrão da assinatura
+      tags:
+      - subscription-management
+  /subscription-management/subscription:
+    get:
+      description: Retorna a assinatura, o plano contratado (com valor e features)
+        e o método de pagamento vinculado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.SubscriptionDetailsResponse'
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca os dados completos da assinatura da empresa autenticada
+      tags:
+      - subscription-management
+  /subscription-management/subscription/cancel:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dados do cancelamento
+        in: body
+        name: cancel
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CancelSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Requisição inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancela a assinatura da empresa autenticada
+      tags:
+      - subscription-management
   /subscription/{id}:
     get:
       parameters:
@@ -4799,44 +5090,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza o plano da assinatura
-      tags:
-      - subscriptions
-  /subscription/status/{id}:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID da assinatura
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Novo status
-        in: body
-        name: status
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscriptions_domain.UpdateSubscriptionStatusRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-        "400":
-          description: Requisição inválida
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Erro interno do servidor
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Atualiza status da assinatura
       tags:
       - subscriptions
   /users:

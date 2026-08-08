@@ -324,6 +324,58 @@ SELECT COALESCE(
     )::FLOAT AS total_pending_amount
 from sales;
 -- name: ListSalesWithDetailsPaginate :many
+WITH filtered_sales AS (
+    -- Vendas distintas que casam com os filtros (busca, status, formas de pagamento e datas).
+    -- Precisa ser resolvido antes de paginar, pois os JOINs com itens/parcelas multiplicam
+    -- as linhas por venda e "count(DISTINCT ...) OVER()" não é suportado pelo Postgres.
+    SELECT DISTINCT s.id, s.sale_at
+    FROM sales s
+        INNER JOIN customers c ON s.customer_id = c.id
+        INNER JOIN sale_items si ON s.id = si.sale_id
+        INNER JOIN products p ON si.product_id = p.id
+        LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
+    WHERE s.company_id = $1
+        AND s.deleted_at IS NULL
+        -- Busca livre: nome do cliente ou nome do produto
+        AND (
+            sqlc.arg(search)::text = '' OR
+            to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
+                @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+            OR to_tsvector(
+                'portuguese_unaccent',
+                coalesce(p.name, '') || ' ' || coalesce(p.description, '')
+            ) @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
+        )
+        -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
+        AND (
+            sqlc.narg(sale_status)::account_status_enum IS NULL OR
+            s.status = sqlc.narg(sale_status)::account_status_enum
+        )
+        -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
+        AND (
+            sqlc.narg(payment_method)::payment_method_enum IS NULL OR
+            s.payment_method = sqlc.narg(payment_method)::payment_method_enum
+        )
+        -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
+        AND (sqlc.narg(payment_start_date)::date IS NULL OR ar.due_date >= sqlc.narg(payment_start_date)::date)
+        AND (sqlc.narg(payment_end_date)::date IS NULL OR ar.due_date < (sqlc.narg(payment_end_date)::date + INTERVAL '1 day'))
+        -- Data da venda (sales.sale_at)
+        AND (sqlc.narg(sale_start_date)::date IS NULL OR s.sale_at >= sqlc.narg(sale_start_date)::date)
+        AND (sqlc.narg(sale_end_date)::date IS NULL OR s.sale_at < (sqlc.narg(sale_end_date)::date + INTERVAL '1 day'))
+),
+paginated_sales AS (
+    -- Pagina por venda (não por linha), preservando o total antes do LIMIT/OFFSET.
+    SELECT
+        fs.id,
+        count(*) OVER() AS total_count
+    FROM filtered_sales fs
+    ORDER BY
+        CASE WHEN sqlc.arg(sort_by)::text = 'sale_at' AND sqlc.arg(order_by)::text = 'asc'  THEN fs.sale_at END ASC,
+        CASE WHEN sqlc.arg(sort_by)::text = 'sale_at' AND sqlc.arg(order_by)::text = 'desc' THEN fs.sale_at END DESC,
+        fs.sale_at DESC
+    LIMIT $2
+    OFFSET $3
+)
 SELECT
     -- Dados da venda
     s.id AS sale_id,
@@ -352,43 +404,15 @@ SELECT
     ar.due_date,
     ar.installment_number,
     ar.status AS installment_status,
-    count(DISTINCT s.id) OVER() AS total_count
-FROM sales s
+    ps.total_count
+FROM paginated_sales ps
+    INNER JOIN sales s ON s.id = ps.id
     INNER JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
-WHERE s.company_id = $1
-    AND s.deleted_at IS NULL
-    -- Busca livre: nome do cliente ou nome do produto
-    AND (
-        sqlc.arg(search)::text = '' OR
-        to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
-            @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
-        OR to_tsvector(
-            'portuguese_unaccent',
-            coalesce(p.name, '') || ' ' || coalesce(p.description, '')
-        ) @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
-    )
-    -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
-    AND (
-        sqlc.narg(sale_status)::account_status_enum IS NULL OR
-        s.status = sqlc.narg(sale_status)::account_status_enum
-    )
-    -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
-    AND (
-        sqlc.narg(payment_method)::payment_method_enum IS NULL OR
-        s.payment_method = sqlc.narg(payment_method)::payment_method_enum
-    )
-    -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
-    AND (sqlc.narg(payment_start_date)::date IS NULL OR ar.due_date >= sqlc.narg(payment_start_date)::date)
-    AND (sqlc.narg(payment_end_date)::date IS NULL OR ar.due_date < (sqlc.narg(payment_end_date)::date + INTERVAL '1 day'))
-    -- Data da venda (sales.sale_at)
-    AND (sqlc.narg(sale_start_date)::date IS NULL OR s.sale_at >= sqlc.narg(sale_start_date)::date)
-    AND (sqlc.narg(sale_end_date)::date IS NULL OR s.sale_at < (sqlc.narg(sale_end_date)::date + INTERVAL '1 day'))
 ORDER BY
     CASE WHEN sqlc.arg(sort_by)::text = 'sale_at'    AND sqlc.arg(order_by)::text = 'asc'  THEN s.sale_at END ASC,
     CASE WHEN sqlc.arg(sort_by)::text = 'sale_at'    AND sqlc.arg(order_by)::text = 'desc' THEN s.sale_at END DESC,
-    ar.installment_number ASC
-LIMIT $2
-OFFSET $3;
+    s.sale_at DESC,
+    ar.installment_number ASC;
