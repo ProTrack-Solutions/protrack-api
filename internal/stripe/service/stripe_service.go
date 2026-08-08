@@ -9,6 +9,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
 
+	subPaymentMethod "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/stripe/stripe-go/v86"
@@ -18,16 +19,17 @@ import (
 )
 
 type Service struct {
-	secretKey string
-
+	secretKey           string
+	subPaymentMethod    *subPaymentMethod.Service
 	subscriptionService *subscriptionService.Service
 }
 
-func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service) *Service {
+func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, subPaymentMethod *subPaymentMethod.Service) *Service {
 	stripe.Key = cfg.StripeSecretKey
 	return &Service{
 		secretKey:           cfg.StripeSecretKey,
 		subscriptionService: subscriptionService,
+		subPaymentMethod:    subPaymentMethod,
 	}
 }
 
@@ -166,6 +168,31 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 		}
 
 		if err := s.subscriptionService.CancelSubscription(ctx, subscription.ID); err != nil {
+			return err
+		}
+
+	case "customer.subscription.updated":
+		var sub stripe.Subscription
+		if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
+			return fmt.Errorf("erro ao deserializar customer.subscription.updated: %w", err)
+		}
+
+		subscription, err := s.subscriptionService.GetSubscriptionByExternalSubscriptionId(ctx, sub.ID)
+		if err != nil {
+			return err
+		}
+
+		var periodEnd time.Time
+		if len(sub.Items.Data) > 0 {
+			periodEnd = time.Unix(sub.Items.Data[0].CurrentPeriodEnd, 0)
+		} else {
+			periodEnd = subscription.CurrentPeriodEnd
+		}
+
+		if err := s.subscriptionService.UpdateSubscriptionStatus(ctx, subscription.ID, subscriptionDomain.UpdateSubscriptionStatusRequest{
+			Status:           string(sub.Status),
+			CurrentPeriodEnd: periodEnd,
+		}); err != nil {
 			return err
 		}
 

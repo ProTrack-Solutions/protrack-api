@@ -4,6 +4,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	"github.com/gin-gonic/gin"
@@ -11,14 +13,18 @@ import (
 )
 
 type Handler struct {
-	service *service.Service
-	cfg     *config.Config
+	service    *service.Service
+	cfg        *config.Config
+	jwtManager *jwt.JWTManager
+	blacklist  *cache.TokenBlacklist
 }
 
-func NewHandler(service *service.Service, cfg *config.Config) *Handler {
+func NewHandler(service *service.Service, cfg *config.Config, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
 	return &Handler{
-		service: service,
-		cfg:     cfg,
+		service:    service,
+		cfg:        cfg,
+		jwtManager: jwtManager,
+		blacklist:  blacklist,
 	}
 }
 
