@@ -3,15 +3,12 @@ package service
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
-	"github.com/google/uuid"
 
-	subPaymentMethodDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
 	subPaymentMethod "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
@@ -174,175 +171,31 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			return err
 		}
 
-	}
-
-	return nil
-}
-
-func (s *Service) UpdateDefaultPaymentMethod(ctx context.Context, companyID uuid.UUID, subPaymentMethod uuid.UUID, req domain.UpdateDefaultPaymentMethodRequest) error {
-	if req.IdempotencyKey == "" {
-		return fmt.Errorf("idempotency key é obrigatória")
-	}
-
-	sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
-	if err != nil {
-		return err
-	}
-
-	paymentMethod, err := s.subPaymentMethod.GetSubscriptionPaymentMethodById(ctx, subPaymentMethod)
-	if err != nil {
-		return err
-	}
-
-	if paymentMethod.CompanyID != companyID {
-		return fmt.Errorf("payment method não pertence à empresa informada")
-	}
-
-	subStripe, err := subscription.Get(sub.ExternalSubscriptionID, nil)
-	if err != nil {
-		return err
-	}
-
-	attachParams := &stripe.PaymentMethodAttachParams{
-		Customer: stripe.String(subStripe.Customer.ID),
-	}
-
-	_, err = paymentmethod.Attach(paymentMethod.GatewayPaymentMethodID, attachParams)
-	if err != nil {
-		var stripeErr *stripe.Error
-
-		if !errors.As(err, &stripeErr) || stripeErr.Code != stripe.ErrorCodeResourceMissing {
-			if stripeErr == nil || stripeErr.Type != stripe.ErrorTypeInvalidRequest {
-				return fmt.Errorf("erro ao anexar payment method: %w", err)
-			}
+	case "customer.subscription.updated":
+		var sub stripe.Subscription
+		if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
+			return fmt.Errorf("erro ao deserializar customer.subscription.updated: %w", err)
 		}
-	}
-	subParams := &stripe.SubscriptionParams{
-		DefaultPaymentMethod: stripe.String(paymentMethod.GatewayPaymentMethodID),
-	}
-	subParams.SetIdempotencyKey(req.IdempotencyKey + "-sub")
-	_, err = subscription.Update(sub.ExternalSubscriptionID, subParams)
-	if err != nil {
-		return fmt.Errorf("erro ao atualizar payment method da assinatura: %w", err)
-	}
 
-	custParams := &stripe.CustomerParams{
-		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
-			DefaultPaymentMethod: stripe.String(paymentMethod.GatewayPaymentMethodID),
-		},
-	}
-
-	custParams.SetIdempotencyKey(req.IdempotencyKey + "-customer")
-	if _, err := customer.Update(subStripe.Customer.ID, custParams); err != nil {
-		return fmt.Errorf("erro ao atualizar payment method padrão do customer: %w", err)
-	}
-
-	return nil
-}
-
-func (s *Service) CancelSubscription(ctx context.Context, companyID uuid.UUID, req domain.CancelSubscriptionRequest) error {
-	if req.IdempotencyKey == "" {
-		return errors.New("idempotency key é obrigatória")
-	}
-
-	sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
-	if err != nil {
-		return err
-	}
-
-	if req.CancelAtPeriodEnd {
-		subParams := &stripe.SubscriptionParams{
-			CancelAtPeriodEnd: stripe.Bool(true),
-		}
-		subParams.SetIdempotencyKey(req.IdempotencyKey + "-cancel-at-period-end")
-
-		_, err = subscription.Update(sub.ExternalSubscriptionID, subParams)
+		subscription, err := s.subscriptionService.GetSubscriptionByExternalSubscriptionId(ctx, sub.ID)
 		if err != nil {
-			return fmt.Errorf("erro ao agendar cancelamento da assinatura: %w", err)
+			return err
 		}
 
-		return nil
-	}
+		var periodEnd time.Time
+		if len(sub.Items.Data) > 0 {
+			periodEnd = time.Unix(sub.Items.Data[0].CurrentPeriodEnd, 0)
+		} else {
+			periodEnd = subscription.CurrentPeriodEnd
+		}
 
-	cancelParams := &stripe.SubscriptionCancelParams{}
-	cancelParams.SetIdempotencyKey(req.IdempotencyKey + "-cancel")
+		if err := s.subscriptionService.UpdateSubscriptionStatus(ctx, subscription.ID, subscriptionDomain.UpdateSubscriptionStatusRequest{
+			Status:           string(sub.Status),
+			CurrentPeriodEnd: periodEnd,
+		}); err != nil {
+			return err
+		}
 
-	_, err = subscription.Cancel(sub.ExternalSubscriptionID, cancelParams)
-	if err != nil {
-		return fmt.Errorf("erro ao cancelar assinatura: %w", err)
-	}
-
-	return s.subscriptionService.CancelSubscription(ctx, sub.ID)
-}
-
-func (s *Service) AddPaymentMethod(ctx context.Context, companyID uuid.UUID, userID uuid.UUID, req domain.AddPaymentMethodRequest) error {
-	if req.IdempotencyKey == "" {
-		return errors.New("idempotency key é obrigatória")
-	}
-
-	sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
-	if err != nil {
-		return err
-	}
-
-	subStripe, err := subscription.Get(sub.ExternalSubscriptionID, nil)
-	if err != nil {
-		return fmt.Errorf("erro ao buscar assinatura: %w", err)
-	}
-
-	attachParams := &stripe.PaymentMethodAttachParams{
-		Customer: stripe.String(subStripe.Customer.ID),
-	}
-	attachParams.SetIdempotencyKey(req.IdempotencyKey + "-attach")
-
-	pm, err := paymentmethod.Attach(req.StripePaymentMethodID, attachParams)
-	if err != nil {
-		return fmt.Errorf("erro ao anexar payment method: %w", err)
-	}
-
-	var brand, last4 string
-	var expMonth, expYear int32
-	if pm.Card != nil {
-		brand = string(pm.Card.Brand)
-		last4 = pm.Card.Last4
-		expMonth = int32(pm.Card.ExpMonth)
-		expYear = int32(pm.Card.ExpYear)
-	}
-
-	if err := s.subPaymentMethod.CreateSubscriptionPaymentMethod(ctx, companyID, userID, subPaymentMethodDomain.CreateSubscriptionPaymentMethodRequest{
-		GatewayPaymentMethodId: pm.ID,
-		Type:                   string(pm.Type),
-		CardBrand:              brand,
-		CardLastFour:           last4,
-		CardExpMonth:           expMonth,
-		CardExpYear:            expYear,
-		IsDefault:              req.SetAsDefault,
-	}); err != nil {
-		return fmt.Errorf("erro ao salvar payment method: %w", err)
-	}
-
-	if !req.SetAsDefault {
-		return nil
-	}
-
-	subParams := &stripe.SubscriptionParams{
-		DefaultPaymentMethod: stripe.String(pm.ID),
-	}
-	subParams.SetIdempotencyKey(req.IdempotencyKey + "-sub-default")
-
-	if _, err := subscription.Update(sub.ExternalSubscriptionID, subParams); err != nil {
-		return fmt.Errorf("payment method salvo, mas erro ao definir como padrão da assinatura: %w", err)
-	}
-
-	custParams := &stripe.CustomerParams{
-		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
-			DefaultPaymentMethod: stripe.String(pm.ID),
-		},
-	}
-	custParams.SetIdempotencyKey(req.IdempotencyKey + "-customer-default")
-
-	if _, err := customer.Update(subStripe.Customer.ID, custParams); err != nil {
-		return fmt.Errorf("payment method salvo, mas erro ao definir como padrão do cliente: %w", err)
 	}
 
 	return nil
