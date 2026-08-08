@@ -168,6 +168,31 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			return err
 		}
 
+	case "customer.subscription.updated":
+		var sub stripe.Subscription
+		if err := json.Unmarshal(event.Data.Raw, &sub); err != nil {
+			return fmt.Errorf("erro ao deserializar customer.subscription.updated: %w", err)
+		}
+
+		subscription, err := s.subscriptionService.GetSubscriptionByExternalSubscriptionId(ctx, sub.ID)
+		if err != nil {
+			return err
+		}
+
+		var periodEnd time.Time
+		if len(sub.Items.Data) > 0 {
+			periodEnd = time.Unix(sub.Items.Data[0].CurrentPeriodEnd, 0)
+		} else {
+			periodEnd = subscription.CurrentPeriodEnd
+		}
+
+		if err := s.subscriptionService.UpdateSubscriptionStatus(ctx, subscription.ID, subscriptionDomain.UpdateSubscriptionStatusRequest{
+			Status:           string(sub.Status),
+			CurrentPeriodEnd: periodEnd,
+		}); err != nil {
+			return err
+		}
+
 	}
 
 	return nil
