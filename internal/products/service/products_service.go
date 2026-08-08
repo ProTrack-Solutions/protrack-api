@@ -74,7 +74,7 @@ func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID
 		Unit:        db.UnitOfMeasure(req.Unit),
 	})
 	if err != nil {
-		return domain.ProductResponse{}, err
+		return domain.ProductResponse{}, domain.TranslateProductDBError(err)
 	}
 
 	return domain.ProductResponse{
@@ -342,7 +342,7 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 
 	product, err := s.repo.UpdateProduct(ctx, arg)
 	if err != nil {
-		return domain.ProductResponse{}, err
+		return domain.ProductResponse{}, domain.TranslateProductDBError(err)
 	}
 
 	return domain.ProductResponse{
