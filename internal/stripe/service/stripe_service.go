@@ -11,6 +11,7 @@ import (
 
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
+	"github.com/rs/zerolog/log"
 	"github.com/stripe/stripe-go/v86"
 	"github.com/stripe/stripe-go/v86/customer"
 	"github.com/stripe/stripe-go/v86/paymentmethod"
@@ -193,6 +194,31 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			return err
 		}
 
+	case "invoice.payment_action_required":
+		// Disparado quando o PaymentIntent da invoice exige uma ação do
+		// cliente (ex: autenticação 3D Secure) para ser confirmado. Não há
+		// atualização de estado a fazer aqui além de registrar o evento: a
+		// mudança de status da assinatura chega separadamente via
+		// customer.subscription.updated (ex: incomplete -> incomplete_expired
+		// caso o cliente nunca confirme).
+		var invoice stripe.Invoice
+		if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
+			return fmt.Errorf("erro ao deserializar invoice.payment_action_required: %w", err)
+		}
+
+		var subID string
+		if invoice.Parent != nil && invoice.Parent.Type == stripe.InvoiceParentTypeSubscriptionDetails &&
+			invoice.Parent.SubscriptionDetails != nil && invoice.Parent.SubscriptionDetails.Subscription != nil {
+			subID = invoice.Parent.SubscriptionDetails.Subscription.ID
+		}
+
+		log.Warn().
+			Str("invoice_id", invoice.ID).
+			Str("subscription_id", subID).
+			Msg("Stripe: invoice requer ação do cliente (payment_action_required) para confirmar o pagamento")
+
+	default:
+		log.Debug().Str("event_type", string(event.Type)).Msg("Stripe: evento de webhook recebido e ignorado (sem handler)")
 	}
 
 	return nil
