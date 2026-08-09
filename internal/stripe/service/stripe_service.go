@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	invoiceHistoryDomain "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/domain"
+	invoiceHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
 
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
@@ -19,15 +21,17 @@ import (
 )
 
 type Service struct {
-	secretKey           string
-	subscriptionService *subscriptionService.Service
+	secretKey             string
+	subscriptionService   *subscriptionService.Service
+	invoiceHistoryService *invoiceHistoryService.Service
 }
 
-func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service) *Service {
+func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, invoiceHistoryService *invoiceHistoryService.Service) *Service {
 	stripe.Key = cfg.StripeSecretKey
 	return &Service{
-		secretKey:           cfg.StripeSecretKey,
-		subscriptionService: subscriptionService,
+		secretKey:             cfg.StripeSecretKey,
+		subscriptionService:   subscriptionService,
+		invoiceHistoryService: invoiceHistoryService,
 	}
 }
 
@@ -128,6 +132,22 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			return err
 		}
 
+		paidAt := time.Now()
+		if invoice.StatusTransitions != nil && invoice.StatusTransitions.PaidAt > 0 {
+			paidAt = time.Unix(invoice.StatusTransitions.PaidAt, 0)
+		}
+
+		if err := s.invoiceHistoryService.UpsertFromWebhook(ctx, subscription.CompanyID, invoiceHistoryDomain.CreateInvoicementHistoryRequest{
+			SubscriptionID:    subscription.ID,
+			ExternalPaymentID: invoice.ID,
+			AmountCents:       int32(invoice.AmountPaid),
+			Status:            "approved",
+			PaymentMethodID:   subscription.PaymentMethodID,
+			PaidAt:            paidAt,
+		}); err != nil {
+			return fmt.Errorf("erro ao registrar histórico de fatura: %w", err)
+		}
+
 	case "invoice.payment_failed":
 		var invoice stripe.Invoice
 		if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
@@ -150,6 +170,17 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 			CurrentPeriodEnd: subscription.CurrentPeriodEnd,
 		}); err != nil {
 			return err
+		}
+
+		if err := s.invoiceHistoryService.UpsertFromWebhook(ctx, subscription.CompanyID, invoiceHistoryDomain.CreateInvoicementHistoryRequest{
+			SubscriptionID:    subscription.ID,
+			ExternalPaymentID: invoice.ID,
+			AmountCents:       int32(invoice.AmountDue),
+			Status:            "rejected",
+			PaymentMethodID:   subscription.PaymentMethodID,
+			// PaidAt fica zerado (NULL): o pagamento não foi confirmado.
+		}); err != nil {
+			return fmt.Errorf("erro ao registrar histórico de fatura: %w", err)
 		}
 
 	case "customer.subscription.deleted":

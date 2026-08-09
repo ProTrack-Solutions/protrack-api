@@ -40,6 +40,9 @@ import (
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
+	invoiceHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/handler"
+	invoiceHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/repository"
+	invoiceHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/service"
 	labelHandler "github.com/ProTrack-Solutions/protrack-api/internal/label/handler"
 	labelService "github.com/ProTrack-Solutions/protrack-api/internal/label/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
@@ -222,6 +225,7 @@ func main() {
 	billCategoriesRepository := billCategoriesRepository.NewRepository(db.Pool)
 	billsPayableRepository := billsPayableRepository.NewRepository(db.Pool)
 	paymentHistoryRepository := paymentHistoryRepository.NewRepository(db.Pool)
+	invoiceHistoryRepository := invoiceHistoryRepository.NewRepository(db.Pool)
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
@@ -240,7 +244,8 @@ func main() {
 	departmentsService := departmentsService.NewService(departmentsRepository)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool)
-	stripeService := stripeService.NewService(cfg, subscriptionsService)
+	invoiceHistoryService := invoiceHistoryService.NewServie(invoiceHistoryRepository, db.Pool)
+	stripeService := stripeService.NewService(cfg, subscriptionsService, invoiceHistoryService)
 	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
 	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
 	customersService := customersService.NewService(customersRepository, db.Pool)
@@ -276,6 +281,7 @@ func main() {
 	billCategoriesHandler := billCategoriesHandler.NewHandler(billCategoriesService, jwtManager, blacklist)
 	billsPayableHandler := billsPayableHandler.NewHandler(billsPayableService, jwtManager, blacklist)
 	paymentHistoryHandler := paymentHistoryHandler.NewHandler(paymentHistoryService, jwtManager, blacklist)
+	invoiceHistoryHandler := invoiceHistoryHandler.NewHandler(invoiceHistoryService, jwtManager, blacklist)
 	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger)
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
@@ -301,6 +307,7 @@ func main() {
 	billCategoriesHandler.RegisterRoute(api)
 	billsPayableHandler.RegisterRoute(api)
 	paymentHistoryHandler.RegisterRoute(api)
+	invoiceHistoryHandler.RegisterRoutes(api)
 	accountsReceivableHandler.RegisterRoute(api)
 	paymentsHandler.RegisterRoute(api)
 	reportsHandler.RegisterRoutes(api)
