@@ -174,10 +174,10 @@ func (s *Service) GetUserFromContext(ctx context.Context, id uuid.UUID) (userDom
 	}, nil
 }
 
-func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) error {
+func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*domain.RegisterResponse, error) {
 	plan, err := s.plansService.GetPlanByID(ctx, req.Payment.PlanID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	periodStart := time.Now()
@@ -189,7 +189,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	case "yearly":
 		periodEnd = periodStart.AddDate(1, 0, 0)
 	default:
-		return fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
+		return nil, fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
 	}
 
 	stripe, err := s.stripeService.CreateSubscription(stripeDomain.CreateSubscriptionInput{
@@ -200,12 +200,12 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 		IdempotencyKey: req.IdempotencyKey,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
@@ -231,7 +231,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro company")
 
-		return err
+		return nil, err
 	}
 
 	userId, err := s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
@@ -246,7 +246,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro user")
 
-		return err
+		return nil, err
 	}
 
 	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
@@ -260,7 +260,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro payment method")
-		return err
+		return nil, err
 	}
 
 	err = s.subscriptionService.CreateSubscription(ctx, tx, companyId, subscriptionDomain.CreateSubscriptionRequest{
@@ -274,8 +274,17 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) erro
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro subscription")
-		return err
+		return nil, err
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	return &domain.RegisterResponse{
+		CompanyID:          companyId,
+		SubscriptionStatus: stripe.Status,
+		ClientSecret:       stripe.ClientSecret,
+		RequiresAction:     stripe.ClientSecret != "",
+	}, nil
 }

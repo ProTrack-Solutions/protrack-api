@@ -247,7 +247,7 @@ func (h *Handler) Logout(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        register body domain.RegisterRequest true "Dados de registro"
-// @Success      201 {object} map[string]string "Empresa e usuário criados com sucesso"
+// @Success      201 {object} domain.RegisterResponse "Empresa e usuário criados com sucesso"
 // @Failure      400 {object} map[string]string "Requisição inválida"
 // @Failure      500 {object} map[string]string "Erro interno do servidor"
 // @Router       /auth/register [post]
@@ -259,10 +259,11 @@ func (h *Handler) Register(c *gin.Context) {
 		return
 	}
 
-	if err := h.service.Register(c.Request.Context(), req); err != nil {
+	res, err := h.service.Register(c.Request.Context(), req)
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, res)
 }
