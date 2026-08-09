@@ -416,3 +416,8 @@ ORDER BY
     CASE WHEN sqlc.arg(sort_by)::text = 'sale_at'    AND sqlc.arg(order_by)::text = 'desc' THEN s.sale_at END DESC,
     s.sale_at DESC,
     ar.installment_number ASC;
+-- name: GetTotalAmountIsPending :one
+SELECT COALESCE(SUM(balance), 0)::numeric AS total_balance
+FROM accounts_receivable
+WHERE status IN ('pending', 'overdue', 'partial')
+  AND company_id = $1;

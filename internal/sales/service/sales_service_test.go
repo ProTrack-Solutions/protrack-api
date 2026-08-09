@@ -457,8 +457,8 @@ func TestGetTotalAmountIsPending_Success(t *testing.T) {
 	companyID := uuid.New()
 
 	repo.EXPECT().
-		GetTotalAmountByStatus(gomock.Any(), gomock.Any()).
-		Return(3500.00, nil)
+		GetTotalAmountIsPending(gomock.Any(), pgconv.ParseUUIDToPgType(companyID)).
+		Return(pgconv.Float64ToPgNumeric(3500.00), nil)
 
 	total, err := svc.GetTotalAmountIsPending(context.Background(), companyID)
 	if err != nil {
@@ -477,8 +477,8 @@ func TestGetTotalAmountIsPending_RepositoryError(t *testing.T) {
 	svc := newSvc(t, repo)
 
 	repo.EXPECT().
-		GetTotalAmountByStatus(gomock.Any(), gomock.Any()).
-		Return(0.0, errDatabase)
+		GetTotalAmountIsPending(gomock.Any(), gomock.Any()).
+		Return(pgtype.Numeric{}, errDatabase)
 
 	_, err := svc.GetTotalAmountIsPending(context.Background(), uuid.New())
 
