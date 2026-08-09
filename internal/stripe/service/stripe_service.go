@@ -9,7 +9,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
 
-	subPaymentMethod "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
 	subscriptionDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/stripe/stripe-go/v86"
@@ -20,16 +19,14 @@ import (
 
 type Service struct {
 	secretKey           string
-	subPaymentMethod    *subPaymentMethod.Service
 	subscriptionService *subscriptionService.Service
 }
 
-func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, subPaymentMethod *subPaymentMethod.Service) *Service {
+func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service) *Service {
 	stripe.Key = cfg.StripeSecretKey
 	return &Service{
 		secretKey:           cfg.StripeSecretKey,
 		subscriptionService: subscriptionService,
-		subPaymentMethod:    subPaymentMethod,
 	}
 }
 
@@ -200,3 +197,4 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 
 	return nil
 }
+

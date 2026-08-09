@@ -56,7 +56,24 @@ func (s *Service) CreateSubscriptionPaymentMethodTx(ctx context.Context, tx db.D
 }
 
 func (s *Service) CreateSubscriptionPaymentMethod(ctx context.Context, companyId uuid.UUID, userId uuid.UUID, req domain.CreateSubscriptionPaymentMethodRequest) error {
-	_, err := s.repo.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
+	methods, err := s.repo.GetSubscriptionPaymentMethodByCompanyId(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return err
+	}
+
+	for _, mt := range methods {
+		if mt.IsDefault == pgconv.BoolToPgBool(true) {
+			if err := s.repo.SetDefaultSubscriptionPaymentMethod(ctx, db.SetDefaultSubscriptionPaymentMethodParams{
+				CompanyID: pgconv.ParseUUIDToPgType(companyId),
+				IsDefault: pgconv.BoolToPgBool(false),
+				UpdatedBy: pgconv.ParseUUIDToPgType(userId),
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	_, err = s.repo.CreateSubscriptionPaymentMethod(ctx, db.CreateSubscriptionPaymentMethodParams{
 		CompanyID:              pgconv.ParseUUIDToPgType(companyId),
 		GatewayPaymentMethodID: req.GatewayPaymentMethodId,
 		Type:                   req.Type,
