@@ -55,6 +55,7 @@ type RepositoryInterface interface {
 	CountSalesDeletedByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	GetTotalAmountPending(ctx context.Context, companyId pgtype.UUID) (float64, error)
 	GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error)
+	GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -456,7 +457,12 @@ func (s *Service) GetTotalAmountSummary(ctx context.Context, companyId uuid.UUID
 		return domain.GetTotalAmountSummaryRow{}, err
 	}
 
-	growthPercentage := (res.LastMonthSt / res.CurrentMonthSt) * 100
+	var growthPercentage float64
+	if res.LastMonthSt > 0 {
+		growthPercentage = ((res.CurrentMonthSt - res.LastMonthSt) / res.LastMonthSt) * 100
+	} else if res.CurrentMonthSt > 0 {
+		growthPercentage = 100
+	}
 
 	return domain.GetTotalAmountSummaryRow{
 		CurrentMonthSt:   res.CurrentMonthSt,
@@ -466,17 +472,12 @@ func (s *Service) GetTotalAmountSummary(ctx context.Context, companyId uuid.UUID
 }
 
 func (s *Service) GetTotalAmountIsPending(ctx context.Context, companyId uuid.UUID) (float64, error) {
-	status := "pending"
-
-	total, err := s.repo.GetTotalAmountByStatus(ctx, db.GetTotalAmountByStatusParams{
-		CompanyID: pgconv.ParseUUIDToPgType(companyId),
-		Status:    status,
-	})
+	total, err := s.repo.GetTotalAmountIsPending(ctx, pgconv.ParseUUIDToPgType(companyId))
 	if err != nil {
 		return 0, err
 	}
 
-	return total, nil
+	return pgconv.PgNumericToFloat64(total), nil
 }
 
 func (s *Service) GetTotalAmountIsOverdue(ctx context.Context, req domain.GetTotalAmountByStatusRequest) (float64, error) {

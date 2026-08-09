@@ -80,7 +80,6 @@ DELETE FROM accounts_receivable
 WHERE sale_id = $1 
     AND company_id = $2;
 -- name: ListAccountsReceivables :many
--- name: ListAccountsReceivableByCompanyPaginated :many
 SELECT
     ar.*,
     c.full_name AS customer_name,

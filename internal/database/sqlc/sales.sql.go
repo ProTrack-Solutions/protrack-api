@@ -494,6 +494,20 @@ func (q *Queries) GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmount
 	return total_pending_amount, err
 }
 
+const getTotalAmountIsPending = `-- name: GetTotalAmountIsPending :one
+SELECT COALESCE(SUM(balance), 0)::numeric AS total_balance
+FROM accounts_receivable
+WHERE status IN ('pending', 'overdue', 'partial')
+  AND company_id = $1
+`
+
+func (q *Queries) GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getTotalAmountIsPending, companyID)
+	var total_balance pgtype.Numeric
+	err := row.Scan(&total_balance)
+	return total_balance, err
+}
+
 const getTotalAmountPaid = `-- name: GetTotalAmountPaid :one
 SELECT COALESCE(
         SUM(total_amount) FILTER (

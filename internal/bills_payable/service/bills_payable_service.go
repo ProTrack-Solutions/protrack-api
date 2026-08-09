@@ -346,3 +346,7 @@ func (s *Service) GetBillsPayableSummary(ctx context.Context, companyId uuid.UUI
 func (s *Service) UpdateOverdueBillsPayable(ctx context.Context) error {
 	return s.repo.UpdateOverdueBillsPayable(ctx)
 }
+
+func (s *Service) SumBillsPayableByCompany(ctx context.Context, companyID uuid.UUID) (float64, error) {
+	return s.repo.SumBillsPayableByCompany(ctx, pgconv.ParseUUIDToPgType(companyID))
+}
