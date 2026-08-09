@@ -431,7 +431,7 @@ func (q *Queries) ScheduleBill(ctx context.Context, arg ScheduleBillParams) erro
 const sumBillsPayableByCompany = `-- name: SumBillsPayableByCompany :one
 SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_amount
 FROM bills_payable 
-WHERE company_id = $1
+WHERE company_id = $1 AND status IN ('overdue','pending','partial')
 `
 
 func (q *Queries) SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error) {

@@ -340,6 +340,20 @@ func (mr *MockRepositoryInterfaceMockRecorder) GetTotalAmountPending(ctx, compan
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalAmountPending", reflect.TypeOf((*MockRepositoryInterface)(nil).GetTotalAmountPending), ctx, companyId)
 }
 
+// GetTotalAmountIsPending mocks o método GetTotalAmountIsPending.
+func (m *MockRepositoryInterface) GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetTotalAmountIsPending", ctx, companyID)
+	ret0, _ := ret[0].(pgtype.Numeric)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetTotalAmountIsPending(ctx, companyID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTotalAmountIsPending", reflect.TypeOf((*MockRepositoryInterface)(nil).GetTotalAmountIsPending), ctx, companyID)
+}
+
 // GetTotalAmountPaid mocks o método GetTotalAmountPaid.
 func (m *MockRepositoryInterface) GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error) {
 	m.ctrl.T.Helper()

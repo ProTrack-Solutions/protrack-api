@@ -131,3 +131,7 @@ func (r *Repository) GetTotalAmountPending(ctx context.Context, companyId pgtype
 func (r *Repository) GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error) {
 	return r.queries().GetTotalAmountPaid(ctx, companyId)
 }
+
+func (r *Repository) GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error) {
+	return r.queries().GetTotalAmountIsPending(ctx, companyID)
+}

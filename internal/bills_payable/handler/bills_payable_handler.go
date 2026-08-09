@@ -355,3 +355,21 @@ func (h *Handler) GetBillsPayableSummary(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"bills_summary": billsSummary})
 }
+
+func (h *Handler) SumBillsPayableByCompany(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	total, err := h.service.SumBillsPayableByCompany(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, total)
+}
