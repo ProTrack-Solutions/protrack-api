@@ -56,3 +56,17 @@ type RegisterRequest struct {
 	} `json:"payment" validate:"required"`
 	IdempotencyKey string `json:"idempotency_key" validate:"required"`
 }
+
+type RegisterResponse struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	// Status da assinatura no Stripe logo após a criação (ex: "incomplete").
+	SubscriptionStatus string `json:"subscription_status"`
+	// ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA
+	// chamar stripe.confirmCardPayment(client_secret) com esse valor para
+	// concluir a autenticação do cartão (incluindo 3D Secure); sem essa
+	// confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
+	ClientSecret string `json:"client_secret,omitempty"`
+	// RequiresAction indica que o frontend deve chamar confirmCardPayment
+	// antes de considerar o cadastro concluído.
+	RequiresAction bool `json:"requires_action"`
+}
