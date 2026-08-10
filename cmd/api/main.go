@@ -13,6 +13,7 @@ import (
 	accountsReceivableRepository "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/repository"
 	accountsReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/email"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
 	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
@@ -210,6 +211,10 @@ func main() {
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
 
 	blacklist := cache.NewTokenBlackList(redis)
+	passwordResetStore := cache.NewPasswordResetStore(redis)
+	rateLimiter := cache.NewRateLimiter(redis)
+
+	emailSender := email.NewSender(cfg)
 
 	subscriptionsRepository := subscriptionsRepository.NewRepository(db.Pool)
 	usersRepository := usersRepository.NewRepository(db.Pool)
@@ -247,7 +252,7 @@ func main() {
 	invoiceHistoryService := invoiceHistoryService.NewServie(invoiceHistoryRepository, db.Pool)
 	stripeService := stripeService.NewService(cfg, subscriptionsService, invoiceHistoryService)
 	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
-	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool)
+	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool, passwordResetStore, rateLimiter, blacklist, ch, cfg)
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
@@ -329,6 +334,7 @@ func main() {
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
 	consumers.StartWhatsAppConsumer(ch, whatsapp)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
+	consumers.StartEmailCOnsumer(ch, emailSender)
 
 	srv := &http.Server{
 		Addr:    ":" + cfg.ApiPort,

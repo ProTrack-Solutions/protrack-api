@@ -332,6 +332,28 @@ func (s *Service) UpdateUserCompanyAndRole(ctx context.Context, req domain.Updat
 	})
 }
 
+// ResetPasswordHash define uma nova senha para o usuário SEM exigir a senha
+// atual. Deve ser chamado apenas após validar um token de recuperação de
+// senha (fluxo "esqueci minha senha") — para troca de senha autenticada,
+// use UpdatePasswordHash.
+func (s *Service) ResetPasswordHash(ctx context.Context, userId uuid.UUID, newPassword string) error {
+	if err := validate.ValidPassword(newPassword); err != nil {
+		return err
+	}
+
+	passwordPepper := newPassword + s.cfg.Pepper
+
+	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
+	if err != nil {
+		return err
+	}
+
+	return s.repo.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
+		ID:           pgconv.ParseUUIDToPgType(userId),
+		PasswordHash: hashPassword,
+	})
+}
+
 func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.CreateUserParams) (uuid.UUID, error) {
 	repoTx := db.New(tx)
 
