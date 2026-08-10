@@ -180,7 +180,7 @@ END $$;
 CREATE TABLE IF NOT EXISTS sales (
     -- Identificadores (UUID)
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    customer_id UUID NOT NULL,
+    customer_id UUID NULL, -- opcional: venda avulsa (consumidor sem cadastro) não tem cliente vinculado
     company_id UUID NOT NULL,
     -- Informações da Venda
     -- Mudei para TIMESTAMPTZ para registrar hora exata da transação
@@ -200,9 +200,12 @@ CREATE TABLE IF NOT EXISTS sales (
     updated_by UUID DEFAULT NULL,
     deleted_at TIMESTAMPTZ DEFAULT NULL,
     deleted_by UUID DEFAULT NULL,
+    buyer_document VARCHAR(20) NULL, -- CPF/CNPJ opcional informado na venda avulsa (sem cadastro)
     -- Constraints
     CONSTRAINT fk_sale_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT,
-    CONSTRAINT fk_sale_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+    CONSTRAINT fk_sale_company FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    CONSTRAINT chk_sales_customer_required_for_credit
+        CHECK (payment_method <> 'installments' OR customer_id IS NOT NULL)
 );
 CREATE TABLE IF NOT EXISTS sale_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

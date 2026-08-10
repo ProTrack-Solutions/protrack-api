@@ -79,7 +79,8 @@ INSERT INTO sales (
         due_days,
         payment_method,
         created_by,
-        status
+        status,
+        buyer_document
     )
 VALUES (
         $1,
@@ -93,7 +94,8 @@ VALUES (
         $8,
         $9,
         $10,
-        $11
+        $11,
+        $12
     )
 RETURNING id
 `
@@ -110,6 +112,7 @@ type CreateSaleParams struct {
 	PaymentMethod     interface{}    `json:"payment_method"`
 	CreatedBy         pgtype.UUID    `json:"created_by"`
 	Status            interface{}    `json:"status"`
+	BuyerDocument     pgtype.Text    `json:"buyer_document"`
 }
 
 func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error) {
@@ -125,6 +128,7 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.
 		arg.PaymentMethod,
 		arg.CreatedBy,
 		arg.Status,
+		arg.BuyerDocument,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -162,7 +166,7 @@ SELECT -- Dados da venda
     s.status AS sale_status,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -178,7 +182,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -266,10 +270,10 @@ func (q *Queries) GetPendingSalesDetailedReport(ctx context.Context, arg GetPend
 }
 
 const getSaleById = `-- name: GetSaleById :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by,
-    c.full_name as customer_name
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document,
+    COALESCE(c.full_name, '') as customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1
     AND s.company_id = $2
 `
@@ -298,6 +302,7 @@ type GetSaleByIdRow struct {
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy         pgtype.UUID        `json:"deleted_by"`
+	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	CustomerName      string             `json:"customer_name"`
 }
 
@@ -323,16 +328,17 @@ func (q *Queries) GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSa
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.BuyerDocument,
 		&i.CustomerName,
 	)
 	return i, err
 }
 
 const getSaleByIdJust = `-- name: GetSaleByIdJust :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by,
-    c.full_name as customer_name
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document,
+    COALESCE(c.full_name, '') as customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1
 `
 
@@ -355,6 +361,7 @@ type GetSaleByIdJustRow struct {
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy         pgtype.UUID        `json:"deleted_by"`
+	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	CustomerName      string             `json:"customer_name"`
 }
 
@@ -380,17 +387,18 @@ func (q *Queries) GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleB
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.BuyerDocument,
 		&i.CustomerName,
 	)
 	return i, err
 }
 
 const getSaleByIdWhatsapp = `-- name: GetSaleByIdWhatsapp :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by,
-    c.full_name as customer_name,
-    c.whatsapp as customer_whatsApp
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document,
+    COALESCE(c.full_name, '') as customer_name,
+    COALESCE(c.whatsapp, '') as customer_whatsApp
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1
 `
 
@@ -413,8 +421,9 @@ type GetSaleByIdWhatsappRow struct {
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy         pgtype.UUID        `json:"deleted_by"`
+	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	CustomerName      string             `json:"customer_name"`
-	CustomerWhatsapp  pgtype.Text        `json:"customer_whatsapp"`
+	CustomerWhatsapp  string             `json:"customer_whatsapp"`
 }
 
 func (q *Queries) GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error) {
@@ -439,6 +448,7 @@ func (q *Queries) GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetS
 		&i.UpdatedBy,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.BuyerDocument,
 		&i.CustomerName,
 		&i.CustomerWhatsapp,
 	)
@@ -636,9 +646,9 @@ SELECT s.id AS sale_id,
     si.unit_price,
     si.discount,
     p.name AS product_name,
-    c.full_name AS customer_name
+    COALESCE(c.full_name, '') AS customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
 WHERE s.company_id = $1
@@ -720,7 +730,7 @@ SELECT -- Dados da venda
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -736,7 +746,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -824,7 +834,7 @@ WITH filtered_sales AS (
     -- as linhas por venda e "count(DISTINCT ...) OVER()" não é suportado pelo Postgres.
     SELECT DISTINCT s.id, s.sale_at
     FROM sales s
-        INNER JOIN customers c ON s.customer_id = c.id
+        LEFT JOIN customers c ON s.customer_id = c.id
         INNER JOIN sale_items si ON s.id = si.sale_id
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -883,7 +893,7 @@ SELECT
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -901,7 +911,7 @@ SELECT
     ps.total_count
 FROM paginated_sales ps
     INNER JOIN sales s ON s.id = ps.id
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -1025,7 +1035,7 @@ SELECT -- Dados da venda
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -1041,7 +1051,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
