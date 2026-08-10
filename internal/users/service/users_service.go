@@ -190,14 +190,36 @@ func (s *Service) ListUsers(ctx context.Context) ([]domain.UserResponse, error) 
 	return response, nil
 }
 
-func (s *Service) UpdatePasswordHash(ctx context.Context, req domain.UpdatePasswordHashParams) error {
-	if err := validate.ValidPassword(req.PasswordHash); err != nil {
+func (s *Service) UpdatePasswordHash(ctx context.Context, userId uuid.UUID, req domain.UpdatePasswordParams) error {
+	user, err := s.repo.GetUserById(ctx, pgconv.ParseUUIDToPgType(userId))
+	if err != nil {
+		return err
+	}
+
+	currentPasswordPepper := req.CurrentPassword + s.cfg.Pepper
+
+	match, err := argon2id.ComparePasswordAndHash(currentPasswordPepper, user.PasswordHash)
+	if err != nil {
+		return errors.New("invalid credentials")
+	}
+	if !match {
+		return errors.New("invalid credentials")
+	}
+
+	if err := validate.ValidPassword(req.Password); err != nil {
+		return err
+	}
+
+	passwordPepper := req.Password + s.cfg.Pepper
+
+	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
+	if err != nil {
 		return err
 	}
 
 	return s.repo.UpdatePasswordHash(ctx, db.UpdatePasswordHashParams{
-		ID:           pgconv.ParseUUIDToPgType(req.ID),
-		PasswordHash: req.PasswordHash,
+		ID:           pgconv.ParseUUIDToPgType(userId),
+		PasswordHash: hashPassword,
 	})
 }
 

@@ -41,9 +41,9 @@ type CreateUserParams struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-type UpdatePasswordHashParams struct {
-	ID           uuid.UUID `json:"id"`
-	PasswordHash string    `json:"password_hash"`
+type UpdatePasswordParams struct {
+	CurrentPassword string `json:"current_password"`
+	Password        string `json:"password"`
 }
 
 type UpdateUserRequest struct {

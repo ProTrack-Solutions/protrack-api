@@ -633,10 +633,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Empresa e usuário criados com sucesso",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterResponse"
                         }
                     },
                     "400": {
@@ -5088,28 +5085,14 @@ const docTemplate = `{
                 }
             }
         },
-        "/users": {
-            "get": {
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Lista todos os usuários",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
-                            }
-                        }
+        "/user/password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
                     }
-                }
-            },
-            "post": {
+                ],
+                "description": "Requer a senha atual para confirmação; o usuário é identificado pelo token JWT (claim \"sub\"), não pelo corpo da requisição.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5119,42 +5102,44 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Cria um usuário",
+                "summary": "Atualiza a senha do usuário autenticado",
                 "parameters": [
                     {
-                        "description": "Usuário",
-                        "name": "user",
+                        "description": "Senha atual e nova senha",
+                        "name": "password",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams"
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordParams"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
-                        }
+                    "204": {
+                        "description": "No Content"
                     }
                 }
             }
         },
-        "/users/email/{email}": {
+        "/user/{id}": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "users"
                 ],
-                "summary": "Busca usuário por e-mail",
+                "summary": "Busca usuário por ID",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "E-mail",
-                        "name": "email",
+                        "description": "ID do usuário",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     }
@@ -5167,10 +5152,13 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/users/password": {
+            },
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "consumes": [
                     "application/json"
                 ],
@@ -5180,16 +5168,54 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Atualiza a senha do usuário",
+                "summary": "Atualiza um usuário",
                 "parameters": [
                     {
-                        "description": "Senha",
-                        "name": "password",
+                        "type": "string",
+                        "description": "ID do usuário",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Usuário",
+                        "name": "user",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams"
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Remove um usuário",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuário",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {
@@ -5546,110 +5572,6 @@ const docTemplate = `{
                             "type": "object",
                             "additionalProperties": true
                         }
-                    }
-                }
-            }
-        },
-        "/{id}": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Busca usuário por ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID do usuário",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
-                        }
-                    }
-                }
-            },
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Atualiza um usuário",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID do usuário",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Usuário",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Remove um usuário",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID do usuário",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "No Content"
                     }
                 }
             }
@@ -6072,6 +5994,26 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterResponse": {
+            "type": "object",
+            "properties": {
+                "client_secret": {
+                    "description": "ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA\nchamar stripe.confirmCardPayment(client_secret) com esse valor para\nconcluir a autenticação do cartão (incluindo 3D Secure); sem essa\nconfirmação a assinatura fica \"incomplete\" e expira em ~23h no Stripe.",
+                    "type": "string"
+                },
+                "company_id": {
+                    "type": "string"
+                },
+                "requires_action": {
+                    "description": "RequiresAction indica que o frontend deve chamar confirmCardPayment\nantes de considerar o cadastro concluído.",
+                    "type": "boolean"
+                },
+                "subscription_status": {
+                    "description": "Status da assinatura no Stripe logo após a criação (ex: \"incomplete\").",
+                    "type": "string"
                 }
             }
         },
@@ -8160,49 +8102,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams": {
+        "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordParams": {
             "type": "object",
             "properties": {
-                "company_id": {
+                "current_password": {
                     "type": "string"
                 },
-                "created_at": {
-                    "type": "string"
-                },
-                "created_by": {
-                    "type": "string"
-                },
-                "department_id": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "password_hash": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "status": {},
-                "updated_by": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "string"
-                },
-                "password_hash": {
+                "password": {
                     "type": "string"
                 }
             }

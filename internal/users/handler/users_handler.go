@@ -26,14 +26,12 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 	}
 }
 
-// CreateUser godoc
-// @Summary      Cria um usuário
-// @Tags         users
-// @Accept       json
-// @Produce      json
-// @Param        user body domain.CreateUserParams true "Usuário"
-// @Success      201 {object} domain.UserResponse
-// @Router       /users [post]
+// CreateUser cria um usuário diretamente pelo serviço.
+//
+// Não exposto como rota HTTP: o cadastro de usuários é feito pelo
+// fluxo de registro (auth), via Service.CreateUserTx. Mantido para
+// uso interno/testes — sem anotações @Router para não aparecer no
+// Swagger como um endpoint disponível.
 func (h *Handler) CreateUser(c *gin.Context) {
 	var req domain.CreateUserParams
 
@@ -58,7 +56,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        id path string true "ID do usuário"
 // @Success      204
-// @Router       /{id} [delete]
+// @Router       /user/{id} [delete]
 func (h *Handler) DeleteUser(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -78,13 +76,11 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
-// GetUserByEmail godoc
-// @Summary      Busca usuário por e-mail
-// @Tags         users
-// @Produce      json
-// @Param        email path string true "E-mail"
-// @Success      200 {object} domain.UserResponse
-// @Router       /users/email/{email} [get]
+// GetUserByEmail busca um usuário pelo e-mail.
+//
+// Não exposto como rota HTTP no momento — usado internamente pelo
+// serviço (ex.: validação de login e checagem de e-mail duplicado em
+// UpdateUser). Sem anotações @Router para não aparecer no Swagger.
 func (h *Handler) GetUserByEmail(c *gin.Context) {
 	email := c.Param("email")
 
@@ -104,7 +100,7 @@ func (h *Handler) GetUserByEmail(c *gin.Context) {
 // @Security     BearerAuth
 // @Param        id path string true "ID do usuário"
 // @Success      200 {object} domain.UserResponse
-// @Router       /{id} [get]
+// @Router       /user/{id} [get]
 func (h *Handler) GetUserById(c *gin.Context) {
 	idStr := c.Param("id")
 
@@ -123,12 +119,10 @@ func (h *Handler) GetUserById(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"user": user})
 }
 
-// ListUsers godoc
-// @Summary      Lista todos os usuários
-// @Tags         users
-// @Produce      json
-// @Success      200 {array} domain.UserResponse
-// @Router       /users [get]
+// ListUsers lista todos os usuários.
+//
+// Não exposto como rota HTTP no momento. Sem anotações @Router para
+// não aparecer no Swagger como um endpoint disponível.
 func (h *Handler) ListUsers(c *gin.Context) {
 	users, err := h.service.ListUsers(c.Request.Context())
 	if err != nil {
@@ -140,22 +134,38 @@ func (h *Handler) ListUsers(c *gin.Context) {
 }
 
 // UpdatePasswordHash godoc
-// @Summary      Atualiza a senha do usuário
+// @Summary      Atualiza a senha do usuário autenticado
+// @Description  Requer a senha atual para confirmação; o usuário é identificado pelo token JWT (claim "sub"), não pelo corpo da requisição.
 // @Tags         users
 // @Accept       json
 // @Produce      json
-// @Param        password body domain.UpdatePasswordHashParams true "Senha"
+// @Security     BearerAuth
+// @Param        password body domain.UpdatePasswordParams true "Senha atual e nova senha"
 // @Success      204
-// @Router       /users/password [put]
+// @Router       /user/password [put]
 func (h *Handler) UpdatePasswordHash(c *gin.Context) {
-	var req domain.UpdatePasswordHashParams
+	userIdAny, exists := c.Get("sub")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	userIdStr := userIdAny.(string)
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req domain.UpdatePasswordParams
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.service.UpdatePasswordHash(c.Request.Context(), req); err != nil {
+	if err := h.service.UpdatePasswordHash(c.Request.Context(), userId, req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
 	}
 
@@ -171,7 +181,7 @@ func (h *Handler) UpdatePasswordHash(c *gin.Context) {
 // @Param        id path string true "ID do usuário"
 // @Param        user body domain.UpdateUserRequest true "Usuário"
 // @Success      200 {object} domain.UserResponse
-// @Router       /{id} [put]
+// @Router       /user/{id} [put]
 func (h *Handler) UpdateUser(c *gin.Context) {
 	idStr := c.Param("id")
 
