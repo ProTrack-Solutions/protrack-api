@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -266,4 +267,66 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, res)
+}
+
+// ForgotPassword godoc
+// @Summary      Solicita a recuperação de senha
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body domain.ForgotPasswordRequest true "E-mail do usuário"
+// @Success      200 {object} map[string]string
+// @Failure      429 {object} map[string]string
+// @Router       /auth/forgot-password [post]
+func (h *Handler) ForgotPassword(c *gin.Context) {
+	var req domain.ForgotPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.RequestPasswordReset(c.Request.Context(), req.Email)
+	if err != nil {
+		if errors.Is(err, service.ErrPasswordResetRateLimited) {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "se o e-mail existir em nossa base, você receberá instruções em instantes",
+	})
+}
+
+// ResetPassword godoc
+// @Summary      Confirma a redefinição de senha usando o token recebido por e-mail
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        request body domain.ResetPasswordRequest true "Token e nova senha"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Router       /auth/reset-password [post]
+func (h *Handler) ResetPassword(c *gin.Context) {
+	var req domain.ResetPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	err := h.service.ConfirmPasswordReset(c.Request.Context(), req.Token, req.NewPassword)
+	if err != nil {
+		if errors.Is(err, service.ErrInvalidResetToken) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "senha redefinida com sucesso"})
 }

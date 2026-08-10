@@ -2,15 +2,19 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	stripeDomain "github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
 	stripeService "github.com/ProTrack-Solutions/protrack-api/internal/stripe/service"
 	paymentMethodsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
@@ -21,7 +25,17 @@ import (
 	userService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
+)
+
+var (
+	// ErrPasswordResetRateLimited é retornado quando o e-mail/IP excedeu o
+	// número de solicitações de reset permitidas na janela de tempo.
+	ErrPasswordResetRateLimited = errors.New("muitas tentativas, aguarde alguns minutos")
+	// ErrInvalidResetToken é retornado quando o token de reset é inválido,
+	// já foi usado ou expirou.
+	ErrInvalidResetToken = errors.New("link inválido ou expirado")
 )
 
 type Service struct {
@@ -33,9 +47,28 @@ type Service struct {
 	stripeService         *stripeService.Service
 	jwtManager            *jwt.JWTManager
 	pool                  *pgxpool.Pool
+
+	passwordResetStore *cache.PasswordResetStore
+	rateLimiter        *cache.RateLimiter
+	blacklist          *cache.TokenBlacklist
+	amqpChan           *amqp091.Channel
+	cfg                *config.Config
 }
 
-func NewService(stripeService *stripeService.Service, userService *userService.Service, companiesService *companiesService.Service, paymentMethodsService *paymentMethodsService.Service, subscriptionService *subscriptionService.Service, plansService *plansService.Service, jwtManager *jwt.JWTManager, pool *pgxpool.Pool) *Service {
+func NewService(stripeService *stripeService.Service,
+	userService *userService.Service,
+	companiesService *companiesService.Service,
+	paymentMethodsService *paymentMethodsService.Service,
+	subscriptionService *subscriptionService.Service,
+	plansService *plansService.Service,
+	jwtManager *jwt.JWTManager,
+	pool *pgxpool.Pool,
+	passwordResetStore *cache.PasswordResetStore,
+	rateLimiter *cache.RateLimiter,
+	blacklist *cache.TokenBlacklist,
+	amqpChan *amqp091.Channel,
+	cfg *config.Config,
+) *Service {
 	return &Service{
 		stripeService:         stripeService,
 		userService:           userService,
@@ -45,6 +78,11 @@ func NewService(stripeService *stripeService.Service, userService *userService.S
 		plansService:          plansService,
 		jwtManager:            jwtManager,
 		pool:                  pool,
+		passwordResetStore:    passwordResetStore,
+		rateLimiter:           rateLimiter,
+		blacklist:             blacklist,
+		amqpChan:              amqpChan,
+		cfg:                   cfg,
 	}
 }
 
@@ -287,4 +325,120 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		ClientSecret:       stripe.ClientSecret,
 		RequiresAction:     stripe.ClientSecret != "",
 	}, nil
+}
+
+func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+	allowed, err := s.rateLimiter.Allow(ctx, "forgot_password:"+email, 3, time.Hour)
+	if err != nil {
+		log.Error().Err(err).Msg("Falha ao verificar rate limit de forgot-password")
+		return fmt.Errorf("checking rate limit: %w", err)
+	}
+
+	if !allowed {
+		return ErrPasswordResetRateLimited
+	}
+
+	user, err := s.userService.GetUserByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+
+	token, err := s.passwordResetStore.GenerateToken()
+	if err != nil {
+		return fmt.Errorf("generating reset token: %w", err)
+	}
+
+	if err := s.passwordResetStore.Store(ctx, user.ID.String(), token); err != nil {
+		return fmt.Errorf("storing reset token: %w", err)
+	}
+
+	resetURL := fmt.Sprintf("%s/reset-password?token=%s", s.cfg.FrontendURL, token)
+
+	event := events.PasswordResetEmail{
+		UserID:   user.ID.String(),
+		Name:     user.Name,
+		Email:    user.Email,
+		ResetURL: resetURL,
+	}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		return fmt.Errorf("serializing reset email event: %w", err)
+	}
+
+	if err := s.amqpChan.PublishWithContext(
+		ctx,
+		"protrack.ex.eventos",
+		"email.password_reset",
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		},
+	); err != nil {
+		log.Error().Err(err).Str("user_id", user.ID.String()).Msg("Falha ao publicar evento de reset de senha no RabbitMQ")
+		return fmt.Errorf("publishing reset email event: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Service) ConfirmPasswordReset(ctx context.Context, token, newPassword string) error {
+	userIDStr, err := s.passwordResetStore.Validate(ctx, token)
+	if err != nil {
+		return ErrInvalidResetToken
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		return ErrInvalidResetToken
+	}
+
+	if err := s.userService.ResetPasswordHash(ctx, userID, newPassword); err != nil {
+		return err
+	}
+
+	if err = s.passwordResetStore.Invalidate(ctx, token); err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao invalidar token de reset após uso")
+	}
+
+	if err = s.blacklist.ClearUserTokens(ctx, userID.String()); err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao revogar sessões ativas após reset de senha")
+	}
+
+	user, err := s.userService.GetUserByID(ctx, userID)
+	if err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao buscar usuário para notificação pós-reset")
+		return err
+	}
+
+	event := events.PasswordChangedEmail{
+		UserID: userID.String(),
+		Name:   user.Name,
+		Email:  user.Email,
+	}
+
+	body, err := json.Marshal(event)
+	if err != nil {
+		log.Error().Err(err).Msg("Falha ao serializar evento de senha alterada")
+		return nil
+	}
+
+	if err := s.amqpChan.PublishWithContext(
+		ctx,
+		"protrack.ex.eventos",
+		"email.password_changed",
+		false,
+		false,
+		amqp091.Publishing{
+			ContentType:  "application/json",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		},
+	); err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao publicar evento de senha alterada no RabbitMQ")
+	}
+	return nil
 }

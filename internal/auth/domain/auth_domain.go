@@ -18,6 +18,15 @@ type LoginResponse struct {
 	TokenType    string `json:"token_type"` // Tipo do token (Bearer)
 }
 
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
 type RegisterRequest struct {
 	User struct {
 		Name     string `json:"name" validate:"required"`
