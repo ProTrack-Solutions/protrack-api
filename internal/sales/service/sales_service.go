@@ -151,7 +151,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 
 	id, err := txRepo.CreateSales(ctx, db.CreateSaleParams{
-		CustomerID:        pgconv.ParseUUIDToPgType(req.CustomerID),
+		CustomerID:        pgconv.OptionalUUIDToPgType(req.CustomerID),
 		CompanyID:         pgconv.ParseUUIDToPgType(companyId),
 		DiscountAmount:    pgconv.Float64ToPgNumeric(req.DiscountAmount),
 		Subtotal:          pgconv.Float64ToPgNumeric(subTotal),
@@ -162,6 +162,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		CreatedBy:         pgconv.ParseUUIDToPgType(userId),
 		InstallmentsCount: installments,
 		DownPayment:       pgconv.Float64ToPgNumeric(req.Prohibited),
+		BuyerDocument:     pgconv.ParseStringToPgText(req.BuyerDocument),
 	})
 	if err != nil {
 		return uuid.Nil, err

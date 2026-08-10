@@ -11,7 +11,8 @@ INSERT INTO sales (
         due_days,
         payment_method,
         created_by,
-        status
+        status,
+        buyer_document
     )
 VALUES (
         $1,
@@ -25,7 +26,8 @@ VALUES (
         $8,
         $9,
         $10,
-        $11
+        $11,
+        $12
     )
 RETURNING id;
 -- name: ListSales :many
@@ -40,9 +42,9 @@ WHERE company_id = $1
 ORDER BY created_at DESC;
 -- name: GetSaleById :one
 SELECT s.*,
-    c.full_name as customer_name
+    COALESCE(c.full_name, '') as customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1
     AND s.company_id = $2;
 -- name: DeleteSale :exec
@@ -71,9 +73,9 @@ SELECT s.id AS sale_id,
     si.unit_price,
     si.discount,
     p.name AS product_name,
-    c.full_name AS customer_name
+    COALESCE(c.full_name, '') AS customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
 WHERE s.company_id = $1
@@ -148,16 +150,16 @@ RETURNING id AS sale_id,
     customer_id, company_id;
 -- name: GetSaleByIdWhatsapp :one
 SELECT s.*,
-    c.full_name as customer_name,
-    c.whatsapp as customer_whatsApp
+    COALESCE(c.full_name, '') as customer_name,
+    COALESCE(c.whatsapp, '') as customer_whatsApp
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1;
 -- name: GetSaleByIdJust :one
 SELECT s.*,
-    c.full_name as customer_name
+    COALESCE(c.full_name, '') as customer_name
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
 WHERE s.id = $1;
 -- name: ContSalesPendingAndOverdue :one
 SELECT COUNT(*)
@@ -178,7 +180,7 @@ SELECT -- Dados da venda
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -194,7 +196,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -216,7 +218,7 @@ SELECT -- Dados da venda
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -232,7 +234,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -254,7 +256,7 @@ SELECT -- Dados da venda
     s.status AS sale_status,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -270,7 +272,7 @@ SELECT -- Dados da venda
     ar.installment_number,
     ar.status AS installment_status
 FROM sales s
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -330,7 +332,7 @@ WITH filtered_sales AS (
     -- as linhas por venda e "count(DISTINCT ...) OVER()" não é suportado pelo Postgres.
     SELECT DISTINCT s.id, s.sale_at
     FROM sales s
-        INNER JOIN customers c ON s.customer_id = c.id
+        LEFT JOIN customers c ON s.customer_id = c.id
         INNER JOIN sale_items si ON s.id = si.sale_id
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
@@ -389,7 +391,7 @@ SELECT
     s.down_payment,
     -- Dados do cliente
     c.id AS customer_id,
-    c.full_name AS customer_name,
+    COALESCE(c.full_name, '') AS customer_name,
     -- Dados dos produtos (itens da venda)
     si.id AS sale_item_id,
     si.product_id,
@@ -407,7 +409,7 @@ SELECT
     ps.total_count
 FROM paginated_sales ps
     INNER JOIN sales s ON s.id = ps.id
-    INNER JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN customers c ON s.customer_id = c.id
     INNER JOIN sale_items si ON s.id = si.sale_id
     INNER JOIN products p ON si.product_id = p.id
     LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id

@@ -350,6 +350,7 @@ type Sale struct {
 	UpdatedBy         pgtype.UUID        `json:"updated_by"`
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy         pgtype.UUID        `json:"deleted_by"`
+	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 }
 
 type SaleItem struct {
