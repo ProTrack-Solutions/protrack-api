@@ -288,6 +288,26 @@ definitions:
     - payment
     - user
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterResponse:
+    properties:
+      client_secret:
+        description: |-
+          ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA
+          chamar stripe.confirmCardPayment(client_secret) com esse valor para
+          concluir a autenticação do cartão (incluindo 3D Secure); sem essa
+          confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
+        type: string
+      company_id:
+        type: string
+      requires_action:
+        description: |-
+          RequiresAction indica que o frontend deve chamar confirmCardPayment
+          antes de considerar o cadastro concluído.
+        type: boolean
+      subscription_status:
+        description: 'Status da assinatura no Stripe logo após a criação (ex: "incomplete").'
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_bill_categories_domain.BillCategoryResponse:
     properties:
       company_id:
@@ -1666,35 +1686,11 @@ definitions:
       plan_id:
         type: string
     type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams:
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordParams:
     properties:
-      company_id:
+      current_password:
         type: string
-      created_at:
-        type: string
-      created_by:
-        type: string
-      department_id:
-        type: string
-      email:
-        type: string
-      name:
-        type: string
-      password_hash:
-        type: string
-      role:
-        type: string
-      status: {}
-      updated_by:
-        type: string
-      username:
-        type: string
-    type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams:
-    properties:
-      id:
-        type: string
-      password_hash:
+      password:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest:
@@ -1855,70 +1851,6 @@ info:
   title: ProTrack API
   version: "1.0"
 paths:
-  /{id}:
-    delete:
-      parameters:
-      - description: ID do usuário
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: No Content
-      security:
-      - BearerAuth: []
-      summary: Remove um usuário
-      tags:
-      - users
-    get:
-      parameters:
-      - description: ID do usuário
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
-      security:
-      - BearerAuth: []
-      summary: Busca usuário por ID
-      tags:
-      - users
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: ID do usuário
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Usuário
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
-      security:
-      - BearerAuth: []
-      summary: Atualiza um usuário
-      tags:
-      - users
   /accounts-receivable:
     get:
       parameters:
@@ -2311,9 +2243,7 @@ paths:
         "201":
           description: Empresa e usuário criados com sucesso
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.RegisterResponse'
         "400":
           description: Requisição inválida
           schema:
@@ -5092,46 +5022,29 @@ paths:
       summary: Atualiza o plano da assinatura
       tags:
       - subscriptions
-  /users:
-    get:
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
-            type: array
-      summary: Lista todos os usuários
-      tags:
-      - users
-    post:
-      consumes:
-      - application/json
+  /user/{id}:
+    delete:
       parameters:
-      - description: Usuário
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.CreateUserParams'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
-      summary: Cria um usuário
-      tags:
-      - users
-  /users/email/{email}:
-    get:
-      parameters:
-      - description: E-mail
+      - description: ID do usuário
         in: path
-        name: email
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um usuário
+      tags:
+      - users
+    get:
+      parameters:
+      - description: ID do usuário
+        in: path
+        name: id
         required: true
         type: string
       produces:
@@ -5141,26 +5054,59 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
-      summary: Busca usuário por e-mail
+      security:
+      - BearerAuth: []
+      summary: Busca usuário por ID
       tags:
       - users
-  /users/password:
     put:
       consumes:
       - application/json
       parameters:
-      - description: Senha
+      - description: ID do usuário
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Usuário
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+      security:
+      - BearerAuth: []
+      summary: Atualiza um usuário
+      tags:
+      - users
+  /user/password:
+    put:
+      consumes:
+      - application/json
+      description: Requer a senha atual para confirmação; o usuário é identificado
+        pelo token JWT (claim "sub"), não pelo corpo da requisição.
+      parameters:
+      - description: Senha atual e nova senha
         in: body
         name: password
         required: true
         schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordHashParams'
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdatePasswordParams'
       produces:
       - application/json
       responses:
         "204":
           description: No Content
-      summary: Atualiza a senha do usuário
+      security:
+      - BearerAuth: []
+      summary: Atualiza a senha do usuário autenticado
       tags:
       - users
   /vendors:
