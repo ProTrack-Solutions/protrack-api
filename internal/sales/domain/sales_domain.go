@@ -6,6 +6,7 @@ import (
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
+	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
@@ -28,6 +29,7 @@ type PaginationParams struct {
 
 type CreateSaleRequest struct {
 	CustomerID        uuid.UUID               `json:"customer_id"`
+	BuyerDocument     string                  `json:"buyer_document"`
 	DiscountAmount    float64                 `json:"discount_amount"`
 	DueDays           int32                   `json:"due_days"`
 	PaymentMethod     enums.PaymentMethod     `json:"payment_method"`
@@ -254,8 +256,15 @@ type OverdueSalesResult struct {
 }
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {
-	if req.CustomerID == uuid.Nil {
-		return errors.New("customer_id is required")
+	// Venda a prazo (parcelada) exige cliente cadastrado, pois gera saldo devedor
+	// e contas a receber vinculados a ele. Venda avulsa (paga na hora) não exige.
+	if req.PaymentMethod == enums.PaymentMethodInstallments && req.CustomerID == uuid.Nil {
+		return errors.New("customer_id is required for installment sales")
+	}
+	if req.BuyerDocument != "" {
+		if _, err := validate.ValidateDocument(req.BuyerDocument); err != nil {
+			return fmt.Errorf("buyer_document: %w", err)
+		}
 	}
 	if len(req.Items) == 0 {
 		return errors.New("the sale must have at least one item")
