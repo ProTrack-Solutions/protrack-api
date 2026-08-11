@@ -540,6 +540,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/forgot-password": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Solicita a recuperação de senha",
+                "parameters": [
+                    {
+                        "description": "E-mail do usuário",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "consumes": [
@@ -647,6 +692,51 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Erro interno do servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Confirma a redefinição de senha usando o token recebido por e-mail",
+                "parameters": [
+                    {
+                        "description": "Token e nova senha",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ResetPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -5821,6 +5911,17 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginRequest": {
             "type": "object",
             "required": [
@@ -6013,6 +6114,22 @@ const docTemplate = `{
                 },
                 "subscription_status": {
                     "description": "Status da assinatura no Stripe logo após a criação (ex: \"incomplete\").",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ResetPasswordRequest": {
+            "type": "object",
+            "required": [
+                "new_password",
+                "token"
+            ],
+            "properties": {
+                "new_password": {
+                    "type": "string",
+                    "minLength": 8
+                },
+                "token": {
                     "type": "string"
                 }
             }
@@ -7153,8 +7270,14 @@ const docTemplate = `{
                 "display_order": {
                     "type": "integer"
                 },
+                "feature_key": {
+                    "type": "string"
+                },
                 "is_enabled": {
                     "type": "boolean"
+                },
+                "limit_value": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -7170,11 +7293,17 @@ const docTemplate = `{
                 "display_order": {
                     "type": "integer"
                 },
+                "feature_key": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "string"
                 },
                 "is_enabled": {
                     "type": "boolean"
+                },
+                "limit_value": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -7620,6 +7749,9 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleRequest": {
             "type": "object",
             "properties": {
+                "buyer_document": {
+                    "type": "string"
+                },
                 "customer_id": {
                     "type": "string"
                 },

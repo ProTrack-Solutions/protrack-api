@@ -65,6 +65,8 @@ func (s *Service) ListFeaturesByPlanID(ctx context.Context, planId uuid.UUID) ([
 			DisplayOrder: fe.DisplayOrder,
 			CreatedAt:    pgconv.PgTimestamptzToTime(fe.CreatedAt),
 			UpdatedAt:    pgconv.PgTimestamptzToTime(fe.UpdatedAt),
+			FeatureKey:   fe.FeatureKey,
+			LimitValue:   int64(fe.LimitValue.Int32),
 		})
 	}
 
