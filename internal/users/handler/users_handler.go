@@ -33,6 +33,25 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 // uso interno/testes — sem anotações @Router para não aparecer no
 // Swagger como um endpoint disponível.
 func (h *Handler) CreateUser(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	userIdAny, exists := c.Get("sub")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "sub is null"})
+	}
+
+	userIdStr := userIdAny.(string)
+
+	userId, err := uuid.Parse(userIdStr)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id is null"})
+	}
+
 	var req domain.CreateUserParams
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -40,7 +59,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 		return
 	}
 
-	user, err := h.service.CreateUser(c.Request.Context(), req)
+	user, err := h.service.CreateUser(c.Request.Context(), userId, companyId, req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

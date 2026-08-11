@@ -25,6 +25,7 @@ type Querier interface {
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountUserByCompanyId(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CreateAccountReceivable(ctx context.Context, arg CreateAccountReceivableParams) error
 	CreateAnnouncements(ctx context.Context, arg CreateAnnouncementsParams) error
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error

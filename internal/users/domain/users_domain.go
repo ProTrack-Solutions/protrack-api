@@ -34,10 +34,7 @@ type CreateUserParams struct {
 	PasswordHash string    `json:"password_hash"`
 	Role         string    `json:"role"`
 	Status       any       `json:"status"`
-	CompanyID    uuid.UUID `json:"company_id"`
 	DepartmentID uuid.UUID `json:"department_id"`
-	CreatedBy    uuid.UUID `json:"created_by"`
-	UpdatedBy    uuid.UUID `json:"updated_by"`
 	CreatedAt    time.Time `json:"created_at"`
 }
 

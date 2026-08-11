@@ -2,13 +2,18 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
+	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
+	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -38,19 +43,57 @@ type RepositoryInterface interface {
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
-type Service struct {
-	repo RepositoryInterface
-	pool *pgxpool.Pool
+// PlansServiceInterface define o contrato de plans consumido pelo service de products.
+type PlansServiceInterface interface {
+	GetPlanByID(ctx context.Context, planId uuid.UUID) (plansDomain.PlanResponse, error)
 }
 
-func NewService(repo *repository.Repository, pool *pgxpool.Pool) *Service {
+// SubscriptionsServiceInterface define o contrato de subscriptions consumido pelo service de products.
+type SubscriptionsServiceInterface interface {
+	GetSubscriptionByCompanyID(ctx context.Context, companyID uuid.UUID) (subscriptionsDomain.SubscriptionResponse, error)
+}
+
+type Service struct {
+	plansService         PlansServiceInterface
+	subscriptionsService SubscriptionsServiceInterface
+	repo                 RepositoryInterface
+	pool                 *pgxpool.Pool
+}
+
+func NewService(repo *repository.Repository, pool *pgxpool.Pool, plansSvc *plansService.Service, subscriptionsSvc *subscriptionsService.Service) *Service {
 	return &Service{
-		repo: repo,
-		pool: pool,
+		repo:                 repo,
+		pool:                 pool,
+		plansService:         plansSvc,
+		subscriptionsService: subscriptionsSvc,
 	}
 }
 
 func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateProductRequest) (domain.ProductResponse, error) {
+	sub, err := s.subscriptionsService.GetSubscriptionByCompanyID(ctx, companyId)
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	contProducts, err := s.repo.CountProducts(ctx, pgconv.OptionalUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	for _, pf := range plan.Features {
+		if pf.FeatureKey == "max_products" {
+			if pf.LimitValue == contProducts {
+				return domain.ProductResponse{}, errors.New("product limit reached for plan")
+			}
+			break
+		}
+	}
+
 	if req.NotBarcode {
 		barcode, err := domain.GerarEAN13("")
 		if err != nil {

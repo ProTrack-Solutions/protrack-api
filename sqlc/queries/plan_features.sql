@@ -3,9 +3,11 @@ INSERT INTO plan_features (
     plan_id,
     name,
     is_enabled,
-    display_order
+    display_order,
+    feature_key,
+    limit_value
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5, $6
 );
 
 -- name: ListFeaturesByPlanID :many

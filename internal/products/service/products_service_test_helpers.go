@@ -9,3 +9,15 @@ func NewServiceWithRepo(repo RepositoryInterface) *Service {
 		pool: nil,
 	}
 }
+
+// NewServiceWithDeps é um construtor alternativo para testes que permite injetar
+// implementações de RepositoryInterface, PlansServiceInterface e SubscriptionsServiceInterface
+// (incluindo mocks). Não deve ser utilizado em código de produção.
+func NewServiceWithDeps(repo RepositoryInterface, plansSvc PlansServiceInterface, subscriptionsSvc SubscriptionsServiceInterface) *Service {
+	return &Service{
+		repo:                 repo,
+		plansService:         plansSvc,
+		subscriptionsService: subscriptionsSvc,
+		pool:                 nil,
+	}
+}

@@ -16,6 +16,8 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
@@ -32,24 +34,53 @@ type RepositoryInterface interface {
 	UpdateUser(ctx context.Context, arg db.UpdateUserParams) (db.User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg db.UpdateUserCompanyAndRoleParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
+	CountUsersByCompanyID(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
 type Service struct {
-	repo RepositoryInterface
-	pool *pgxpool.Pool
-	cfg  *config.Config
+	plansService         *plansService.Service
+	subscriptionsService *subscriptionsService.Service
+	repo                 RepositoryInterface
+	pool                 *pgxpool.Pool
+	cfg                  *config.Config
 }
 
-func NewService(repo *repository.Repository, pool *pgxpool.Pool, cfg *config.Config) *Service {
+func NewService(repo *repository.Repository, pool *pgxpool.Pool, cfg *config.Config, plansService *plansService.Service, subscriptionsService *subscriptionsService.Service) *Service {
 	return &Service{
-		repo: repo,
-		pool: pool,
-		cfg:  cfg,
+		repo:                 repo,
+		pool:                 pool,
+		cfg:                  cfg,
+		plansService:         plansService,
+		subscriptionsService: subscriptionsService,
 	}
 }
 
-func (s *Service) CreateUser(ctx context.Context, req domain.CreateUserParams) (domain.UserResponse, error) {
+func (s *Service) CreateUser(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateUserParams) (domain.UserResponse, error) {
+	sub, err := s.subscriptionsService.GetSubscriptionByCompanyID(ctx, companyId)
+	if err != nil {
+		return domain.UserResponse{}, err
+	}
+
+	plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
+	if err != nil {
+		return domain.UserResponse{}, err
+	}
+
+	contUsers, err := s.repo.CountUsersByCompanyID(ctx, pgconv.OptionalUUIDToPgType(companyId))
+	if err != nil {
+		return domain.UserResponse{}, err
+	}
+
+	for _, pf := range plan.Features {
+		if pf.FeatureKey == "max_users" {
+			if pf.LimitValue == contUsers {
+				return domain.UserResponse{}, errors.New("users limit reached for plan")
+			}
+			break
+		}
+	}
+
 	if err := validate.ValidPassword(req.PasswordHash); err != nil {
 		return domain.UserResponse{}, err
 	}
@@ -75,10 +106,10 @@ func (s *Service) CreateUser(ctx context.Context, req domain.CreateUserParams) (
 		PasswordHash: string(hashPassword),
 		Role:         req.Role,
 		Status:       req.Status,
-		CompanyID:    pgconv.ParseUUIDToPgType(req.CompanyID),
+		CompanyID:    pgconv.ParseUUIDToPgType(companyId),
 		DepartmentID: pgconv.ParseUUIDToPgType(req.DepartmentID),
-		CreatedBy:    pgconv.ParseUUIDToPgType(req.CreatedBy),
-		UpdatedBy:    pgconv.ParseUUIDToPgType(req.UpdatedBy),
+		CreatedBy:    pgconv.ParseUUIDToPgType(userId),
+		UpdatedBy:    pgconv.ParseUUIDToPgType(userId),
 		CreatedAt:    pgconv.TimeToPgTimestamptz(req.CreatedAt),
 	})
 	if err != nil {
@@ -354,7 +385,7 @@ func (s *Service) ResetPasswordHash(ctx context.Context, userId uuid.UUID, newPa
 	})
 }
 
-func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.CreateUserParams) (uuid.UUID, error) {
+func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, companyId uuid.UUID, req domain.CreateUserParams) (uuid.UUID, error) {
 	repoTx := db.New(tx)
 
 	log.Info().Str("password", req.PasswordHash).Msg("password")
@@ -384,7 +415,7 @@ func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, req domain.Creat
 		PasswordHash: string(hashPassword),
 		Role:         "ADMIN",
 		Status:       "ACTIVE",
-		CompanyID:    pgconv.ParseUUIDToPgType(req.CompanyID),
+		CompanyID:    pgconv.ParseUUIDToPgType(companyId),
 		CreatedAt:    pgconv.TimeToPgTimestamptz(time.Now()),
 		CreatedBy:    pgconv.ParseUUIDToPgType(uuid.Nil),
 	})

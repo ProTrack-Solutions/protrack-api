@@ -165,30 +165,52 @@ type BillsPayable struct {
 }
 
 type Company struct {
-	ID                  pgtype.UUID        `json:"id"`
-	Name                string             `json:"name"`
-	TradeName           pgtype.Text        `json:"trade_name"`
-	Document            pgtype.Text        `json:"document"`
-	DocumentType        pgtype.Text        `json:"document_type"`
-	Email               pgtype.Text        `json:"email"`
-	Phone               pgtype.Text        `json:"phone"`
-	Website             pgtype.Text        `json:"website"`
-	AddressStreet       pgtype.Text        `json:"address_street"`
-	AddressNumber       pgtype.Text        `json:"address_number"`
-	AddressComplement   pgtype.Text        `json:"address_complement"`
-	AddressNeighborhood pgtype.Text        `json:"address_neighborhood"`
-	AddressCity         pgtype.Text        `json:"address_city"`
-	AddressState        pgtype.Text        `json:"address_state"`
-	AddressZipcode      pgtype.Text        `json:"address_zipcode"`
-	AddressCountry      pgtype.Text        `json:"address_country"`
-	Status              interface{}        `json:"status"`
-	Timezone            pgtype.Text        `json:"timezone"`
-	CreatedBy           pgtype.UUID        `json:"created_by"`
-	UpdatedBy           pgtype.UUID        `json:"updated_by"`
-	DeletedBy           pgtype.UUID        `json:"deleted_by"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	ID                      pgtype.UUID        `json:"id"`
+	Name                    string             `json:"name"`
+	TradeName               pgtype.Text        `json:"trade_name"`
+	Document                pgtype.Text        `json:"document"`
+	DocumentType            pgtype.Text        `json:"document_type"`
+	Email                   pgtype.Text        `json:"email"`
+	Phone                   pgtype.Text        `json:"phone"`
+	Website                 pgtype.Text        `json:"website"`
+	AddressStreet           pgtype.Text        `json:"address_street"`
+	AddressNumber           pgtype.Text        `json:"address_number"`
+	AddressComplement       pgtype.Text        `json:"address_complement"`
+	AddressNeighborhood     pgtype.Text        `json:"address_neighborhood"`
+	AddressCity             pgtype.Text        `json:"address_city"`
+	AddressState            pgtype.Text        `json:"address_state"`
+	AddressZipcode          pgtype.Text        `json:"address_zipcode"`
+	AddressCountry          pgtype.Text        `json:"address_country"`
+	Status                  interface{}        `json:"status"`
+	Timezone                pgtype.Text        `json:"timezone"`
+	CreatedBy               pgtype.UUID        `json:"created_by"`
+	UpdatedBy               pgtype.UUID        `json:"updated_by"`
+	DeletedBy               pgtype.UUID        `json:"deleted_by"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
+	InscricaoEstadual       pgtype.Text        `json:"inscricao_estadual"`
+	InscricaoEstadualIsento bool               `json:"inscricao_estadual_isento"`
+	Cnae                    pgtype.Text        `json:"cnae"`
+	RegimeTributario        interface{}        `json:"regime_tributario"`
+}
+
+type CompanyCertificate struct {
+	ID                     pgtype.UUID        `json:"id"`
+	CompanyID              pgtype.UUID        `json:"company_id"`
+	EncryptedCertData      []byte             `json:"encrypted_cert_data"`
+	EncryptedCertNonce     []byte             `json:"encrypted_cert_nonce"`
+	EncryptedPassword      []byte             `json:"encrypted_password"`
+	EncryptedPasswordNonce []byte             `json:"encrypted_password_nonce"`
+	CertSubjectCn          pgtype.Text        `json:"cert_subject_cn"`
+	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
+	NuvemFiscalStatus      interface{}        `json:"nuvem_fiscal_status"`
+	CreatedBy              pgtype.UUID        `json:"created_by"`
+	UpdatedBy              pgtype.UUID        `json:"updated_by"`
+	DeletedBy              pgtype.UUID        `json:"deleted_by"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
 }
 
 type Customer struct {
@@ -233,6 +255,39 @@ type Department struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type FiscalInvoice struct {
+	ID                   pgtype.UUID        `json:"id"`
+	CompanyID            pgtype.UUID        `json:"company_id"`
+	SaleID               pgtype.UUID        `json:"sale_id"`
+	Type                 interface{}        `json:"type"`
+	Status               interface{}        `json:"status"`
+	NuvemFiscalID        pgtype.Text        `json:"nuvem_fiscal_id"`
+	ChaveAcesso          pgtype.Text        `json:"chave_acesso"`
+	Numero               pgtype.Text        `json:"numero"`
+	Serie                pgtype.Text        `json:"serie"`
+	ProtocoloAutorizacao pgtype.Text        `json:"protocolo_autorizacao"`
+	XmlUrl               pgtype.Text        `json:"xml_url"`
+	DanfeUrl             pgtype.Text        `json:"danfe_url"`
+	ErrorMessage         pgtype.Text        `json:"error_message"`
+	CancelledReason      pgtype.Text        `json:"cancelled_reason"`
+	AuthorizedAt         pgtype.Timestamptz `json:"authorized_at"`
+	CancelledAt          pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedBy            pgtype.UUID        `json:"created_by"`
+	UpdatedBy            pgtype.UUID        `json:"updated_by"`
+	DeletedBy            pgtype.UUID        `json:"deleted_by"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt            pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type FiscalInvoiceEvent struct {
+	ID              pgtype.UUID        `json:"id"`
+	FiscalInvoiceID pgtype.UUID        `json:"fiscal_invoice_id"`
+	EventType       interface{}        `json:"event_type"`
+	Payload         []byte             `json:"payload"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type InvoiceHistory struct {
@@ -294,27 +349,35 @@ type PlanFeature struct {
 	DisplayOrder int32              `json:"display_order"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	FeatureKey   string             `json:"feature_key"`
+	LimitValue   pgtype.Int4        `json:"limit_value"`
 }
 
 type Product struct {
-	ID          pgtype.UUID        `json:"id"`
-	CompanyID   pgtype.UUID        `json:"company_id"`
-	CategoryID  pgtype.UUID        `json:"category_id"`
-	Name        string             `json:"name"`
-	Description pgtype.Text        `json:"description"`
-	Barcode     pgtype.Text        `json:"barcode"`
-	Quantity    pgtype.Int4        `json:"quantity"`
-	Size        pgtype.Text        `json:"size"`
-	CostPrice   pgtype.Numeric     `json:"cost_price"`
-	SalePrice   pgtype.Numeric     `json:"sale_price"`
-	CreatedBy   pgtype.UUID        `json:"created_by"`
-	UpdatedBy   pgtype.UUID        `json:"updated_by"`
-	DeletedBy   pgtype.UUID        `json:"deleted_by"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
-	Unit        UnitOfMeasure      `json:"unit"`
-	SellInBulk  bool               `json:"sell_in_bulk"`
+	ID                    pgtype.UUID        `json:"id"`
+	CompanyID             pgtype.UUID        `json:"company_id"`
+	CategoryID            pgtype.UUID        `json:"category_id"`
+	Name                  string             `json:"name"`
+	Description           pgtype.Text        `json:"description"`
+	Barcode               pgtype.Text        `json:"barcode"`
+	Quantity              pgtype.Int4        `json:"quantity"`
+	Size                  pgtype.Text        `json:"size"`
+	CostPrice             pgtype.Numeric     `json:"cost_price"`
+	SalePrice             pgtype.Numeric     `json:"sale_price"`
+	CreatedBy             pgtype.UUID        `json:"created_by"`
+	UpdatedBy             pgtype.UUID        `json:"updated_by"`
+	DeletedBy             pgtype.UUID        `json:"deleted_by"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt             pgtype.Timestamptz `json:"deleted_at"`
+	Unit                  UnitOfMeasure      `json:"unit"`
+	SellInBulk            bool               `json:"sell_in_bulk"`
+	Ncm                   pgtype.Text        `json:"ncm"`
+	Cest                  pgtype.Text        `json:"cest"`
+	Csosn                 pgtype.Text        `json:"csosn"`
+	CfopSaidaDentroEstado pgtype.Text        `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   pgtype.Text        `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16              `json:"origem_mercadoria"`
 }
 
 type ProductCategory struct {

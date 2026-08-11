@@ -16,9 +16,11 @@ INSERT INTO plan_features (
     plan_id,
     name,
     is_enabled,
-    display_order
+    display_order,
+    feature_key,
+    limit_value
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5, $6
 )
 `
 
@@ -27,6 +29,8 @@ type CreatePlanFeatureParams struct {
 	Name         string      `json:"name"`
 	IsEnabled    bool        `json:"is_enabled"`
 	DisplayOrder int32       `json:"display_order"`
+	FeatureKey   string      `json:"feature_key"`
+	LimitValue   pgtype.Int4 `json:"limit_value"`
 }
 
 func (q *Queries) CreatePlanFeature(ctx context.Context, arg CreatePlanFeatureParams) error {
@@ -35,6 +39,8 @@ func (q *Queries) CreatePlanFeature(ctx context.Context, arg CreatePlanFeaturePa
 		arg.Name,
 		arg.IsEnabled,
 		arg.DisplayOrder,
+		arg.FeatureKey,
+		arg.LimitValue,
 	)
 	return err
 }
@@ -50,7 +56,7 @@ func (q *Queries) DeletePlanFeature(ctx context.Context, id pgtype.UUID) error {
 }
 
 const listFeaturesByPlanID = `-- name: ListFeaturesByPlanID :many
-SELECT id, plan_id, name, is_enabled, display_order, created_at, updated_at
+SELECT id, plan_id, name, is_enabled, display_order, created_at, updated_at, feature_key, limit_value
 FROM plan_features
 WHERE plan_id = $1
 ORDER BY display_order ASC
@@ -73,6 +79,8 @@ func (q *Queries) ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) 
 			&i.DisplayOrder,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FeatureKey,
+			&i.LimitValue,
 		); err != nil {
 			return nil, err
 		}

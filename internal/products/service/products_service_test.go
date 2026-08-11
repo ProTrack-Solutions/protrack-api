@@ -9,9 +9,12 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
+	plansFeatureDomain "github.com/ProTrack-Solutions/protrack-api/internal/plan_features/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/mocks"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/service"
+	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/mock/gomock"
@@ -25,6 +28,14 @@ import (
 func newService(t *testing.T, repo *mocks.MockRepositoryInterface) *service.Service {
 	t.Helper()
 	return service.NewServiceWithRepo(repo)
+}
+
+// newServiceWithDeps cria um novo Service injetando o mock de repositório e os mocks
+// de plansService/subscriptionsService via NewServiceWithDeps, necessário para os
+// métodos que validam os limites do plano (ex.: CreateProduct).
+func newServiceWithDeps(t *testing.T, repo *mocks.MockRepositoryInterface, plansSvc *mocks.MockPlansServiceInterface, subscriptionsSvc *mocks.MockSubscriptionsServiceInterface) *service.Service {
+	t.Helper()
+	return service.NewServiceWithDeps(repo, plansSvc, subscriptionsSvc)
 }
 
 // buildDbProduct cria uma db.Product de exemplo totalmente preenchido.
@@ -109,12 +120,32 @@ func TestCreateProduct_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := newService(t, repo)
+	plansSvc := mocks.NewMockPlansServiceInterface(ctrl)
+	subscriptionsSvc := mocks.NewMockSubscriptionsServiceInterface(ctrl)
+	svc := newServiceWithDeps(t, repo, plansSvc, subscriptionsSvc)
 
 	companyId := uuid.New()
 	categoryID := uuid.New()
 	userId := uuid.New()
 	productID := uuid.New()
+	planID := uuid.New()
+
+	subscriptionsSvc.EXPECT().
+		GetSubscriptionByCompanyID(gomock.Any(), companyId).
+		Return(subscriptionsDomain.SubscriptionResponse{PlanID: planID}, nil)
+
+	plansSvc.EXPECT().
+		GetPlanByID(gomock.Any(), planID).
+		Return(plansDomain.PlanResponse{
+			ID: planID,
+			Features: []plansFeatureDomain.PlanFeatureResponse{
+				{FeatureKey: "max_products", LimitValue: 100},
+			},
+		}, nil)
+
+	repo.EXPECT().
+		CountProducts(gomock.Any(), gomock.Any()).
+		Return(int64(5), nil)
 
 	expectedProduct := buildDbProduct(productID, companyId, categoryID, userId)
 
@@ -156,7 +187,28 @@ func TestCreateProduct_RepositoryError(t *testing.T) {
 	defer ctrl.Finish()
 
 	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := newService(t, repo)
+	plansSvc := mocks.NewMockPlansServiceInterface(ctrl)
+	subscriptionsSvc := mocks.NewMockSubscriptionsServiceInterface(ctrl)
+	svc := newServiceWithDeps(t, repo, plansSvc, subscriptionsSvc)
+
+	planID := uuid.New()
+
+	subscriptionsSvc.EXPECT().
+		GetSubscriptionByCompanyID(gomock.Any(), gomock.Any()).
+		Return(subscriptionsDomain.SubscriptionResponse{PlanID: planID}, nil)
+
+	plansSvc.EXPECT().
+		GetPlanByID(gomock.Any(), planID).
+		Return(plansDomain.PlanResponse{
+			ID: planID,
+			Features: []plansFeatureDomain.PlanFeatureResponse{
+				{FeatureKey: "max_products", LimitValue: 100},
+			},
+		}, nil)
+
+	repo.EXPECT().
+		CountProducts(gomock.Any(), gomock.Any()).
+		Return(int64(5), nil)
 
 	repo.EXPECT().
 		CreateProduct(gomock.Any(), gomock.Any()).
@@ -168,6 +220,66 @@ func TestCreateProduct_RepositoryError(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório, mas não houve")
+	}
+}
+
+func TestCreateProduct_PlanLimitReached(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	plansSvc := mocks.NewMockPlansServiceInterface(ctrl)
+	subscriptionsSvc := mocks.NewMockSubscriptionsServiceInterface(ctrl)
+	svc := newServiceWithDeps(t, repo, plansSvc, subscriptionsSvc)
+
+	companyId := uuid.New()
+	planID := uuid.New()
+
+	subscriptionsSvc.EXPECT().
+		GetSubscriptionByCompanyID(gomock.Any(), companyId).
+		Return(subscriptionsDomain.SubscriptionResponse{PlanID: planID}, nil)
+
+	plansSvc.EXPECT().
+		GetPlanByID(gomock.Any(), planID).
+		Return(plansDomain.PlanResponse{
+			ID: planID,
+			Features: []plansFeatureDomain.PlanFeatureResponse{
+				{FeatureKey: "max_products", LimitValue: 10},
+			},
+		}, nil)
+
+	repo.EXPECT().
+		CountProducts(gomock.Any(), gomock.Any()).
+		Return(int64(10), nil)
+
+	_, err := svc.CreateProduct(context.Background(), uuid.New(), companyId, domain.CreateProductRequest{
+		Name: "X",
+	})
+
+	if err == nil {
+		t.Fatal("esperava erro de limite do plano, mas não houve")
+	}
+}
+
+func TestCreateProduct_SubscriptionServiceError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	plansSvc := mocks.NewMockPlansServiceInterface(ctrl)
+	subscriptionsSvc := mocks.NewMockSubscriptionsServiceInterface(ctrl)
+	svc := newServiceWithDeps(t, repo, plansSvc, subscriptionsSvc)
+
+	subscriptionsSvc.EXPECT().
+		GetSubscriptionByCompanyID(gomock.Any(), gomock.Any()).
+		Return(subscriptionsDomain.SubscriptionResponse{}, errDatabase)
+
+	_, err := svc.CreateProduct(context.Background(), uuid.New(), uuid.New(), domain.CreateProductRequest{
+		Name: "X",
+	})
+
+	if err == nil {
+		t.Fatal("esperava erro do serviço de subscriptions, mas não houve")
 	}
 }
 
