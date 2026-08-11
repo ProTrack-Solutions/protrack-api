@@ -6,10 +6,18 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	announcements := r.Group("/announcements").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	announcements := r.Group("/announcements")
+	announcements.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
-		announcements.POST("", h.CreateAnnoucements)
+		// leitura: ADMIN e USER podem ver os avisos da empresa
 		announcements.GET("", h.ListAnnoucements)
-		announcements.DELETE("/:id", h.DeleteAnnoucements)
+
+		// criar/remover aviso afeta a empresa toda -> só ADMIN
+		admin := announcements.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.POST("", h.CreateAnnoucements)
+			admin.DELETE("/:id", h.DeleteAnnoucements)
+		}
 	}
 }

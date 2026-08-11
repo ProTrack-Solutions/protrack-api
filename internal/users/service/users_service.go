@@ -35,6 +35,8 @@ type RepositoryInterface interface {
 	UpdateUserCompanyAndRole(ctx context.Context, arg db.UpdateUserCompanyAndRoleParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	CountUsersByCompanyID(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountUsers(ctx context.Context) (int64, error)
+	UpdateOwnProfile(ctx context.Context, req db.UpdateOwnProfileParams) error
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -278,7 +280,6 @@ func (s *Service) UpdateUser(ctx context.Context, id uuid.UUID, req domain.Updat
 		Name:         user.Name,
 		Email:        user.Email,
 		Username:     user.Username,
-		Role:         user.Role,
 		Status:       user.Status,
 		DepartmentID: user.DepartmentID,
 		UpdatedBy:    user.UpdatedBy,
@@ -424,4 +425,28 @@ func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, companyId uuid.U
 	}
 
 	return pgconv.PgUUIDToUUID(user.ID), nil
+}
+
+func (s *Service) UpdateOwnProfile(ctx context.Context, userId uuid.UUID, req domain.UpdateOwnProfileRequest) error {
+	user, err := s.repo.GetUserById(ctx, pgconv.ParseUUIDToPgType(userId))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("user not found")
+		}
+		return err
+	}
+
+	arg := db.UpdateOwnProfileParams{
+		Name:     user.Name,
+		Email:    user.Email,
+		Username: user.Username,
+	}
+
+	domain.ApplyUpdateOwnProfile(req, &arg)
+
+	return s.repo.UpdateOwnProfile(ctx, arg)
+}
+
+func (s *Service) CountUsers(ctx context.Context) (int64, error) {
+	return s.repo.CountUsers(ctx)
 }

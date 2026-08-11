@@ -72,6 +72,12 @@ type UserResponse struct {
 	DepartmentName string    `json:"department_name"`
 }
 
+type UpdateOwnProfileRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
+}
+
 func ApplyUpdateUserParams(req UpdateUserRequest, arg *db.UpdateUserParams) {
 	if req.Name != "" {
 		arg.Name = req.Name
@@ -85,10 +91,6 @@ func ApplyUpdateUserParams(req UpdateUserRequest, arg *db.UpdateUserParams) {
 		arg.Username = pgconv.ParseStringToPgText(req.Username)
 	}
 
-	if req.Role != "" {
-		arg.Role = req.Role
-	}
-
 	if req.Status != nil {
 		arg.Status = req.Status
 	}
@@ -99,6 +101,20 @@ func ApplyUpdateUserParams(req UpdateUserRequest, arg *db.UpdateUserParams) {
 
 	if req.UpdatedBy != (uuid.UUID{}) {
 		arg.UpdatedBy = pgconv.ParseUUIDToPgType(req.UpdatedBy)
+	}
+}
+
+func ApplyUpdateOwnProfile(req UpdateOwnProfileRequest, arg *db.UpdateOwnProfileParams) {
+	if req.Name != "" {
+		arg.Name = req.Name
+	}
+
+	if req.Email != "" {
+		arg.Email = req.Email
+	}
+
+	if req.Username != "" {
+		arg.Username = pgconv.ParseStringToPgText(req.Username)
 	}
 }
 

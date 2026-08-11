@@ -353,6 +353,17 @@ type PlanFeature struct {
 	LimitValue   pgtype.Int4        `json:"limit_value"`
 }
 
+type PlatformAdmin struct {
+	ID           pgtype.UUID        `json:"id"`
+	Name         string             `json:"name"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	Status       interface{}        `json:"status"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
 type Product struct {
 	ID                    pgtype.UUID        `json:"id"`
 	CompanyID             pgtype.UUID        `json:"company_id"`

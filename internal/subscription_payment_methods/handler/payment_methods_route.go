@@ -7,6 +7,9 @@ import (
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	paymentMethods := r.Group("/subscription-payment-methods").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	// métodos de pagamento da assinatura do ProTrack (cartão da empresa) ->
+	// gerenciamento de assinatura/plano -> ADMIN
+	paymentMethods.Use(middleware.RequireRole("ADMIN"))
 	{
 		paymentMethods.POST("", h.CreateSubscriptionPaymentMethodHandler)
 		paymentMethods.GET("", h.GetSubscriptionPaymentMethodByCompanyId)

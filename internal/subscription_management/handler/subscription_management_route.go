@@ -7,6 +7,8 @@ import (
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	authorized := r.Group("/subscription-management").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	// gerenciamento de assinatura/plano da empresa -> ADMIN
+	authorized.Use(middleware.RequireRole("ADMIN"))
 	{
 		authorized.GET("/subscription", h.GetSubscriptionDetails)
 		authorized.POST("/payment-methods", h.AddPaymentMethod)

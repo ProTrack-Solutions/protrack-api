@@ -215,3 +215,13 @@ func (h *Handler) UpdateCompany(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"company": company})
 }
+
+func (h *Handler) CountCompanies(c *gin.Context) {
+	companies, err := h.service.CountCompanies(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"companies": companies})
+}

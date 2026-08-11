@@ -32,10 +32,9 @@ UPDATE users
 SET name = $2,
     email = $3,
     username = $4,
-    role = $5,
-    status = $6,
-    department_id = $7,
-    updated_by = $8,
+    status = $5,
+    department_id = $6,
+    updated_by = $7,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -67,3 +66,14 @@ WHERE id = $1;
 -- name: CountUserByCompanyId :one
 SELECT COUNT(*) FROM users 
 WHERE company_id = $1;
+-- name: UpdateOwnProfile :exec
+UPDATE users
+SET name = $2,
+    email = $3,
+    username = $4,
+    updated_by = $5,
+    updated_at = NOW()
+WHERE id = $1
+    AND deleted_at IS NULL;
+-- name: CountUser :one
+SELECT COUNT(*) FROM users;

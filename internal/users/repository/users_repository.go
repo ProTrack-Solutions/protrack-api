@@ -74,3 +74,11 @@ func (r *Repository) UpdateLastLogin(ctx context.Context, id pgtype.UUID) error 
 func (r *Repository) CountUsersByCompanyID(ctx context.Context, companyID pgtype.UUID) (int64, error) {
 	return r.queries().CountUserByCompanyId(ctx, companyID)
 }
+
+func (r *Repository) UpdateOwnProfile(ctx context.Context, req db.UpdateOwnProfileParams) error {
+	return r.queries().UpdateOwnProfile(ctx, req)
+}
+
+func (r *Repository) CountUsers(ctx context.Context) (int64, error) {
+	return r.queries().CountUser(ctx)
+}

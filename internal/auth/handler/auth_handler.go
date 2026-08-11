@@ -11,21 +11,26 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 type Handler struct {
-	service    *service.Service
-	jwtManager *jwt.JWTManager
-	blacklist  *cache.TokenBlacklist
+	service     *service.Service
+	jwtManager  *jwt.JWTManager
+	blacklist   *cache.TokenBlacklist
+	cfg         *config.Config
+	rateLimiter *cache.RateLimiter
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, cfg *config.Config, rateLimiter *cache.RateLimiter) *Handler {
 	return &Handler{
-		service:    service,
-		jwtManager: jwtManager,
-		blacklist:  blacklist,
+		service:     service,
+		jwtManager:  jwtManager,
+		blacklist:   blacklist,
+		cfg:         cfg,
+		rateLimiter: rateLimiter,
 	}
 }
 
@@ -45,6 +50,16 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	allowed, err := h.rateLimiter.Allow(c.Request.Context(), "platform_login:"+req.Email, 10, time.Minute*15)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts, try again later"})
+		return
+	}
+
 	response, err := h.service.Login(c.Request.Context(), req)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
@@ -59,7 +74,7 @@ func (h *Handler) Login(c *gin.Context) {
 		int(response.ExpiresIn),
 		"/",
 		"",
-		false, // alterar para true para produção
+		h.cfg.IsProduction, // alterar para true para produção
 		true,
 	)
 
@@ -69,7 +84,7 @@ func (h *Handler) Login(c *gin.Context) {
 		int(response.ExpiresIn),
 		"/",
 		"",
-		false, // alterar para true para produção
+		h.cfg.IsProduction, // alterar para true para produção
 		true,
 	)
 
