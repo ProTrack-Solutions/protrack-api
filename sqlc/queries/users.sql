@@ -64,3 +64,6 @@ WHERE id = $1;
 UPDATE users
 SET last_login_at = CURRENT_TIMESTAMP
 WHERE id = $1;
+-- name: CountUserByCompanyId :one
+SELECT COUNT(*) FROM users 
+WHERE company_id = $1;

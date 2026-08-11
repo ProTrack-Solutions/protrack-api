@@ -70,3 +70,7 @@ func (r *Repository) UpdateUserCompanyAndRole(ctx context.Context, arg db.Update
 func (r *Repository) UpdateLastLogin(ctx context.Context, id pgtype.UUID) error {
 	return r.queries().UpdateLastLogin(ctx, id)
 }
+
+func (r *Repository) CountUsersByCompanyID(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	return r.queries().CountUserByCompanyId(ctx, companyID)
+}

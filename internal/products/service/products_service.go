@@ -2,13 +2,16 @@ package service
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
+	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -39,18 +42,45 @@ type RepositoryInterface interface {
 }
 
 type Service struct {
-	repo RepositoryInterface
-	pool *pgxpool.Pool
+	plansService         *plansService.Service
+	subscriptionsService *subscriptionsService.Service
+	repo                 RepositoryInterface
+	pool                 *pgxpool.Pool
 }
 
-func NewService(repo *repository.Repository, pool *pgxpool.Pool) *Service {
+func NewService(repo *repository.Repository, pool *pgxpool.Pool, plansService *plansService.Service, subscriptionsService *subscriptionsService.Service) *Service {
 	return &Service{
-		repo: repo,
-		pool: pool,
+		repo:         repo,
+		pool:         pool,
+		plansService: plansService,
 	}
 }
 
 func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID, req domain.CreateProductRequest) (domain.ProductResponse, error) {
+	sub, err := s.subscriptionsService.GetSubscriptionByCompanyID(ctx, companyId)
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	contProducts, err := s.repo.CountProducts(ctx, pgconv.OptionalUUIDToPgType(companyId))
+	if err != nil {
+		return domain.ProductResponse{}, err
+	}
+
+	for _, pf := range plan.Features {
+		if pf.FeatureKey == "max_products" {
+			if pf.LimitValue == contProducts {
+				return domain.ProductResponse{}, errors.New("product limit reached for plan")
+			}
+			break
+		}
+	}
+
 	if req.NotBarcode {
 		barcode, err := domain.GerarEAN13("")
 		if err != nil {
