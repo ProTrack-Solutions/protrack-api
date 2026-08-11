@@ -23,7 +23,7 @@ WHERE id = $1;
 
 -- name: ListPlans :many
 SELECT *
-FROM plans;
+FROM plans WHERE active = true;
 
 -- name: ListPlansByActiveStatus :many
 SELECT *
