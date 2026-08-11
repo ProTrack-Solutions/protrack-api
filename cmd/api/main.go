@@ -62,6 +62,9 @@ import (
 	plansHandler "github.com/ProTrack-Solutions/protrack-api/internal/plans/handler"
 	plansRepository "github.com/ProTrack-Solutions/protrack-api/internal/plans/repository"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
+	platformAdminsHandler "github.com/ProTrack-Solutions/protrack-api/internal/platform_admins/handler"
+	platformAdminsRepository "github.com/ProTrack-Solutions/protrack-api/internal/platform_admins/repository"
+	platformAdminsService "github.com/ProTrack-Solutions/protrack-api/internal/platform_admins/service"
 	productsHandler "github.com/ProTrack-Solutions/protrack-api/internal/products/handler"
 	productsRepository "github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
 	productsService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
@@ -235,12 +238,14 @@ func main() {
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
+	platformAdminsRepository := platformAdminsRepository.NewRepository(db.Pool)
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
 	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
+	platformAdminsService := platformAdminsService.NewService(platformAdminsRepository, cfg, jwtManager)
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
@@ -277,7 +282,7 @@ func main() {
 	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
 	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist)
 	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist)
-	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist)
+	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist, cfg, rateLimiter)
 	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist)
 	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist)
 	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist)
@@ -292,7 +297,8 @@ func main() {
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
 	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
-	plansHandler := plansHandler.NewHandler(plansService)
+	plansHandler := plansHandler.NewHandler(plansService, jwtManager, blacklist)
+	platformAdminsHandler := platformAdminsHandler.NewHandler(platformAdminsService, cfg, rateLimiter)
 	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
@@ -320,6 +326,7 @@ func main() {
 	whatsappHandler.RegisterRoute(api)
 	annoucementsHandler.RegisterRoutes(api)
 	plansHandler.RegisterRoutes(api)
+	platformAdminsHandler.RegisterRoutes(api)
 	subscriptionPaymentMethodsHandler.RegisterRoutes(api)
 	subscriptionsHandler.RegisterRoute(api)
 	stripeHandler.RegisterRoutes(api)

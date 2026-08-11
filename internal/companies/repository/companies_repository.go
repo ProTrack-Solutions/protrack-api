@@ -51,3 +51,8 @@ func (r *Repository) UpdateCompany(ctx context.Context, arg db.UpdateCompanyPara
 	q := db.New(r.db)
 	return q.UpdateCompany(ctx, arg)
 }
+
+func (r *Repository) CountCompanies(ctx context.Context) (int64, error) {
+	q := db.New(r.db)
+	return q.CountCompanies(ctx)
+}

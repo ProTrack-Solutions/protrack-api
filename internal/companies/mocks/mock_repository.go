@@ -103,6 +103,20 @@ func (mr *MockRepositoryInterfaceMockRecorder) ListCompanies(ctx any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCompanies", reflect.TypeOf((*MockRepositoryInterface)(nil).ListCompanies), ctx)
 }
 
+// CountCompanies mocks o método CountCompanies.
+func (m *MockRepositoryInterface) CountCompanies(ctx context.Context) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountCompanies", ctx)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) CountCompanies(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountCompanies", reflect.TypeOf((*MockRepositoryInterface)(nil).CountCompanies), ctx)
+}
+
 // SetCompanyStatus mocks o método SetCompanyStatus.
 func (m *MockRepositoryInterface) SetCompanyStatus(ctx context.Context, arg db.SetCompanyStatusParams) (int64, error) {
 	m.ctrl.T.Helper()

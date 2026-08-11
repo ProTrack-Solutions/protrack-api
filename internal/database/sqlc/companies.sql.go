@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCompanies = `-- name: CountCompanies :one
+SELECT COUNT(*) FROM companies
+`
+
+func (q *Queries) CountCompanies(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countCompanies)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies(
         name,

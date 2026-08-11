@@ -6,8 +6,10 @@ import (
 )
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
-	product := r.Group("/product").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	product := r.Group("/product")
+	product.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
+		// operação do dia a dia de catálogo/estoque -> aberto
 		product.POST("", h.CreateProduct)
 		product.DELETE("/:id", h.DeleteProduct)
 		product.GET("/barcode/:barcode", h.GetProductByBarcode)
@@ -15,9 +17,15 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		product.GET("/company", h.ListProductsByCompany)
 		product.GET("/count", h.CountProducts)
 		product.GET("/percentage", h.GetProductsPerformanceSummary)
-		product.GET("/cost-total", h.GetCostTotalStock)
 		product.GET("/top-products", h.GetTop5BestSellingProducts)
 		product.GET("/:id", h.GetProductById)
 		product.PUT("/:id", h.UpdateProduct)
+
+		// custo total do estoque revela custo de compra/margem da empresa -> ADMIN
+		admin := product.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.GET("/cost-total", h.GetCostTotalStock)
+		}
 	}
 }

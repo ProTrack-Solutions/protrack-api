@@ -13,7 +13,6 @@ import (
 
 func AuthMiddleware(jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
 		if c.Request.Method == http.MethodOptions {
 			c.Next()
 			return
@@ -58,6 +57,7 @@ func AuthMiddleware(jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist)
 
 		c.Set("sub", claims.Subject)
 		c.Set("company_id", claims.CompanyId)
+		c.Set("role", claims.Role)
 
 		c.Next()
 	}

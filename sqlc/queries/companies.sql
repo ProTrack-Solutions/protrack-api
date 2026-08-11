@@ -86,3 +86,5 @@ ORDER BY created_at DESC;
 UPDATE companies
 SET status = $2::status_enum
 WHERE id = $1;
+-- name: CountCompanies :one
+SELECT COUNT(*) FROM companies;

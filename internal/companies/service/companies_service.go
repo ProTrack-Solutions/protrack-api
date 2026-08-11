@@ -24,6 +24,7 @@ type RepositoryInterface interface {
 	ListCompanies(ctx context.Context) ([]db.Company, error)
 	SetCompanyStatus(ctx context.Context, arg db.SetCompanyStatusParams) (int64, error)
 	UpdateCompany(ctx context.Context, arg db.UpdateCompanyParams) (db.Company, error)
+	CountCompanies(ctx context.Context) (int64, error)
 }
 
 type Service struct {
@@ -332,4 +333,8 @@ func (s *Service) CreateCompanyTx(ctx context.Context, tx db.DBTX, req domain.Cr
 	}
 
 	return pgconv.PgUUIDToUUID(company.ID), nil
+}
+
+func (s *Service) CountCompanies(ctx context.Context) (int64, error) {
+	return s.repo.CountCompanies(ctx)
 }
