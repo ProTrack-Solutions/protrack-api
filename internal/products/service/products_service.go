@@ -8,9 +8,11 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/repository"
+	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -41,18 +43,29 @@ type RepositoryInterface interface {
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
+// PlansServiceInterface define o contrato de plans consumido pelo service de products.
+type PlansServiceInterface interface {
+	GetPlanByID(ctx context.Context, planId uuid.UUID) (plansDomain.PlanResponse, error)
+}
+
+// SubscriptionsServiceInterface define o contrato de subscriptions consumido pelo service de products.
+type SubscriptionsServiceInterface interface {
+	GetSubscriptionByCompanyID(ctx context.Context, companyID uuid.UUID) (subscriptionsDomain.SubscriptionResponse, error)
+}
+
 type Service struct {
-	plansService         *plansService.Service
-	subscriptionsService *subscriptionsService.Service
+	plansService         PlansServiceInterface
+	subscriptionsService SubscriptionsServiceInterface
 	repo                 RepositoryInterface
 	pool                 *pgxpool.Pool
 }
 
-func NewService(repo *repository.Repository, pool *pgxpool.Pool, plansService *plansService.Service, subscriptionsService *subscriptionsService.Service) *Service {
+func NewService(repo *repository.Repository, pool *pgxpool.Pool, plansSvc *plansService.Service, subscriptionsSvc *subscriptionsService.Service) *Service {
 	return &Service{
-		repo:         repo,
-		pool:         pool,
-		plansService: plansService,
+		repo:                 repo,
+		pool:                 pool,
+		plansService:         plansSvc,
+		subscriptionsService: subscriptionsSvc,
 	}
 }
 
