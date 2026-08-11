@@ -9,12 +9,21 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	companies := r.Group("/companies")
 	companies.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
-		// companies.POST("", h.CreateCompany)
-		companies.DELETE("/:id", h.DeleteCompany)
-		companies.GET("/document/:document", h.GetCompanyByDocument)
+
 		companies.GET("/me", h.GetCompanyByID)
-		companies.GET("", h.ListCompanies)
-		companies.POST("/set/", h.SetCompanyStatus)
-		companies.PUT("/:id", h.UpdateCompany)
+
+		admin := companies.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.DELETE("/:id", h.DeleteCompany)
+			admin.POST("/set/", h.SetCompanyStatus)
+			admin.PUT("/:id", h.UpdateCompany)
+		}
+		superadmin := companies.Group("")
+		superadmin.Use(middleware.RequireRole("SUPER_ADMIN"))
+		{
+			superadmin.GET("/list", h.ListCompanies)
+			superadmin.GET("/count", h.CountCompanies)
+		}
 	}
 }

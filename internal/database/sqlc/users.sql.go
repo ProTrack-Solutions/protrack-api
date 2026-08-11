@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUser = `-- name: CountUser :one
+SELECT COUNT(*) FROM users
+`
+
+func (q *Queries) CountUser(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUser)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUserByCompanyId = `-- name: CountUserByCompanyId :one
 SELECT COUNT(*) FROM users 
 WHERE company_id = $1
@@ -243,6 +254,36 @@ func (q *Queries) UpdateLastLogin(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const updateOwnProfile = `-- name: UpdateOwnProfile :exec
+UPDATE users
+SET name = $2,
+    email = $3,
+    username = $4,
+    updated_by = $5,
+    updated_at = NOW()
+WHERE id = $1
+    AND deleted_at IS NULL
+`
+
+type UpdateOwnProfileParams struct {
+	ID        pgtype.UUID `json:"id"`
+	Name      string      `json:"name"`
+	Email     string      `json:"email"`
+	Username  pgtype.Text `json:"username"`
+	UpdatedBy pgtype.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpdateOwnProfile(ctx context.Context, arg UpdateOwnProfileParams) error {
+	_, err := q.db.Exec(ctx, updateOwnProfile,
+		arg.ID,
+		arg.Name,
+		arg.Email,
+		arg.Username,
+		arg.UpdatedBy,
+	)
+	return err
+}
+
 const updatePasswordHash = `-- name: UpdatePasswordHash :exec
 UPDATE users
 SET password_hash = $2
@@ -265,10 +306,9 @@ UPDATE users
 SET name = $2,
     email = $3,
     username = $4,
-    role = $5,
-    status = $6,
-    department_id = $7,
-    updated_by = $8,
+    status = $5,
+    department_id = $6,
+    updated_by = $7,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -280,7 +320,6 @@ type UpdateUserParams struct {
 	Name         string      `json:"name"`
 	Email        string      `json:"email"`
 	Username     pgtype.Text `json:"username"`
-	Role         string      `json:"role"`
 	Status       interface{} `json:"status"`
 	DepartmentID pgtype.UUID `json:"department_id"`
 	UpdatedBy    pgtype.UUID `json:"updated_by"`
@@ -292,7 +331,6 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, e
 		arg.Name,
 		arg.Email,
 		arg.Username,
-		arg.Role,
 		arg.Status,
 		arg.DepartmentID,
 		arg.UpdatedBy,

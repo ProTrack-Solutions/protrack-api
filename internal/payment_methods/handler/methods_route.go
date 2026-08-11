@@ -6,15 +6,21 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	methods := r.Group("/payment-methods").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	methods := r.Group("/payment-methods")
+	methods.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
-		methods.POST("", h.CreatePaymentMethod)
-        methods.GET("", h.ListPaymentMethod)
+		// leitura: ADMIN e USER precisam consultar ao registrar uma venda/pagamento
+		methods.GET("", h.ListPaymentMethod)
+		methods.GET("/is-active", h.ListPaymentMethodIsActive)
+		methods.GET("/stats", h.GetPaymentMethodsStats)
+		methods.GET("/:id", h.GetPaymentMethodById)
 
-        methods.GET("/is-active", h.ListPaymentMethodIsActive)
-        methods.GET("/stats", h.GetPaymentMethodsStats)
-
-        methods.GET("/:id", h.GetPaymentMethodById)
-        methods.PUT("/:id", h.TogglePaymentMethodActive)
+		// criar/ativar-desativar método de pagamento é configuração da empresa -> ADMIN
+		admin := methods.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.POST("", h.CreatePaymentMethod)
+			admin.PUT("/:id", h.TogglePaymentMethodActive)
+		}
 	}
 }

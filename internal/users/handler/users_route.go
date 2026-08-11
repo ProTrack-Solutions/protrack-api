@@ -11,8 +11,22 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 
 		protected.GET("/:id", h.GetUserById)
-		protected.PUT("/:id", h.UpdateUser)
-		protected.DELETE("/:id", h.DeleteUser)
+		protected.PUT("", h.UpdateOwnProfile)
+
 		protected.PUT("/password", h.UpdatePasswordHash)
+
+		admin := protected.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.DELETE("/:id", h.DeleteUser)
+			admin.PUT("/:id", h.UpdateUser)
+		}
+
+		superadmin := protected.Group("")
+		superadmin.Use(middleware.RequireRole("SUPER_ADMIN"))
+		{
+			superadmin.GET("/list", h.ListUsers)
+			superadmin.GET("/count", h.CountUsers)
+		}
 	}
 }

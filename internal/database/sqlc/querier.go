@@ -16,6 +16,7 @@ type Querier interface {
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountCompanies(ctx context.Context) (int64, error)
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountInvoices(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -25,6 +26,7 @@ type Querier interface {
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountUser(ctx context.Context) (int64, error)
 	CountUserByCompanyId(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CreateAccountReceivable(ctx context.Context, arg CreateAccountReceivableParams) error
 	CreateAnnouncements(ctx context.Context, arg CreateAnnouncementsParams) error
@@ -91,6 +93,7 @@ type Querier interface {
 	GetPendingReceivablesByCustomer(ctx context.Context, arg GetPendingReceivablesByCustomerParams) ([]AccountsReceivable, error)
 	GetPendingSalesDetailedReport(ctx context.Context, arg GetPendingSalesDetailedReportParams) ([]GetPendingSalesDetailedReportRow, error)
 	GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
+	GetPlatformAdminByEmail(ctx context.Context, email string) (PlatformAdmin, error)
 	GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (Product, error)
 	GetProductCategoryById(ctx context.Context, id pgtype.UUID) (ProductCategory, error)
@@ -179,6 +182,7 @@ type Querier interface {
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateOverdueBillsPayable(ctx context.Context) error
 	UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]UpdateOverdueSalesAndAccountsGlobalRow, error)
+	UpdateOwnProfile(ctx context.Context, arg UpdateOwnProfileParams) error
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) error
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)

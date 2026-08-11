@@ -9,7 +9,8 @@ import (
 )
 
 type Config struct {
-	AppEnv string
+	AppEnv       string
+	IsProduction bool
 
 	DBSimpleProtocol bool
 	DBHost           string
@@ -47,6 +48,8 @@ type Config struct {
 	SMTPFrom     string
 
 	FrontendURL string
+
+	SuperAdiminPepper string
 }
 
 func LoadConfig() (*Config, error) {
@@ -80,6 +83,8 @@ func LoadConfig() (*Config, error) {
 		SMTPPassword:        getEnv("SMTP_PASSWORD"),
 		SMTPFrom:            getEnv("SMTP_FROM"),
 		FrontendURL:         getEnv("FRONTEND_URL"),
+		SuperAdiminPepper:   getEnv("SUPER_ADMIN_PEPPER"),
+		IsProduction:        getEnvBool("IS_PRODUCTION"),
 	}
 
 	return config, nil

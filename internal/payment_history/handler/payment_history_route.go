@@ -6,13 +6,21 @@ import (
 )
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
-	paymentHistory := r.Group("/payment-history").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	paymentHistory := r.Group("/payment-history")
+	paymentHistory.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	{
+		// operação do dia a dia (registrar/consultar pagamento de uma venda) -> aberto
 		paymentHistory.POST("", h.CreatePaymentHistory)
 		paymentHistory.GET("", h.ListPaymentHistory)
 		paymentHistory.GET("/customer/:customerId", h.GetPaymentsByCustomer)
 		paymentHistory.GET("/sale/:saleId", h.GetPaymentsBySale)
-		paymentHistory.GET("/total", h.GetTotalReceivedByPeriod)
+
+		// total recebido no período = dado financeiro agregado da empresa -> ADMIN
+		admin := paymentHistory.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.GET("/total", h.GetTotalReceivedByPeriod)
+		}
 		// paymentHistory.GET("/report", h.ExportExcel)
 	}
 }
