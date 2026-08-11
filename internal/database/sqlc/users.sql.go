@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUserByCompanyId = `-- name: CountUserByCompanyId :one
+SELECT COUNT(*) FROM users 
+WHERE company_id = $1
+`
+
+func (q *Queries) CountUserByCompanyId(ctx context.Context, companyID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countUserByCompanyId, companyID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users(
         name,

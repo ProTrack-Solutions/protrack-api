@@ -1,0 +1,3 @@
+ALTER TABLE plan_features
+    DROP COLUMN IF EXISTS feature_key VARCHAR(100) NOT NULL,
+    DROP COLUMN IF EXISTS limit_value INT;

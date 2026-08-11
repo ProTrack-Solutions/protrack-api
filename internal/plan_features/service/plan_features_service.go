@@ -38,6 +38,8 @@ func (s *Service) CreatePlanFeatureTx(ctx context.Context, tx db.DBTX, planId uu
 			Name:         pf.Name,
 			IsEnabled:    pf.IsEnabled,
 			DisplayOrder: pf.DisplayOrder,
+			FeatureKey:   pf.FeatureKey,
+			LimitValue:   pgconv.IntToPgInt4(int(pf.LimitValue)),
 		}); err != nil {
 			return err
 		}

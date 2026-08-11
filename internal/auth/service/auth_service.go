@@ -272,14 +272,13 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		return nil, err
 	}
 
-	userId, err := s.userService.CreateUserTx(ctx, tx, userDomain.CreateUserParams{
+	userId, err := s.userService.CreateUserTx(ctx, tx, companyId, userDomain.CreateUserParams{
 		Name:         req.User.Name,
 		Email:        req.User.Email,
 		Username:     req.User.Username,
 		PasswordHash: req.User.Password,
 		Role:         "ADMIN",
 		Status:       "ACTIVE",
-		CompanyID:    companyId,
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro user")
