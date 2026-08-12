@@ -40,48 +40,41 @@ INSERT INTO companies(
         address_zipcode,
         address_country,
         timezone,
-        created_by
+        created_by,
+        inscricao_estadual,
+        inscricao_estadual_isento,
+        cnae,
+        regime_tributario
     )
 VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12,
-        $13,
-        $14,
-        $15,
-        $16,
-        $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
     )
 RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
 `
 
 type CreateCompanyParams struct {
-	Name                string      `json:"name"`
-	TradeName           pgtype.Text `json:"trade_name"`
-	Document            pgtype.Text `json:"document"`
-	DocumentType        pgtype.Text `json:"document_type"`
-	Email               pgtype.Text `json:"email"`
-	Phone               pgtype.Text `json:"phone"`
-	Website             pgtype.Text `json:"website"`
-	AddressStreet       pgtype.Text `json:"address_street"`
-	AddressNumber       pgtype.Text `json:"address_number"`
-	AddressComplement   pgtype.Text `json:"address_complement"`
-	AddressNeighborhood pgtype.Text `json:"address_neighborhood"`
-	AddressCity         pgtype.Text `json:"address_city"`
-	AddressState        pgtype.Text `json:"address_state"`
-	AddressZipcode      pgtype.Text `json:"address_zipcode"`
-	AddressCountry      pgtype.Text `json:"address_country"`
-	Timezone            pgtype.Text `json:"timezone"`
-	CreatedBy           pgtype.UUID `json:"created_by"`
+	Name                    string      `json:"name"`
+	TradeName               pgtype.Text `json:"trade_name"`
+	Document                pgtype.Text `json:"document"`
+	DocumentType            pgtype.Text `json:"document_type"`
+	Email                   pgtype.Text `json:"email"`
+	Phone                   pgtype.Text `json:"phone"`
+	Website                 pgtype.Text `json:"website"`
+	AddressStreet           pgtype.Text `json:"address_street"`
+	AddressNumber           pgtype.Text `json:"address_number"`
+	AddressComplement       pgtype.Text `json:"address_complement"`
+	AddressNeighborhood     pgtype.Text `json:"address_neighborhood"`
+	AddressCity             pgtype.Text `json:"address_city"`
+	AddressState            pgtype.Text `json:"address_state"`
+	AddressZipcode          pgtype.Text `json:"address_zipcode"`
+	AddressCountry          pgtype.Text `json:"address_country"`
+	Timezone                pgtype.Text `json:"timezone"`
+	CreatedBy               pgtype.UUID `json:"created_by"`
+	InscricaoEstadual       pgtype.Text `json:"inscricao_estadual"`
+	InscricaoEstadualIsento bool        `json:"inscricao_estadual_isento"`
+	Cnae                    pgtype.Text `json:"cnae"`
+	RegimeTributario        interface{} `json:"regime_tributario"`
 }
 
 func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error) {
@@ -103,6 +96,10 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		arg.AddressCountry,
 		arg.Timezone,
 		arg.CreatedBy,
+		arg.InscricaoEstadual,
+		arg.InscricaoEstadualIsento,
+		arg.Cnae,
+		arg.RegimeTributario,
 	)
 	var i Company
 	err := row.Scan(
@@ -336,6 +333,10 @@ SET name = $2,
     address_country = $16,
     timezone = $17,
     updated_by = $18,
+    inscricao_estadual = $19,
+    inscricao_estadual_isento = $20,
+    cnae = $21,
+    regime_tributario = $22,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -343,24 +344,28 @@ RETURNING id, name, trade_name, document, document_type, email, phone, website, 
 `
 
 type UpdateCompanyParams struct {
-	ID                  pgtype.UUID `json:"id"`
-	Name                string      `json:"name"`
-	TradeName           pgtype.Text `json:"trade_name"`
-	Document            pgtype.Text `json:"document"`
-	DocumentType        pgtype.Text `json:"document_type"`
-	Email               pgtype.Text `json:"email"`
-	Phone               pgtype.Text `json:"phone"`
-	Website             pgtype.Text `json:"website"`
-	AddressStreet       pgtype.Text `json:"address_street"`
-	AddressNumber       pgtype.Text `json:"address_number"`
-	AddressComplement   pgtype.Text `json:"address_complement"`
-	AddressNeighborhood pgtype.Text `json:"address_neighborhood"`
-	AddressCity         pgtype.Text `json:"address_city"`
-	AddressState        pgtype.Text `json:"address_state"`
-	AddressZipcode      pgtype.Text `json:"address_zipcode"`
-	AddressCountry      pgtype.Text `json:"address_country"`
-	Timezone            pgtype.Text `json:"timezone"`
-	UpdatedBy           pgtype.UUID `json:"updated_by"`
+	ID                      pgtype.UUID `json:"id"`
+	Name                    string      `json:"name"`
+	TradeName               pgtype.Text `json:"trade_name"`
+	Document                pgtype.Text `json:"document"`
+	DocumentType            pgtype.Text `json:"document_type"`
+	Email                   pgtype.Text `json:"email"`
+	Phone                   pgtype.Text `json:"phone"`
+	Website                 pgtype.Text `json:"website"`
+	AddressStreet           pgtype.Text `json:"address_street"`
+	AddressNumber           pgtype.Text `json:"address_number"`
+	AddressComplement       pgtype.Text `json:"address_complement"`
+	AddressNeighborhood     pgtype.Text `json:"address_neighborhood"`
+	AddressCity             pgtype.Text `json:"address_city"`
+	AddressState            pgtype.Text `json:"address_state"`
+	AddressZipcode          pgtype.Text `json:"address_zipcode"`
+	AddressCountry          pgtype.Text `json:"address_country"`
+	Timezone                pgtype.Text `json:"timezone"`
+	UpdatedBy               pgtype.UUID `json:"updated_by"`
+	InscricaoEstadual       pgtype.Text `json:"inscricao_estadual"`
+	InscricaoEstadualIsento bool        `json:"inscricao_estadual_isento"`
+	Cnae                    pgtype.Text `json:"cnae"`
+	RegimeTributario        interface{} `json:"regime_tributario"`
 }
 
 func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error) {
@@ -383,6 +388,10 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		arg.AddressCountry,
 		arg.Timezone,
 		arg.UpdatedBy,
+		arg.InscricaoEstadual,
+		arg.InscricaoEstadualIsento,
+		arg.Cnae,
+		arg.RegimeTributario,
 	)
 	var i Company
 	err := row.Scan(

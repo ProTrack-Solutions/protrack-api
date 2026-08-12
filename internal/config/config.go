@@ -50,6 +50,12 @@ type Config struct {
 	FrontendURL string
 
 	SuperAdiminPepper string
+
+	FiscalAPIKey            string
+	FiscalBaseURL           string
+	FiscalWebhookSecret     string
+	FiscalWebhookCallbackURL string
+	CertEncryptionKey       string
 }
 
 func LoadConfig() (*Config, error) {
@@ -85,6 +91,11 @@ func LoadConfig() (*Config, error) {
 		FrontendURL:         getEnv("FRONTEND_URL"),
 		SuperAdiminPepper:   getEnv("SUPER_ADMIN_PEPPER"),
 		IsProduction:        getEnvBool("IS_PRODUCTION"),
+		FiscalAPIKey:             getEnv("FISCAL_API_KEY"),
+		FiscalBaseURL:            getEnv("FISCAL_BASE_URL"),
+		FiscalWebhookSecret:      getEnv("FISCAL_WEBHOOK_SECRET"),
+		FiscalWebhookCallbackURL: getEnv("FISCAL_WEBHOOK_CALLBACK_URL"),
+		CertEncryptionKey:        getEnv("CERT_ENCRYPTION_KEY"),
 	}
 
 	return config, nil

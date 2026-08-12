@@ -66,38 +66,40 @@ INSERT INTO products(
         sale_price,
         created_by,
         sell_in_bulk,
-        unit
+        unit,
+        ncm,
+        cest,
+        csosn,
+        cfop_saida_dentro_estado,
+        cfop_saida_fora_estado,
+        origem_mercadoria
     )
 VALUES(
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18
     )
 RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria
 `
 
 type CreateProductParams struct {
-	CompanyID   pgtype.UUID    `json:"company_id"`
-	Name        string         `json:"name"`
-	Description pgtype.Text    `json:"description"`
-	CategoryID  pgtype.UUID    `json:"category_id"`
-	Barcode     pgtype.Text    `json:"barcode"`
-	Quantity    pgtype.Int4    `json:"quantity"`
-	Size        pgtype.Text    `json:"size"`
-	CostPrice   pgtype.Numeric `json:"cost_price"`
-	SalePrice   pgtype.Numeric `json:"sale_price"`
-	CreatedBy   pgtype.UUID    `json:"created_by"`
-	SellInBulk  bool           `json:"sell_in_bulk"`
-	Unit        UnitOfMeasure  `json:"unit"`
+	CompanyID             pgtype.UUID    `json:"company_id"`
+	Name                  string         `json:"name"`
+	Description           pgtype.Text    `json:"description"`
+	CategoryID            pgtype.UUID    `json:"category_id"`
+	Barcode               pgtype.Text    `json:"barcode"`
+	Quantity              pgtype.Int4    `json:"quantity"`
+	Size                  pgtype.Text    `json:"size"`
+	CostPrice             pgtype.Numeric `json:"cost_price"`
+	SalePrice             pgtype.Numeric `json:"sale_price"`
+	CreatedBy             pgtype.UUID    `json:"created_by"`
+	SellInBulk            bool           `json:"sell_in_bulk"`
+	Unit                  UnitOfMeasure  `json:"unit"`
+	Ncm                   pgtype.Text    `json:"ncm"`
+	Cest                  pgtype.Text    `json:"cest"`
+	Csosn                 pgtype.Text    `json:"csosn"`
+	CfopSaidaDentroEstado pgtype.Text    `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   pgtype.Text    `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16          `json:"origem_mercadoria"`
 }
 
 func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error) {
@@ -114,6 +116,12 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (P
 		arg.CreatedBy,
 		arg.SellInBulk,
 		arg.Unit,
+		arg.Ncm,
+		arg.Cest,
+		arg.Csosn,
+		arg.CfopSaidaDentroEstado,
+		arg.CfopSaidaForaEstado,
+		arg.OrigemMercadoria,
 	)
 	var i Product
 	err := row.Scan(
@@ -822,6 +830,12 @@ SET name = $2,
     sale_price = $9,
     updated_by = $10,
     unit = $11,
+    ncm = $12,
+    cest = $13,
+    csosn = $14,
+    cfop_saida_dentro_estado = $15,
+    cfop_saida_fora_estado = $16,
+    origem_mercadoria = $17,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -829,17 +843,23 @@ RETURNING id, company_id, category_id, name, description, barcode, quantity, siz
 `
 
 type UpdateProductParams struct {
-	ID          pgtype.UUID    `json:"id"`
-	Name        string         `json:"name"`
-	Description pgtype.Text    `json:"description"`
-	CategoryID  pgtype.UUID    `json:"category_id"`
-	Barcode     pgtype.Text    `json:"barcode"`
-	Quantity    pgtype.Int4    `json:"quantity"`
-	Size        pgtype.Text    `json:"size"`
-	CostPrice   pgtype.Numeric `json:"cost_price"`
-	SalePrice   pgtype.Numeric `json:"sale_price"`
-	UpdatedBy   pgtype.UUID    `json:"updated_by"`
-	Unit        UnitOfMeasure  `json:"unit"`
+	ID                    pgtype.UUID    `json:"id"`
+	Name                  string         `json:"name"`
+	Description           pgtype.Text    `json:"description"`
+	CategoryID            pgtype.UUID    `json:"category_id"`
+	Barcode               pgtype.Text    `json:"barcode"`
+	Quantity              pgtype.Int4    `json:"quantity"`
+	Size                  pgtype.Text    `json:"size"`
+	CostPrice             pgtype.Numeric `json:"cost_price"`
+	SalePrice             pgtype.Numeric `json:"sale_price"`
+	UpdatedBy             pgtype.UUID    `json:"updated_by"`
+	Unit                  UnitOfMeasure  `json:"unit"`
+	Ncm                   pgtype.Text    `json:"ncm"`
+	Cest                  pgtype.Text    `json:"cest"`
+	Csosn                 pgtype.Text    `json:"csosn"`
+	CfopSaidaDentroEstado pgtype.Text    `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   pgtype.Text    `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16          `json:"origem_mercadoria"`
 }
 
 func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error) {
@@ -855,6 +875,12 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		arg.SalePrice,
 		arg.UpdatedBy,
 		arg.Unit,
+		arg.Ncm,
+		arg.Cest,
+		arg.Csosn,
+		arg.CfopSaidaDentroEstado,
+		arg.CfopSaidaForaEstado,
+		arg.OrigemMercadoria,
 	)
 	var i Product
 	err := row.Scan(

@@ -31,17 +31,23 @@ type Product struct {
 }
 
 type CreateProductRequest struct {
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CategoryID  uuid.UUID `json:"category_id"`
-	Barcode     string    `json:"barcode"`
-	Quantity    int32     `json:"quantity"`
-	Size        string    `json:"size"`
-	CostPrice   float64   `json:"cost_price"`
-	SalePrice   float64   `json:"sale_price"`
-	NotBarcode  bool      `json:"not_barcode"`
-	SellInBulk  bool      `json:"sell_in_bulk"`
-	Unit        string    `json:"unit"`
+	Name                  string    `json:"name"`
+	Description           string    `json:"description"`
+	CategoryID            uuid.UUID `json:"category_id"`
+	Barcode               string    `json:"barcode"`
+	Quantity              int32     `json:"quantity"`
+	Size                  string    `json:"size"`
+	CostPrice             float64   `json:"cost_price"`
+	SalePrice             float64   `json:"sale_price"`
+	NotBarcode            bool      `json:"not_barcode"`
+	SellInBulk            bool      `json:"sell_in_bulk"`
+	Unit                  string    `json:"unit"`
+	Ncm                   string    `json:"ncm"`
+	Cest                  string    `json:"cest"`
+	Csosn                 string    `json:"csosn"`
+	CfopSaidaDentroEstado string    `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   string    `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16     `json:"origem_mercadoria"`
 }
 
 type DeleteProductRequest struct {
@@ -55,36 +61,48 @@ type ListProductsByCategoryIdRequest struct {
 }
 
 type UpdateProductRequest struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	CategoryID  uuid.UUID `json:"category_id"`
-	Barcode     string    `json:"barcode"`
-	Quantity    int32     `json:"quantity"`
-	Size        string    `json:"size"`
-	CostPrice   float64   `json:"cost_price"`
-	SalePrice   float64   `json:"sale_price"`
-	UpdatedBy   uuid.UUID `json:"updated_by"`
-	Unit        string    `json:"unit"`
+	ID                    uuid.UUID `json:"id"`
+	Name                  string    `json:"name"`
+	Description           string    `json:"description"`
+	CategoryID            uuid.UUID `json:"category_id"`
+	Barcode               string    `json:"barcode"`
+	Quantity              int32     `json:"quantity"`
+	Size                  string    `json:"size"`
+	CostPrice             float64   `json:"cost_price"`
+	SalePrice             float64   `json:"sale_price"`
+	UpdatedBy             uuid.UUID `json:"updated_by"`
+	Unit                  string    `json:"unit"`
+	Ncm                   string    `json:"ncm"`
+	Cest                  string    `json:"cest"`
+	Csosn                 string    `json:"csosn"`
+	CfopSaidaDentroEstado string    `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   string    `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16     `json:"origem_mercadoria"`
 }
 
 type ProductResponse struct {
-	ID          uuid.UUID `json:"id"`
-	CompanyID   uuid.UUID `json:"company_id"`
-	CategoryID  uuid.UUID `json:"category_id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Barcode     string    `json:"barcode"`
-	Quantity    int32     `json:"quantity"`
-	Size        string    `json:"size"`
-	CostPrice   float64   `json:"cost_price"`
-	SalePrice   float64   `json:"sale_price"`
-	CreatedBy   uuid.UUID `json:"created_by"`
-	UpdatedBy   uuid.UUID `json:"updated_by"`
-	DeletedBy   uuid.UUID `json:"deleted_by"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	DeletedAt   time.Time `json:"deleted_at"`
+	ID                    uuid.UUID `json:"id"`
+	CompanyID             uuid.UUID `json:"company_id"`
+	CategoryID            uuid.UUID `json:"category_id"`
+	Name                  string    `json:"name"`
+	Description           string    `json:"description"`
+	Barcode               string    `json:"barcode"`
+	Quantity              int32     `json:"quantity"`
+	Size                  string    `json:"size"`
+	CostPrice             float64   `json:"cost_price"`
+	SalePrice             float64   `json:"sale_price"`
+	CreatedBy             uuid.UUID `json:"created_by"`
+	UpdatedBy             uuid.UUID `json:"updated_by"`
+	DeletedBy             uuid.UUID `json:"deleted_by"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+	DeletedAt             time.Time `json:"deleted_at"`
+	Ncm                   string    `json:"ncm"`
+	Cest                  string    `json:"cest"`
+	Csosn                 string    `json:"csosn"`
+	CfopSaidaDentroEstado string    `json:"cfop_saida_dentro_estado"`
+	CfopSaidaForaEstado   string    `json:"cfop_saida_fora_estado"`
+	OrigemMercadoria      int16     `json:"origem_mercadoria"`
 }
 
 type ListProductsByCompanyRow struct {
@@ -210,6 +228,30 @@ func ApplyUpdateProductParams(
 
 	if req.Unit != "" {
 		arg.Unit = db.UnitOfMeasure(req.Unit)
+	}
+
+	if req.Ncm != "" {
+		arg.Ncm = pgconv.ParseStringToPgText(req.Ncm)
+	}
+
+	if req.Cest != "" {
+		arg.Cest = pgconv.ParseStringToPgText(req.Cest)
+	}
+
+	if req.Csosn != "" {
+		arg.Csosn = pgconv.ParseStringToPgText(req.Csosn)
+	}
+
+	if req.CfopSaidaDentroEstado != "" {
+		arg.CfopSaidaDentroEstado = pgconv.ParseStringToPgText(req.CfopSaidaDentroEstado)
+	}
+
+	if req.CfopSaidaForaEstado != "" {
+		arg.CfopSaidaForaEstado = pgconv.ParseStringToPgText(req.CfopSaidaForaEstado)
+	}
+
+	if req.OrigemMercadoria != 0 {
+		arg.OrigemMercadoria = req.OrigemMercadoria
 	}
 }
 

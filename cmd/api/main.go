@@ -13,6 +13,7 @@ import (
 	accountsReceivableRepository "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/repository"
 	accountsReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
+	certCrypto "github.com/ProTrack-Solutions/protrack-api/internal/adapters/crypto"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/email"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
@@ -41,6 +42,9 @@ import (
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
+	fiscalInvoicesHandler "github.com/ProTrack-Solutions/protrack-api/internal/fiscal_invoices/handler"
+	fiscalInvoicesRepository "github.com/ProTrack-Solutions/protrack-api/internal/fiscal_invoices/repository"
+	fiscalInvoicesService "github.com/ProTrack-Solutions/protrack-api/internal/fiscal_invoices/service"
 	invoiceHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/handler"
 	invoiceHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/repository"
 	invoiceHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/service"
@@ -49,6 +53,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
+	nfeemission "github.com/ProTrack-Solutions/protrack-api/internal/nfe_emission"
 	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
 	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
@@ -211,6 +216,16 @@ func main() {
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 	discordLogger.Send(domain.LevelInfo, "Whatsapp initialized", "Whatsapp client initialized successfully")
 
+	certCipher, err := certCrypto.NewCertCipher(cfg.CertEncryptionKey)
+	if err != nil {
+		discordLogger.Send(domain.LevelError, "Failed to initialize cert cipher", err.Error())
+		log.Fatal().Err(err).Msg("Failed to initialize cert cipher")
+	}
+	discordLogger.Send(domain.LevelInfo, "Cert cipher initialized", "Certificate cipher initialized successfully")
+
+	nfeEmission := nfeemission.NewClient(cfg)
+	discordLogger.Send(domain.LevelInfo, "PlugNotas client created", "PlugNotas client initialized successfully")
+
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
 
 	blacklist := cache.NewTokenBlackList(redis)
@@ -242,6 +257,7 @@ func main() {
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
+	fiscalInvoicesRepository := fiscalInvoicesRepository.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
 	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
@@ -262,6 +278,7 @@ func main() {
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
 	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService, whatsapp)
+	fiscalInvoicesService := fiscalInvoicesService.NewService(fiscalInvoicesRepository, db.Pool, nfeEmission, salesService, saleItemsService, companiesService, productsService, certCipher, cfg)
 	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
 	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
 	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
@@ -302,6 +319,7 @@ func main() {
 	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
+	fiscalInvoicesHandler := fiscalInvoicesHandler.NewHandler(fiscalInvoicesService, jwtManager, blacklist, cfg)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -332,6 +350,7 @@ func main() {
 	stripeHandler.RegisterRoutes(api)
 	subscriptionManagementHandler.RegisterRoutes(api)
 	labelHandler.RegisterRoutes(api)
+	fiscalInvoicesHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -339,6 +358,7 @@ func main() {
 
 	worker.StartOverdueMonitor(salesService, ch, discordLogger)
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
+	worker.StartFiscalInvoiceReconciliation(fiscalInvoicesService, discordLogger)
 	consumers.StartWhatsAppConsumer(ch, whatsapp)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 	consumers.StartEmailCOnsumer(ch, emailSender)

@@ -204,13 +204,14 @@ type CompanyCertificate struct {
 	EncryptedPasswordNonce []byte             `json:"encrypted_password_nonce"`
 	CertSubjectCn          pgtype.Text        `json:"cert_subject_cn"`
 	ExpiresAt              pgtype.Timestamptz `json:"expires_at"`
-	NuvemFiscalStatus      interface{}        `json:"nuvem_fiscal_status"`
+	ProviderStatus         interface{}        `json:"provider_status"`
 	CreatedBy              pgtype.UUID        `json:"created_by"`
 	UpdatedBy              pgtype.UUID        `json:"updated_by"`
 	DeletedBy              pgtype.UUID        `json:"deleted_by"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
+	ProviderCertID         pgtype.Text        `json:"provider_cert_id"`
 }
 
 type Customer struct {
@@ -263,7 +264,7 @@ type FiscalInvoice struct {
 	SaleID               pgtype.UUID        `json:"sale_id"`
 	Type                 interface{}        `json:"type"`
 	Status               interface{}        `json:"status"`
-	NuvemFiscalID        pgtype.Text        `json:"nuvem_fiscal_id"`
+	ProviderInvoiceID    pgtype.Text        `json:"provider_invoice_id"`
 	ChaveAcesso          pgtype.Text        `json:"chave_acesso"`
 	Numero               pgtype.Text        `json:"numero"`
 	Serie                pgtype.Text        `json:"serie"`

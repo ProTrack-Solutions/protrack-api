@@ -11,21 +11,17 @@ INSERT INTO products(
         sale_price,
         created_by,
         sell_in_bulk,
-        unit
+        unit,
+        ncm,
+        cest,
+        csosn,
+        cfop_saida_dentro_estado,
+        cfop_saida_fora_estado,
+        origem_mercadoria
     )
 VALUES(
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18
     )
 RETURNING *;
 -- name: GetProductById :one
@@ -63,6 +59,12 @@ SET name = $2,
     sale_price = $9,
     updated_by = $10,
     unit = $11,
+    ncm = $12,
+    cest = $13,
+    csosn = $14,
+    cfop_saida_dentro_estado = $15,
+    cfop_saida_fora_estado = $16,
+    origem_mercadoria = $17,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL

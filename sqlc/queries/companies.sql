@@ -16,26 +16,15 @@ INSERT INTO companies(
         address_zipcode,
         address_country,
         timezone,
-        created_by
+        created_by,
+        inscricao_estadual,
+        inscricao_estadual_isento,
+        cnae,
+        regime_tributario
     )
 VALUES (
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12,
-        $13,
-        $14,
-        $15,
-        $16,
-        $17
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
     )
 RETURNING *;
 -- name: GetCompanyByID :one
@@ -67,6 +56,10 @@ SET name = $2,
     address_country = $16,
     timezone = $17,
     updated_by = $18,
+    inscricao_estadual = $19,
+    inscricao_estadual_isento = $20,
+    cnae = $21,
+    regime_tributario = $22,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL

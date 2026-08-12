@@ -22,6 +22,7 @@ type RepositoryInterface interface {
 	ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UUID) ([]db.ListItemsFromPendingSaleRow, error)
 	ListItemsByCompany(ctx context.Context, companyId pgtype.UUID) ([]db.ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg db.ListItemsByDateParams) ([]db.ListItemsByDateRow, error)
+	GetSaleItemsBySaleID(ctx context.Context, saleID pgtype.UUID) ([]db.GetSaleItemsBySaleIDRow, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -171,5 +172,24 @@ func (s *Service) ListItemsByDate(ctx context.Context, companyId uuid.UUID, date
 		})
 	}
 
+	return response, nil
+}
+
+func (s *Service) GetSaleItemsBySaleID(ctx context.Context, saleId uuid.UUID) ([]domain.SaleItemRow, error) {
+	items, err := s.repo.GetSaleItemsBySaleID(ctx, pgconv.ParseUUIDToPgType(saleId))
+	if err != nil {
+		return nil, err
+	}
+	var response []domain.SaleItemRow
+	for _, item := range items {
+		response = append(response, domain.SaleItemRow{
+			ID:          pgconv.PgUUIDToUUID(item.ID),
+			ProductID:   pgconv.PgUUIDToUUID(item.ProductID),
+			Quantity:    item.Quantity,
+			UnitPrice:   pgconv.PgNumericToFloat64(item.UnitPrice),
+			Discount:    pgconv.PgNumericToFloat64(item.Discount),
+			ProductName: item.ProductName,
+		})
+	}
 	return response, nil
 }

@@ -33,8 +33,11 @@ type Querier interface {
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error
 	CreateBillPayable(ctx context.Context, arg CreateBillPayableParams) error
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
+	CreateCompanyCertificate(ctx context.Context, arg CreateCompanyCertificateParams) (CompanyCertificate, error)
 	CreateCustomers(ctx context.Context, arg CreateCustomersParams) (pgtype.UUID, error)
 	CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error)
+	CreateFiscalInvoice(ctx context.Context, arg CreateFiscalInvoiceParams) (FiscalInvoice, error)
+	CreateFiscalInvoiceEvent(ctx context.Context, arg CreateFiscalInvoiceEventParams) (FiscalInvoiceEvent, error)
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
@@ -53,6 +56,7 @@ type Querier interface {
 	DeleteAnnoucements(ctx context.Context, arg DeleteAnnoucementsParams) error
 	DeleteBillCategories(ctx context.Context, id pgtype.UUID) error
 	DeleteCompany(ctx context.Context, arg DeleteCompanyParams) error
+	DeleteCompanyCertificate(ctx context.Context, arg DeleteCompanyCertificateParams) error
 	DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error
 	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
 	DeleteItemsBySale(ctx context.Context, saleID pgtype.UUID) error
@@ -73,12 +77,16 @@ type Querier interface {
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
+	GetCompanyCertificateByCompanyID(ctx context.Context, companyID pgtype.UUID) (CompanyCertificate, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
 	GetCustomerById(ctx context.Context, id pgtype.UUID) (Customer, error)
 	GetCustomerDebtSummary(ctx context.Context, customerID pgtype.UUID) (GetCustomerDebtSummaryRow, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetCustomersPerformanceSummaryRow, error)
 	GetDepartmentById(ctx context.Context, id pgtype.UUID) (Department, error)
+	GetFiscalInvoiceByID(ctx context.Context, arg GetFiscalInvoiceByIDParams) (FiscalInvoice, error)
+	GetFiscalInvoiceByProviderInvoiceID(ctx context.Context, providerInvoiceID pgtype.Text) (FiscalInvoice, error)
+	GetFiscalInvoiceBySaleAndType(ctx context.Context, arg GetFiscalInvoiceBySaleAndTypeParams) (FiscalInvoice, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
@@ -103,6 +111,7 @@ type Querier interface {
 	GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSaleByIdRow, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
+	GetSaleItemsBySaleID(ctx context.Context, saleID pgtype.UUID) ([]GetSaleItemsBySaleIDRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
 	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error)
 	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)
@@ -133,6 +142,8 @@ type Querier interface {
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
+	ListFiscalInvoiceEventsByInvoiceID(ctx context.Context, fiscalInvoiceID pgtype.UUID) ([]FiscalInvoiceEvent, error)
+	ListFiscalInvoicesBySale(ctx context.Context, arg ListFiscalInvoicesBySaleParams) ([]FiscalInvoice, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
@@ -154,11 +165,20 @@ type Querier interface {
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsRow, error)
 	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
+	// Documentos presos em 'processing'/'cancel_processing' há mais de $1 —
+	// usados pela reconciliação periódica como rede de segurança para quando o
+	// webhook do provedor não chega (ver internal/worker).
+	ListStaleProcessingFiscalInvoices(ctx context.Context, updatedAt pgtype.Timestamptz) ([]FiscalInvoice, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	PayBill(ctx context.Context, arg PayBillParams) error
+	// Reabre um documento fiscal 'rejected'/'cancelled' para uma nova tentativa
+	// de emissão, reaproveitando o mesmo id (usado como idIntegracao no
+	// provedor) em vez de criar uma linha nova — UNIQUE(sale_id, type) impediria
+	// a duplicata mesmo que tentássemos.
+	ResetFiscalInvoiceForRetry(ctx context.Context, id pgtype.UUID) (FiscalInvoice, error)
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
@@ -175,9 +195,18 @@ type Querier interface {
 	UpdateBalanceDueCustomer(ctx context.Context, arg UpdateBalanceDueCustomerParams) error
 	UpdateBillPayable(ctx context.Context, arg UpdateBillPayableParams) error
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
+	UpdateCompanyCertificate(ctx context.Context, arg UpdateCompanyCertificateParams) (CompanyCertificate, error)
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) error
 	UpdateCustomerBalance(ctx context.Context, arg UpdateCustomerBalanceParams) error
 	UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error)
+	// xml_url/danfe_url usam COALESCE porque a reconciliação periódica (GET
+	// .../resumo) não traz esses links, só o webhook traz — não pode apagar um
+	// link já conhecido só porque essa chamada específica não o tem.
+	UpdateFiscalInvoiceAuthorized(ctx context.Context, arg UpdateFiscalInvoiceAuthorizedParams) (FiscalInvoice, error)
+	UpdateFiscalInvoiceCancelProcessing(ctx context.Context, id pgtype.UUID) (FiscalInvoice, error)
+	UpdateFiscalInvoiceCancelled(ctx context.Context, arg UpdateFiscalInvoiceCancelledParams) (FiscalInvoice, error)
+	UpdateFiscalInvoiceProcessing(ctx context.Context, arg UpdateFiscalInvoiceProcessingParams) (FiscalInvoice, error)
+	UpdateFiscalInvoiceRejected(ctx context.Context, arg UpdateFiscalInvoiceRejectedParams) (FiscalInvoice, error)
 	UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateOverdueBillsPayable(ctx context.Context) error

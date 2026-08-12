@@ -27,33 +27,39 @@ func newSvc(t *testing.T, repo *mocks.MockRepositoryInterface) *service.Service 
 	return service.NewServiceWithRepo(repo)
 }
 
-// buildDbCompany constrói um db.Company completo para uso nos testes.
+// buildDbCompany constrói um db.Company completo para uso nos testes. Inclui
+// os campos fiscais (inscricao_estadual, cnae, regime_tributario) usados pela
+// emissão de NF-e/NFC-e — ver internal/fiscal_invoices.
 func buildDbCompany(id uuid.UUID, name string) db.Company {
 	return db.Company{
-		ID:                  pgconv.ParseUUIDToPgType(id),
-		Name:                name,
-		TradeName:           pgtype.Text{String: "Trade " + name, Valid: true},
-		Document:            pgtype.Text{String: "00000000000191", Valid: true},
-		DocumentType:        pgtype.Text{String: "CNPJ", Valid: true},
-		Email:               pgtype.Text{String: "empresa@email.com", Valid: true},
-		Phone:               pgtype.Text{String: "+5511999999999", Valid: true},
-		Website:             pgtype.Text{String: "https://empresa.com.br", Valid: true},
-		AddressStreet:       pgtype.Text{String: "Rua das Palmeiras", Valid: true},
-		AddressNumber:       pgtype.Text{String: "100", Valid: true},
-		AddressComplement:   pgtype.Text{Valid: false},
-		AddressNeighborhood: pgtype.Text{String: "Centro", Valid: true},
-		AddressCity:         pgtype.Text{String: "São Paulo", Valid: true},
-		AddressState:        pgtype.Text{String: "SP", Valid: true},
-		AddressZipcode:      pgtype.Text{String: "01000-000", Valid: true},
-		AddressCountry:      pgtype.Text{String: "Brasil", Valid: true},
-		Status:              "active",
-		Timezone:            pgtype.Text{String: "America/Sao_Paulo", Valid: true},
-		CreatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		UpdatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		DeletedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		CreatedAt:           pgconv.TimeToPgTimestamptz(pgconv.PgTimestamptzToTime(pgtype.Timestamptz{Valid: false})),
-		UpdatedAt:           pgtype.Timestamptz{Valid: false},
-		DeletedAt:           pgtype.Timestamptz{Valid: false},
+		ID:                      pgconv.ParseUUIDToPgType(id),
+		Name:                    name,
+		TradeName:               pgtype.Text{String: "Trade " + name, Valid: true},
+		Document:                pgtype.Text{String: "00000000000191", Valid: true},
+		DocumentType:            pgtype.Text{String: "CNPJ", Valid: true},
+		Email:                   pgtype.Text{String: "empresa@email.com", Valid: true},
+		Phone:                   pgtype.Text{String: "+5511999999999", Valid: true},
+		Website:                 pgtype.Text{String: "https://empresa.com.br", Valid: true},
+		AddressStreet:           pgtype.Text{String: "Rua das Palmeiras", Valid: true},
+		AddressNumber:           pgtype.Text{String: "100", Valid: true},
+		AddressComplement:       pgtype.Text{Valid: false},
+		AddressNeighborhood:     pgtype.Text{String: "Centro", Valid: true},
+		AddressCity:             pgtype.Text{String: "São Paulo", Valid: true},
+		AddressState:            pgtype.Text{String: "SP", Valid: true},
+		AddressZipcode:          pgtype.Text{String: "01000-000", Valid: true},
+		AddressCountry:          pgtype.Text{String: "Brasil", Valid: true},
+		Status:                  "active",
+		Timezone:                pgtype.Text{String: "America/Sao_Paulo", Valid: true},
+		CreatedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		UpdatedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		DeletedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		CreatedAt:               pgconv.TimeToPgTimestamptz(pgconv.PgTimestamptzToTime(pgtype.Timestamptz{Valid: false})),
+		UpdatedAt:               pgtype.Timestamptz{Valid: false},
+		DeletedAt:               pgtype.Timestamptz{Valid: false},
+		InscricaoEstadual:       pgtype.Text{String: "110042490114", Valid: true},
+		InscricaoEstadualIsento: false,
+		Cnae:                    pgtype.Text{String: "4711-3/02", Valid: true},
+		RegimeTributario:        "simples_nacional",
 	}
 }
 
@@ -140,6 +146,18 @@ func TestGetCompanyByID_Success(t *testing.T) {
 	}
 	if resp.Document != "00000000000191" {
 		t.Errorf("Document incorreto: '%s'", resp.Document)
+	}
+	if resp.InscricaoEstadual != "110042490114" {
+		t.Errorf("InscricaoEstadual incorreta: '%s'", resp.InscricaoEstadual)
+	}
+	if resp.InscricaoEstadualIsento {
+		t.Error("InscricaoEstadualIsento deveria ser false")
+	}
+	if resp.Cnae != "4711-3/02" {
+		t.Errorf("Cnae incorreto: '%s'", resp.Cnae)
+	}
+	if resp.RegimeTributario != "simples_nacional" {
+		t.Errorf("RegimeTributario incorreto: '%v'", resp.RegimeTributario)
 	}
 }
 
@@ -435,6 +453,150 @@ func TestUpdateCompany_UpdateRepositoryError(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// UpdateCompany — campos fiscais (inscricao_estadual, cnae, regime_tributario)
+// Ver ApplyUpdateCompanyParams em companies_domain.go.
+// ---------------------------------------------------------------------------
+
+// TestUpdateCompany_FiscalFieldsUpdated garante que, quando a requisição traz
+// os campos fiscais preenchidos, eles substituem os valores atuais da
+// empresa no argumento passado ao repositório.
+func TestUpdateCompany_FiscalFieldsUpdated(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newSvc(t, repo)
+
+	id := uuid.New()
+	currentCompany := buildDbCompany(id, "Empresa Original")
+
+	repo.EXPECT().
+		GetCompanyByID(gomock.Any(), pgconv.ParseUUIDToPgType(id)).
+		Return(currentCompany, nil)
+
+	repo.EXPECT().
+		UpdateCompany(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, arg db.UpdateCompanyParams) (db.Company, error) {
+			if arg.InscricaoEstadual.String != "987654321" || !arg.InscricaoEstadual.Valid {
+				t.Errorf("InscricaoEstadual não foi atualizada: %+v", arg.InscricaoEstadual)
+			}
+			if arg.Cnae.String != "4791-1/00" || !arg.Cnae.Valid {
+				t.Errorf("Cnae não foi atualizado: %+v", arg.Cnae)
+			}
+			if arg.RegimeTributario != "simples_nacional" {
+				t.Errorf("RegimeTributario não foi atualizado: %v", arg.RegimeTributario)
+			}
+			updated := currentCompany
+			updated.InscricaoEstadual = arg.InscricaoEstadual
+			updated.Cnae = arg.Cnae
+			updated.RegimeTributario = arg.RegimeTributario
+			return updated, nil
+		})
+
+	resp, err := svc.UpdateCompany(context.Background(), id, domain.UpdateCompanyRequest{
+		InscricaoEstadual: "987654321",
+		Cnae:              "4791-1/00",
+		RegimeTributario:  "simples_nacional",
+	})
+
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+	if resp.InscricaoEstadual != "987654321" {
+		t.Errorf("InscricaoEstadual incorreta na resposta: '%s'", resp.InscricaoEstadual)
+	}
+	if resp.Cnae != "4791-1/00" {
+		t.Errorf("Cnae incorreto na resposta: '%s'", resp.Cnae)
+	}
+}
+
+// TestUpdateCompany_PreservesFiscalFieldsWhenNotProvided garante que uma
+// atualização parcial (ex.: só o nome) não apaga inscricao_estadual/cnae/
+// regime_tributario já cadastrados — ApplyUpdateCompanyParams só sobrescreve
+// esses três campos quando a requisição os traz preenchidos.
+func TestUpdateCompany_PreservesFiscalFieldsWhenNotProvided(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newSvc(t, repo)
+
+	id := uuid.New()
+	currentCompany := buildDbCompany(id, "Empresa Original")
+
+	repo.EXPECT().
+		GetCompanyByID(gomock.Any(), pgconv.ParseUUIDToPgType(id)).
+		Return(currentCompany, nil)
+
+	repo.EXPECT().
+		UpdateCompany(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, arg db.UpdateCompanyParams) (db.Company, error) {
+			if arg.InscricaoEstadual != currentCompany.InscricaoEstadual {
+				t.Errorf("InscricaoEstadual não deveria mudar: %+v", arg.InscricaoEstadual)
+			}
+			if arg.Cnae != currentCompany.Cnae {
+				t.Errorf("Cnae não deveria mudar: %+v", arg.Cnae)
+			}
+			if arg.RegimeTributario != currentCompany.RegimeTributario {
+				t.Errorf("RegimeTributario não deveria mudar: %v", arg.RegimeTributario)
+			}
+			return currentCompany, nil
+		})
+
+	_, err := svc.UpdateCompany(context.Background(), id, domain.UpdateCompanyRequest{
+		Name: "Só o nome mudou",
+	})
+
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+}
+
+// TestUpdateCompany_InscricaoEstadualIsentoAlwaysOverwritten documenta um
+// comportamento existente em ApplyUpdateCompanyParams: diferente dos outros
+// campos fiscais (guardados por "if != ''"), InscricaoEstadualIsento é
+// sempre copiado da requisição, mesmo que venha com zero-value (false). Uma
+// atualização parcial que não pretenda mexer nesse campo (ex.: o JSON não
+// inclui "inscricao_estadual_isento") ainda assim o reseta para false — o
+// que pode reabrir a exigência de IE numa empresa isenta sem que ninguém
+// tenha pedido isso. Este teste apenas fixa o comportamento atual; se for
+// intencional, ok — se não for, é candidato a virar *bool em
+// UpdateCompanyRequest para diferenciar "não veio" de "veio false".
+func TestUpdateCompany_InscricaoEstadualIsentoAlwaysOverwritten(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newSvc(t, repo)
+
+	id := uuid.New()
+	currentCompany := buildDbCompany(id, "Empresa Isenta")
+	currentCompany.InscricaoEstadualIsento = true
+	currentCompany.InscricaoEstadual = pgtype.Text{Valid: false}
+
+	repo.EXPECT().
+		GetCompanyByID(gomock.Any(), pgconv.ParseUUIDToPgType(id)).
+		Return(currentCompany, nil)
+
+	repo.EXPECT().
+		UpdateCompany(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, arg db.UpdateCompanyParams) (db.Company, error) {
+			if arg.InscricaoEstadualIsento {
+				t.Fatal("comportamento mudou: InscricaoEstadualIsento deixou de ser sempre sobrescrito — atualize este teste e reavalie o comentário acima")
+			}
+			return currentCompany, nil
+		})
+
+	_, err := svc.UpdateCompany(context.Background(), id, domain.UpdateCompanyRequest{
+		Name: "Só o nome mudou, isento não foi mencionado",
+	})
+
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Teste de conversão dos campos opcionais (pgtype.Text)
 // ---------------------------------------------------------------------------
 
@@ -447,31 +609,36 @@ func TestGetCompanyByID_NullableFieldsHandled(t *testing.T) {
 
 	id := uuid.New()
 
-	// Empresa com campos opcionais nulos
+	// Empresa com campos opcionais nulos — inclui os fiscais (empresa que
+	// ainda não completou o cadastro fiscal necessário para emitir NF-e).
 	dbCompany := db.Company{
-		ID:                  pgconv.ParseUUIDToPgType(id),
-		Name:                "Empresa Mínima",
-		TradeName:           pgtype.Text{Valid: false},
-		Document:            pgtype.Text{Valid: false},
-		DocumentType:        pgtype.Text{Valid: false},
-		Email:               pgtype.Text{Valid: false},
-		Phone:               pgtype.Text{Valid: false},
-		Website:             pgtype.Text{Valid: false},
-		AddressStreet:       pgtype.Text{Valid: false},
-		AddressNumber:       pgtype.Text{Valid: false},
-		AddressComplement:   pgtype.Text{Valid: false},
-		AddressNeighborhood: pgtype.Text{Valid: false},
-		AddressCity:         pgtype.Text{Valid: false},
-		AddressState:        pgtype.Text{Valid: false},
-		AddressZipcode:      pgtype.Text{Valid: false},
-		AddressCountry:      pgtype.Text{Valid: false},
-		Status:              "active",
-		CreatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		UpdatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		DeletedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
-		CreatedAt:           pgtype.Timestamptz{Valid: false},
-		UpdatedAt:           pgtype.Timestamptz{Valid: false},
-		DeletedAt:           pgtype.Timestamptz{Valid: false},
+		ID:                      pgconv.ParseUUIDToPgType(id),
+		Name:                    "Empresa Mínima",
+		TradeName:               pgtype.Text{Valid: false},
+		Document:                pgtype.Text{Valid: false},
+		DocumentType:            pgtype.Text{Valid: false},
+		Email:                   pgtype.Text{Valid: false},
+		Phone:                   pgtype.Text{Valid: false},
+		Website:                 pgtype.Text{Valid: false},
+		AddressStreet:           pgtype.Text{Valid: false},
+		AddressNumber:           pgtype.Text{Valid: false},
+		AddressComplement:       pgtype.Text{Valid: false},
+		AddressNeighborhood:     pgtype.Text{Valid: false},
+		AddressCity:             pgtype.Text{Valid: false},
+		AddressState:            pgtype.Text{Valid: false},
+		AddressZipcode:          pgtype.Text{Valid: false},
+		AddressCountry:          pgtype.Text{Valid: false},
+		Status:                  "active",
+		CreatedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		UpdatedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		DeletedBy:               pgconv.ParseUUIDToPgType(uuid.Nil),
+		CreatedAt:               pgtype.Timestamptz{Valid: false},
+		UpdatedAt:               pgtype.Timestamptz{Valid: false},
+		DeletedAt:               pgtype.Timestamptz{Valid: false},
+		InscricaoEstadual:       pgtype.Text{Valid: false},
+		InscricaoEstadualIsento: false,
+		Cnae:                    pgtype.Text{Valid: false},
+		RegimeTributario:        nil,
 	}
 
 	repo.EXPECT().
@@ -495,5 +662,19 @@ func TestGetCompanyByID_NullableFieldsHandled(t *testing.T) {
 	}
 	if resp.Name != "Empresa Mínima" {
 		t.Errorf("Name incorreto: '%s'", resp.Name)
+	}
+	// Campos fiscais nulos também devem virar zero-value, não travar a
+	// conversão nem propagar pgtype.Text cru para o DTO de resposta.
+	if resp.InscricaoEstadual != "" {
+		t.Errorf("InscricaoEstadual nula deve ser string vazia, obteve '%s'", resp.InscricaoEstadual)
+	}
+	if resp.InscricaoEstadualIsento {
+		t.Error("InscricaoEstadualIsento deveria ser false quando não informado")
+	}
+	if resp.Cnae != "" {
+		t.Errorf("Cnae nulo deve ser string vazia, obteve '%s'", resp.Cnae)
+	}
+	if resp.RegimeTributario != nil {
+		t.Errorf("RegimeTributario nulo deve ser nil, obteve '%v'", resp.RegimeTributario)
 	}
 }

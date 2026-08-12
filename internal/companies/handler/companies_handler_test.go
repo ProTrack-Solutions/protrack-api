@@ -28,24 +28,28 @@ func ginCtx() context.Context { return context.Background() }
 
 func sampleCompanyResponse(id uuid.UUID, name string) domain.CompanyResponse {
 	return domain.CompanyResponse{
-		ID:                  id,
-		Name:                name,
-		TradeName:           "Trade " + name,
-		Document:            "00000000000191",
-		DocumentType:        "CNPJ",
-		Email:               "empresa@email.com",
-		Phone:               "+5511999999999",
-		Website:             "https://empresa.com",
-		AddressStreet:       "Rua Teste",
-		AddressNumber:       "100",
-		AddressNeighborhood: "Bairro Teste",
-		AddressCity:         "São Paulo",
-		AddressState:        "SP",
-		AddressZipcode:      "01000-000",
-		AddressCountry:      "Brasil",
-		Status:              "active",
-		CreatedBy:           uuid.New(),
-		CreatedAt:           time.Now().UTC(),
+		ID:                      id,
+		Name:                    name,
+		TradeName:               "Trade " + name,
+		Document:                "00000000000191",
+		DocumentType:            "CNPJ",
+		Email:                   "empresa@email.com",
+		Phone:                   "+5511999999999",
+		Website:                 "https://empresa.com",
+		AddressStreet:           "Rua Teste",
+		AddressNumber:           "100",
+		AddressNeighborhood:     "Bairro Teste",
+		AddressCity:             "São Paulo",
+		AddressState:            "SP",
+		AddressZipcode:          "01000-000",
+		AddressCountry:          "Brasil",
+		Status:                  "active",
+		CreatedBy:               uuid.New(),
+		CreatedAt:               time.Now().UTC(),
+		InscricaoEstadual:       "110042490114",
+		InscricaoEstadualIsento: false,
+		Cnae:                    "4711-3/02",
+		RegimeTributario:        "simples_nacional",
 	}
 }
 
@@ -345,6 +349,12 @@ func TestHTTP_GetCompanyByID_Success(t *testing.T) {
 	}
 	if compMap["name"] != "Empresa Teste HTTP" {
 		t.Errorf("Nome da empresa incorreto: %v", compMap["name"])
+	}
+	if compMap["inscricao_estadual"] != "110042490114" {
+		t.Errorf("inscricao_estadual incorreta: %v", compMap["inscricao_estadual"])
+	}
+	if compMap["regime_tributario"] != "simples_nacional" {
+		t.Errorf("regime_tributario incorreto: %v", compMap["regime_tributario"])
 	}
 }
 

@@ -72,6 +72,7 @@ type GetSaleByIdRow struct {
 	DeletedAt      time.Time   `json:"deleted_at"`
 	DeletedBy      uuid.UUID   `json:"deleted_by"`
 	CustomerName   string      `json:"customer_name"`
+	BuyerDocument  string      `json:"buyer_document"`
 }
 
 type ListSalesRow struct {

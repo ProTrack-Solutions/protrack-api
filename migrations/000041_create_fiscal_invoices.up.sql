@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS fiscal_invoices (
     sale_id UUID NOT NULL,
     type fiscal_invoice_type_enum NOT NULL,
     status fiscal_invoice_status_enum NOT NULL DEFAULT 'draft',
-    nuvem_fiscal_id VARCHAR(100),
+    provider_invoice_id VARCHAR(100),
     chave_acesso VARCHAR(44),
     numero VARCHAR(20),
     serie VARCHAR(10),

@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS company_certificates (
     encrypted_password_nonce BYTEA NOT NULL,
     cert_subject_cn VARCHAR(150),
     expires_at TIMESTAMPTZ,
-    nuvem_fiscal_status certificate_status_enum NOT NULL DEFAULT 'pending',
+    provider_status certificate_status_enum NOT NULL DEFAULT 'pending',
     created_by UUID NULL,
     updated_by UUID NULL,
     deleted_by UUID NULL,

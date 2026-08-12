@@ -41,3 +41,13 @@ type ListItemsByDateResponse struct {
 	Discount    float64   `json:"discount"`
 	ProductName string    `json:"product_name"`
 }
+
+type SaleItemRow struct {
+	ID          uuid.UUID `json:"id"`
+	SaleID      uuid.UUID `json:"sale_id"`
+	ProductID   uuid.UUID `json:"product_id"`
+	Quantity    int32     `json:"quantity"`
+	UnitPrice   float64   `json:"unit_price"`
+	Discount    float64   `json:"discount"`
+	ProductName string    `json:"product_name"`
+}

@@ -52,3 +52,10 @@ FROM sale_items si
     INNER JOIN products p ON si.product_id = p.id
 WHERE s.company_id = $1 -- Compara apenas o Mês e o Ano, ignorando o dia e a hora
     AND DATE_TRUNC('month', s.created_at) = DATE_TRUNC('month', $2::timestamptz);
+-- name: GetSaleItemsBySaleID :many
+SELECT si.id, si.sale_id, si.product_id, si.quantity, si.unit_price, si.discount,
+       p.name AS product_name
+FROM sale_items si
+JOIN products p ON p.id = si.product_id
+WHERE si.sale_id = $1
+ORDER BY si.id;

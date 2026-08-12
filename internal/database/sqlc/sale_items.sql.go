@@ -61,6 +61,53 @@ func (q *Queries) DeleteSaleItem(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const getSaleItemsBySaleID = `-- name: GetSaleItemsBySaleID :many
+SELECT si.id, si.sale_id, si.product_id, si.quantity, si.unit_price, si.discount,
+       p.name AS product_name
+FROM sale_items si
+JOIN products p ON p.id = si.product_id
+WHERE si.sale_id = $1
+ORDER BY si.id
+`
+
+type GetSaleItemsBySaleIDRow struct {
+	ID          pgtype.UUID    `json:"id"`
+	SaleID      pgtype.UUID    `json:"sale_id"`
+	ProductID   pgtype.UUID    `json:"product_id"`
+	Quantity    int32          `json:"quantity"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	Discount    pgtype.Numeric `json:"discount"`
+	ProductName string         `json:"product_name"`
+}
+
+func (q *Queries) GetSaleItemsBySaleID(ctx context.Context, saleID pgtype.UUID) ([]GetSaleItemsBySaleIDRow, error) {
+	rows, err := q.db.Query(ctx, getSaleItemsBySaleID, saleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSaleItemsBySaleIDRow{}
+	for rows.Next() {
+		var i GetSaleItemsBySaleIDRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.SaleID,
+			&i.ProductID,
+			&i.Quantity,
+			&i.UnitPrice,
+			&i.Discount,
+			&i.ProductName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemsByCompany = `-- name: ListItemsByCompany :many
 SELECT si.id,
     si.sale_id,
