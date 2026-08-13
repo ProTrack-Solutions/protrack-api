@@ -10,6 +10,12 @@ INSERT INTO plan_features (
     $1, $2, $3, $4, $5, $6
 );
 
+-- name: ListFeaturesActiveByPlanID :many
+SELECT *
+FROM plan_features
+WHERE plan_id = $1 AND is_enabled = true
+ORDER BY display_order ASC;
+
 -- name: ListFeaturesByPlanID :many
 SELECT *
 FROM plan_features

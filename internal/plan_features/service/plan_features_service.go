@@ -16,6 +16,7 @@ type RepositoryInterface interface {
 	CreatePlanFeatures(ctx context.Context, arg db.CreatePlanFeatureParams) error
 	ListFeaturesByPlanID(ctx context.Context, planId pgtype.UUID) ([]db.PlanFeature, error)
 	DeletePlanFeature(ctx context.Context, id pgtype.UUID) error
+	ListFeaturesActiveByPlanID(ctx context.Context, planId pgtype.UUID) ([]db.PlanFeature, error)
 }
 
 type Service struct {
@@ -75,4 +76,29 @@ func (s *Service) ListFeaturesByPlanID(ctx context.Context, planId uuid.UUID) ([
 
 func (s *Service) DeletePlanFeature(ctx context.Context, id uuid.UUID) error {
 	return s.repo.DeletePlanFeature(ctx, pgconv.ParseUUIDToPgType(id))
+}
+
+func (s *Service) ListFeaturesActiveByPlanID(ctx context.Context, planId uuid.UUID) ([]domain.PlanFeatureResponse, error) {
+	features, err := s.repo.ListFeaturesActiveByPlanID(ctx, pgconv.ParseUUIDToPgType(planId))
+	if err != nil {
+		return []domain.PlanFeatureResponse{}, err
+	}
+
+	var response []domain.PlanFeatureResponse
+
+	for _, fe := range features {
+		response = append(response, domain.PlanFeatureResponse{
+			ID:           pgconv.PgUUIDToUUID(fe.ID),
+			PlanID:       pgconv.PgUUIDToUUID(fe.PlanID),
+			Name:         fe.Name,
+			IsEnabled:    fe.IsEnabled,
+			DisplayOrder: fe.DisplayOrder,
+			CreatedAt:    pgconv.PgTimestamptzToTime(fe.CreatedAt),
+			UpdatedAt:    pgconv.PgTimestamptzToTime(fe.UpdatedAt),
+			FeatureKey:   fe.FeatureKey,
+			LimitValue:   int64(fe.LimitValue.Int32),
+		})
+	}
+
+	return response, nil
 }

@@ -31,6 +31,7 @@ type RepositoryInterface interface {
 type PlanFeatureServiceInterface interface {
 	CreatePlanFeatureTx(ctx context.Context, tx db.DBTX, planId uuid.UUID, req []plansFeatureDomain.CreatePlanFeatureRequest) error
 	ListFeaturesByPlanID(ctx context.Context, planId uuid.UUID) ([]plansFeatureDomain.PlanFeatureResponse, error)
+	ListFeaturesActiveByPlanID(ctx context.Context, planId uuid.UUID) ([]plansFeatureDomain.PlanFeatureResponse, error)
 }
 
 type Service struct {
@@ -195,7 +196,7 @@ func (s *Service) ListPlans(ctx context.Context) ([]domain.PlanResponse, error) 
 
 		var features []plansFeatureDomain.PlanFeatureResponse
 		if s.plansFeatureService != nil {
-			features, err = s.plansFeatureService.ListFeaturesByPlanID(ctx, planId)
+			features, err = s.plansFeatureService.ListFeaturesActiveByPlanID(ctx, planId)
 			if err != nil {
 				return nil, err
 			}
