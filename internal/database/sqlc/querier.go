@@ -48,8 +48,14 @@ type Querier interface {
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
+	// queries/whatsapp_bot.sql
+	// ===== whatsapp_bot_configs =====
+	CreateWhatsAppBotConfig(ctx context.Context, arg CreateWhatsAppBotConfigParams) (WhatsappBotConfig, error)
+	// ===== whatsapp_bot_menu_options =====
+	CreateWhatsAppBotMenuOption(ctx context.Context, arg CreateWhatsAppBotMenuOptionParams) (WhatsappBotMenuOption, error)
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
 	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
+	DeleteAllMenuOptionsForBotConfig(ctx context.Context, botConfigID pgtype.UUID) error
 	DeleteAnnoucements(ctx context.Context, arg DeleteAnnoucementsParams) error
 	DeleteBillCategories(ctx context.Context, id pgtype.UUID) error
 	DeleteCompany(ctx context.Context, arg DeleteCompanyParams) error
@@ -63,6 +69,8 @@ type Querier interface {
 	DeleteSaleItem(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscriptionPaymentMethod(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
+	DeleteWhatsAppBotConfig(ctx context.Context, id pgtype.UUID) error
+	DeleteWhatsAppBotMenuOption(ctx context.Context, id pgtype.UUID) error
 	GetBillCategoriesById(ctx context.Context, id pgtype.UUID) (BillCategory, error)
 	GetBillsById(ctx context.Context, arg GetBillsByIdParams) (BillsPayable, error)
 	GetBillsByStatus(ctx context.Context, arg GetBillsByStatusParams) ([]BillsPayable, error)
@@ -123,6 +131,11 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
+	GetWhatsAppBotConfigByCompanyID(ctx context.Context, companyID pgtype.UUID) (WhatsappBotConfig, error)
+	GetWhatsAppBotConfigByInstanceName(ctx context.Context, instanceName string) (WhatsappBotConfig, error)
+	// ===== consulta composta (config + opções de uma vez) =====
+	GetWhatsAppBotConfigWithOptionsByInstance(ctx context.Context, instanceName string) ([]GetWhatsAppBotConfigWithOptionsByInstanceRow, error)
+	GetWhatsAppBotMenuOptionByKey(ctx context.Context, arg GetWhatsAppBotMenuOptionByKeyParams) (WhatsappBotMenuOption, error)
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
 	ListBillCategories(ctx context.Context, companyID pgtype.UUID) ([]BillCategory, error)
@@ -159,12 +172,14 @@ type Querier interface {
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
+	ListWhatsAppBotMenuOptions(ctx context.Context, botConfigID pgtype.UUID) ([]WhatsappBotMenuOption, error)
 	PayBill(ctx context.Context, arg PayBillParams) error
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
 	SetStatusDepartment(ctx context.Context, arg SetStatusDepartmentParams) (int64, error)
+	SetWhatsAppBotActive(ctx context.Context, arg SetWhatsAppBotActiveParams) error
 	SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error)
@@ -197,6 +212,9 @@ type Querier interface {
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
+	UpdateWhatsAppBotConfig(ctx context.Context, arg UpdateWhatsAppBotConfigParams) (WhatsappBotConfig, error)
+	UpdateWhatsAppBotInstanceName(ctx context.Context, arg UpdateWhatsAppBotInstanceNameParams) (WhatsappBotConfig, error)
+	UpdateWhatsAppBotMenuOption(ctx context.Context, arg UpdateWhatsAppBotMenuOptionParams) (WhatsappBotMenuOption, error)
 }
 
 var _ Querier = (*Queries)(nil)

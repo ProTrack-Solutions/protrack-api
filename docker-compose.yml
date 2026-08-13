@@ -64,6 +64,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       EVOLUTION_KEY: ${EVOLUTION_KEY}
       EVOLUTION_API: http://evolution_api:8081
+      API_BASE_URL: ${API_BASE_URL:-http://protrack-api:8080}
     depends_on:
       redis:
         condition: service_healthy

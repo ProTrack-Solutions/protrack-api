@@ -34,6 +34,10 @@ type Config struct {
 
 	EvolutionApiUrl string
 
+	// ApiBaseURL é a URL pública/acessível pela Evolution API para chamar de volta
+	// os webhooks do ProTrack (ex: http://protrack-api:8080 na rede docker).
+	ApiBaseURL string
+
 	RabbitURL string
 
 	StripeSecretKey     string
@@ -72,6 +76,7 @@ func LoadConfig() (*Config, error) {
 		RedisPort:           getEnv("REDIS_PORT"),
 		Pepper:              getEnv("PEPPER"),
 		EvolutionApiUrl:     getEnv("EVOLUTION_API_URL"),
+		ApiBaseURL:          getEnv("API_BASE_URL"),
 		RabbitURL:           getEnv("RABBITMQ_URL"),
 		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),

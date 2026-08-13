@@ -2,8 +2,10 @@ package whatsapp
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -12,7 +14,9 @@ import (
 )
 
 type Whatsapp struct {
-	cfg *config.Config
+	cfg  *config.Config
+	http *http.Client
+	
 }
 
 type MessagePayload struct {
@@ -23,6 +27,9 @@ type MessagePayload struct {
 func NewWhatsapp(cfg *config.Config) *Whatsapp {
 	return &Whatsapp{
 		cfg: cfg,
+		http: &http.Client{
+			Timeout: 1 * time.Minute,
+		},
 	}
 }
 
@@ -71,11 +78,13 @@ func (w *Whatsapp) SendWhatsAppMessage(targetNumber string, messageContent strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated && resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
 		log.Error().
 			Int("status_code", resp.StatusCode).
 			Str("url", apiURL).
+			Str("body", string(body)).
 			Msg("A Evolution API recusou a requisição")
-		return fmt.Errorf("erro na api: status %d erro %d", resp.StatusCode, resp.Body)
+		return fmt.Errorf("erro na api: status %d corpo: %s", resp.StatusCode, string(body))
 	}
 
 	log.Info().Msg("WhatsApp enviado com sucesso!")
@@ -97,4 +106,36 @@ func (w *Whatsapp) WhatsAppWebhookHandler(rw http.ResponseWriter, r *http.Reques
 	}
 
 	rw.WriteHeader(http.StatusOK)
+}
+
+// evolution_client.go
+
+func (w *Whatsapp) SetWebhook(ctx context.Context, instance, webhookURL string) error {
+	payload, _ := json.Marshal(map[string]any{
+		"webhook": map[string]any{
+			"enabled": true,
+			"url":     webhookURL,
+			"events":  []string{"MESSAGES_UPSERT"},
+		},
+	})
+
+	url := fmt.Sprintf("%s/webhook/set/%s", w.cfg.EvolutionApiUrl, instance)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
+	if err != nil {
+		return fmt.Errorf("failed to build webhook request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("apikey", w.cfg.EvolutionKey)
+
+	resp, err := w.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to call evolution api: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("evolution api returned status %d: %s", resp.StatusCode, string(body))
+	}
+	return nil
 }

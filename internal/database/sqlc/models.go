@@ -505,3 +505,24 @@ type Vendor struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
+
+type WhatsappBotConfig struct {
+	ID             pgtype.UUID        `json:"id"`
+	CompanyID      pgtype.UUID        `json:"company_id"`
+	InstanceName   string             `json:"instance_name"`
+	WelcomeMessage string             `json:"welcome_message"`
+	IsActive       bool               `json:"is_active"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WhatsappBotMenuOption struct {
+	ID              pgtype.UUID        `json:"id"`
+	BotConfigID     pgtype.UUID        `json:"bot_config_id"`
+	OptionKey       string             `json:"option_key"`
+	Label           string             `json:"label"`
+	ResponseMessage string             `json:"response_message"`
+	OrderIndex      int32              `json:"order_index"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}

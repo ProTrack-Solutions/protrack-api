@@ -100,6 +100,7 @@ import (
 	vendorsService "github.com/ProTrack-Solutions/protrack-api/internal/vendors/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	whatsappHandler "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/handler"
+	whatsappRepository "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/repository"
 	whatsappService "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/worker"
 	"github.com/gin-contrib/cors"
@@ -270,7 +271,8 @@ func main() {
 	paymentsService := paymentsService.NewService(db.Pool, paymentHistoryService, accountsReceivableService, customersService, salesService)
 	analyticsService := analyticsService.NewService(productsService, saleItemsService)
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
-	whatsappService := whatsappService.NewService(cfg, companiesService)
+	whatsappRepository := whatsappRepository.NewRepository(db.Pool)
+	whatsappService := whatsappService.NewService(cfg, companiesService, whatsappRepository, whatsapp)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 

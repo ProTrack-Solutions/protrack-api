@@ -5519,6 +5519,186 @@ const docTemplate = `{
                 }
             }
         },
+        "/whatsapp/bot": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna a configuração do bot (mensagem de boas-vindas, status e opções de menu) da empresa autenticada.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Obtém a configuração do bot do WhatsApp",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotConfig"
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Configuração do bot não encontrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao obter a configuração do bot",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria a configuração do bot (mensagem de boas-vindas e opções de menu) para a empresa autenticada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Cria a configuração do bot do WhatsApp",
+                "parameters": [
+                    {
+                        "description": "Dados de criação",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Configuração criada com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Payload inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao criar a configuração do bot",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/whatsapp/bot/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Atualiza a mensagem de boas-vindas, status e opções de menu da configuração do bot da empresa autenticada.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Atualiza a configuração do bot do WhatsApp",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da configuração do bot",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados de atualização",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.UpdateWhatsAppBotConfigRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Configuração atualizada com sucesso",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Id inválido ou payload inválido",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Empresa não autenticada no contexto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Configuração do bot não encontrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Falha ao atualizar a configuração do bot",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/whatsapp/instance/connect": {
             "get": {
                 "security": [
@@ -5658,6 +5838,39 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Falha ao deletar a instância no serviço",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/whatsapp/webhook/{companyId}": {
+            "post": {
+                "description": "Endpoint público chamado pela Evolution API a cada mensagem recebida na instância da empresa. Resolve a resposta do bot e a envia de volta.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "whatsapp"
+                ],
+                "summary": "Recebe eventos da Evolution API (webhook do bot do WhatsApp)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da empresa",
+                        "name": "companyId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -8462,6 +8675,109 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tax_id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotConfigRequest": {
+            "type": "object",
+            "properties": {
+                "menu_option": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest"
+                    }
+                },
+                "welcome_message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest": {
+            "type": "object",
+            "properties": {
+                "bot_config_id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "option_key": {
+                    "type": "string"
+                },
+                "order_index": {
+                    "type": "integer"
+                },
+                "response_message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.UpdateWhatsAppBotConfigRequest": {
+            "type": "object",
+            "properties": {
+                "is_active": {
+                    "type": "boolean"
+                },
+                "menu_option": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest"
+                    }
+                },
+                "welcome_message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotConfig": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "instance_name": {
+                    "type": "string"
+                },
+                "is_active": {
+                    "type": "boolean"
+                },
+                "welcome_message": {
+                    "type": "string"
+                },
+                "whatsapp_not_option": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotMenuOption"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotMenuOption": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "option_key": {
+                    "type": "string"
+                },
+                "order_index": {
+                    "type": "integer"
+                },
+                "response_message": {
                     "type": "string"
                 },
                 "updated_at": {

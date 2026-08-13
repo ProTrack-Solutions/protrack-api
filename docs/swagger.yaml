@@ -1869,6 +1869,73 @@ definitions:
       updated_at:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotConfigRequest:
+    properties:
+      menu_option:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest'
+        type: array
+      welcome_message:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest:
+    properties:
+      bot_config_id:
+        type: string
+      label:
+        type: string
+      option_key:
+        type: string
+      order_index:
+        type: integer
+      response_message:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.UpdateWhatsAppBotConfigRequest:
+    properties:
+      is_active:
+        type: boolean
+      menu_option:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotMenuOptionRequest'
+        type: array
+      welcome_message:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotConfig:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      instance_name:
+        type: string
+      is_active:
+        type: boolean
+      welcome_message:
+        type: string
+      whatsapp_not_option:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotMenuOption'
+        type: array
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotMenuOption:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      label:
+        type: string
+      option_key:
+        type: string
+      order_index:
+        type: integer
+      response_message:
+        type: string
+      updated_at:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact:
@@ -5319,6 +5386,128 @@ paths:
       summary: Ativa ou desativa um fornecedor
       tags:
       - vendors
+  /whatsapp/bot:
+    get:
+      description: Retorna a configuração do bot (mensagem de boas-vindas, status
+        e opções de menu) da empresa autenticada.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.WhatsappBotConfig'
+        "401":
+          description: Empresa não autenticada no contexto
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Configuração do bot não encontrada
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Falha ao obter a configuração do bot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Obtém a configuração do bot do WhatsApp
+      tags:
+      - whatsapp
+    post:
+      consumes:
+      - application/json
+      description: Cria a configuração do bot (mensagem de boas-vindas e opções de
+        menu) para a empresa autenticada.
+      parameters:
+      - description: Dados de criação
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.CreateWhatsAppBotConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Configuração criada com sucesso
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Payload inválido
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Empresa não autenticada no contexto
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Falha ao criar a configuração do bot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria a configuração do bot do WhatsApp
+      tags:
+      - whatsapp
+  /whatsapp/bot/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Atualiza a mensagem de boas-vindas, status e opções de menu da
+        configuração do bot da empresa autenticada.
+      parameters:
+      - description: ID da configuração do bot
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados de atualização
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_whatsapp_domain.UpdateWhatsAppBotConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuração atualizada com sucesso
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Id inválido ou payload inválido
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Empresa não autenticada no contexto
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Configuração do bot não encontrada
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Falha ao atualizar a configuração do bot
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Atualiza a configuração do bot do WhatsApp
+      tags:
+      - whatsapp
   /whatsapp/instance/connect:
     get:
       description: Solicita a conexão da instância do WhatsApp para a empresa autenticada
@@ -5413,6 +5602,29 @@ paths:
       security:
       - BearerAuth: []
       summary: Deleta a instância do WhatsApp
+      tags:
+      - whatsapp
+  /whatsapp/webhook/{companyId}:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint público chamado pela Evolution API a cada mensagem recebida
+        na instância da empresa. Resolve a resposta do bot e a envia de volta.
+      parameters:
+      - description: ID da empresa
+        in: path
+        name: companyId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Recebe eventos da Evolution API (webhook do bot do WhatsApp)
       tags:
       - whatsapp
 securityDefinitions:

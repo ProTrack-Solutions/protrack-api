@@ -2,6 +2,7 @@ package consumers
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
@@ -54,6 +55,7 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Wha
 
 		// 4. Loop infinito processando as mensagens conforme elas entram na fila
 		for d := range msgs {
+			time.Sleep(15 * time.Second)
 			var event events.WhatsApp
 
 			if err := json.Unmarshal(d.Body, &event); err != nil {

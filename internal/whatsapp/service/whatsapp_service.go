@@ -11,20 +11,45 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/rs/zerolog/log"
 )
+
+type RepositoryInterface interface {
+	CreateWhatsAppBotConfig(ctx context.Context, arg db.CreateWhatsAppBotConfigParams) (db.WhatsappBotConfig, error)
+	GetWhatsAppBotConfigByCompanyID(ctx context.Context, companyID pgtype.UUID) (db.WhatsappBotConfig, error)
+	GetWhatsAppBotConfigByInstanceName(ctx context.Context, instanceName string) (db.WhatsappBotConfig, error)
+	UpdateWhatsAppBotConfig(ctx context.Context, arg db.UpdateWhatsAppBotConfigParams) (db.WhatsappBotConfig, error)
+	UpdateWhatsAppBotInstanceName(ctx context.Context, arg db.UpdateWhatsAppBotInstanceNameParams) (db.WhatsappBotConfig, error)
+	SetWhatsAppBotActive(ctx context.Context, arg db.SetWhatsAppBotActiveParams) error
+	DeleteWhatsAppBotConfig(ctx context.Context, id pgtype.UUID) error
+	CreateWhatsAppBotMenuOption(ctx context.Context, arg db.CreateWhatsAppBotMenuOptionParams) (db.WhatsappBotMenuOption, error)
+	ListWhatsAppBotMenuOptions(ctx context.Context, botConfigID pgtype.UUID) ([]db.WhatsappBotMenuOption, error)
+	GetWhatsAppBotMenuOptionByKey(ctx context.Context, arg db.GetWhatsAppBotMenuOptionByKeyParams) (db.WhatsappBotMenuOption, error)
+	UpdateWhatsAppBotMenuOption(ctx context.Context, arg db.UpdateWhatsAppBotMenuOptionParams) (db.WhatsappBotMenuOption, error)
+	DeleteWhatsAppBotMenuOption(ctx context.Context, id pgtype.UUID) error
+	DeleteAllMenuOptionsForBotConfig(ctx context.Context, botConfigID pgtype.UUID) error
+	GetWhatsAppBotConfigWithOptionsByInstance(ctx context.Context, instanceName string) ([]db.GetWhatsAppBotConfigWithOptionsByInstanceRow, error)
+}
 
 type Service struct {
 	cfg              *config.Config
 	companiesService *service.Service
+	repo             RepositoryInterface
+	whatsApp         *whatsapp.Whatsapp
 }
 
-func NewService(cfg *config.Config, companiesService *service.Service) *Service {
+func NewService(cfg *config.Config, companiesService *service.Service, repo *repository.Repository, whatsApp *whatsapp.Whatsapp) *Service {
 	return &Service{
 		cfg:              cfg,
 		companiesService: companiesService,
+		repo:             repo,
+		whatsApp:         whatsApp,
 	}
 }
 
