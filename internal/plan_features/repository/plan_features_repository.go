@@ -38,3 +38,7 @@ func (r *Repository) ListFeaturesByPlanID(ctx context.Context, planId pgtype.UUI
 func (r *Repository) DeletePlanFeature(ctx context.Context, id pgtype.UUID) error {
 	return r.queries().DeletePlanFeature(ctx, id)
 }
+
+func (r *Repository) ListFeaturesActiveByPlanID(ctx context.Context, planId pgtype.UUID)([]db.PlanFeature, error){
+	return r.queries().ListFeaturesActiveByPlanID(ctx, planId)
+}

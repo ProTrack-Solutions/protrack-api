@@ -55,6 +55,43 @@ func (q *Queries) DeletePlanFeature(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const listFeaturesActiveByPlanID = `-- name: ListFeaturesActiveByPlanID :many
+SELECT id, plan_id, name, is_enabled, display_order, created_at, updated_at, feature_key, limit_value
+FROM plan_features
+WHERE plan_id = $1 AND is_enabled = true
+ORDER BY display_order ASC
+`
+
+func (q *Queries) ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error) {
+	rows, err := q.db.Query(ctx, listFeaturesActiveByPlanID, planID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []PlanFeature{}
+	for rows.Next() {
+		var i PlanFeature
+		if err := rows.Scan(
+			&i.ID,
+			&i.PlanID,
+			&i.Name,
+			&i.IsEnabled,
+			&i.DisplayOrder,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.FeatureKey,
+			&i.LimitValue,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listFeaturesByPlanID = `-- name: ListFeaturesByPlanID :many
 SELECT id, plan_id, name, is_enabled, display_order, created_at, updated_at, feature_key, limit_value
 FROM plan_features
