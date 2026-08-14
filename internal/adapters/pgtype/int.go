@@ -34,3 +34,11 @@ func PgInt4ToInt(value pgtype.Int4) int {
 
 	return int(value.Int32)
 }
+
+func PgInt4ToIntPtr(value pgtype.Int4) *int32 {
+	if !value.Valid {
+		return nil
+	}
+
+	return &value.Int32
+}

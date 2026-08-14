@@ -25,3 +25,20 @@ func ParsePgTextToString(value pgtype.Text) string {
 	}
 	return value.String
 }
+
+func ParsePgTextToStringPtr(t pgtype.Text) *string {
+	if !t.Valid {
+		return nil
+	}
+	return &t.String
+}
+
+func ParseStringPtrToPgText(value *string) pgtype.Text {
+	if value == nil {
+		return pgtype.Text{Valid: false}
+	}
+	return pgtype.Text{
+		String: *value,
+		Valid:  true,
+	}
+}

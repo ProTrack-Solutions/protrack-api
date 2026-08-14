@@ -50,6 +50,9 @@ type Config struct {
 	FrontendURL string
 
 	SuperAdiminPepper string
+	PhoneNumberID     string
+	MetaAccessToken   string
+	MetaSecretKey     string
 }
 
 func LoadConfig() (*Config, error) {

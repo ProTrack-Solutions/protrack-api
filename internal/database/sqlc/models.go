@@ -100,6 +100,137 @@ func (ns NullUnitOfMeasure) Value() (driver.Value, error) {
 	return string(ns.UnitOfMeasure), nil
 }
 
+type WhatsappMessageCategory string
+
+const (
+	WhatsappMessageCategoryMarketing      WhatsappMessageCategory = "marketing"
+	WhatsappMessageCategoryUtility        WhatsappMessageCategory = "utility"
+	WhatsappMessageCategoryAuthentication WhatsappMessageCategory = "authentication"
+	WhatsappMessageCategoryService        WhatsappMessageCategory = "service"
+)
+
+func (e *WhatsappMessageCategory) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WhatsappMessageCategory(s)
+	case string:
+		*e = WhatsappMessageCategory(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WhatsappMessageCategory: %T", src)
+	}
+	return nil
+}
+
+type NullWhatsappMessageCategory struct {
+	WhatsappMessageCategory WhatsappMessageCategory `json:"whatsapp_message_category"`
+	Valid                   bool                    `json:"valid"` // Valid is true if WhatsappMessageCategory is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWhatsappMessageCategory) Scan(value interface{}) error {
+	if value == nil {
+		ns.WhatsappMessageCategory, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WhatsappMessageCategory.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWhatsappMessageCategory) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WhatsappMessageCategory), nil
+}
+
+type WhatsappMessageStatus string
+
+const (
+	WhatsappMessageStatusQueued    WhatsappMessageStatus = "queued"
+	WhatsappMessageStatusSent      WhatsappMessageStatus = "sent"
+	WhatsappMessageStatusDelivered WhatsappMessageStatus = "delivered"
+	WhatsappMessageStatusRead      WhatsappMessageStatus = "read"
+	WhatsappMessageStatusFailed    WhatsappMessageStatus = "failed"
+)
+
+func (e *WhatsappMessageStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WhatsappMessageStatus(s)
+	case string:
+		*e = WhatsappMessageStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WhatsappMessageStatus: %T", src)
+	}
+	return nil
+}
+
+type NullWhatsappMessageStatus struct {
+	WhatsappMessageStatus WhatsappMessageStatus `json:"whatsapp_message_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if WhatsappMessageStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWhatsappMessageStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.WhatsappMessageStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WhatsappMessageStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWhatsappMessageStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WhatsappMessageStatus), nil
+}
+
+type WhatsappMode string
+
+const (
+	WhatsappModePlatformShared WhatsappMode = "platform_shared"
+	WhatsappModeOwnWaba        WhatsappMode = "own_waba"
+)
+
+func (e *WhatsappMode) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WhatsappMode(s)
+	case string:
+		*e = WhatsappMode(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WhatsappMode: %T", src)
+	}
+	return nil
+}
+
+type NullWhatsappMode struct {
+	WhatsappMode WhatsappMode `json:"whatsapp_mode"`
+	Valid        bool         `json:"valid"` // Valid is true if WhatsappMode is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWhatsappMode) Scan(value interface{}) error {
+	if value == nil {
+		ns.WhatsappMode, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WhatsappMode.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWhatsappMode) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WhatsappMode), nil
+}
+
 type AccountsReceivable struct {
 	ID                pgtype.UUID        `json:"id"`
 	CompanyID         pgtype.UUID        `json:"company_id"`
@@ -211,6 +342,20 @@ type CompanyCertificate struct {
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type CompanyWhatsappConfig struct {
+	ID                      pgtype.UUID        `json:"id"`
+	CompanyID               pgtype.UUID        `json:"company_id"`
+	Mode                    WhatsappMode       `json:"mode"`
+	WabaID                  pgtype.Text        `json:"waba_id"`
+	PhoneNumberID           pgtype.Text        `json:"phone_number_id"`
+	DisplayPhoneNumber      pgtype.Text        `json:"display_phone_number"`
+	AccessTokenEncrypted    pgtype.Text        `json:"access_token_encrypted"`
+	MonthlyMessageAllowance int32              `json:"monthly_message_allowance"`
+	IsActive                bool               `json:"is_active"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Customer struct {
@@ -504,4 +649,43 @@ type Vendor struct {
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+type WhatsappMessage struct {
+	ID                 pgtype.UUID             `json:"id"`
+	CompanyID          pgtype.UUID             `json:"company_id"`
+	TemplateID         pgtype.UUID             `json:"template_id"`
+	Category           WhatsappMessageCategory `json:"category"`
+	RecipientPhone     string                  `json:"recipient_phone"`
+	MetaMessageID      pgtype.Text             `json:"meta_message_id"`
+	Status             WhatsappMessageStatus   `json:"status"`
+	FailureCode        pgtype.Int4             `json:"failure_code"`
+	FailureReason      pgtype.Text             `json:"failure_reason"`
+	EstimatedCostCents pgtype.Int4             `json:"estimated_cost_cents"`
+	SentAt             pgtype.Timestamptz      `json:"sent_at"`
+	DeliveredAt        pgtype.Timestamptz      `json:"delivered_at"`
+	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
+}
+
+type WhatsappTemplate struct {
+	ID                       pgtype.UUID             `json:"id"`
+	MetaTemplateName         string                  `json:"meta_template_name"`
+	Category                 WhatsappMessageCategory `json:"category"`
+	LanguageCode             string                  `json:"language_code"`
+	BodyText                 string                  `json:"body_text"`
+	Variables                []byte                  `json:"variables"`
+	IsPlatformSharedEligible bool                    `json:"is_platform_shared_eligible"`
+	MetaApprovalStatus       string                  `json:"meta_approval_status"`
+	CreatedAt                pgtype.Timestamptz      `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz      `json:"updated_at"`
+}
+
+type WhatsappUsageMonthly struct {
+	ID                    pgtype.UUID        `json:"id"`
+	CompanyID             pgtype.UUID        `json:"company_id"`
+	BillingPeriod         pgtype.Date        `json:"billing_period"`
+	MessagesSent          int32              `json:"messages_sent"`
+	MessagesOverAllowance int32              `json:"messages_over_allowance"`
+	StripeUsageRecordID   pgtype.Text        `json:"stripe_usage_record_id"`
+	SyncedAt              pgtype.Timestamptz `json:"synced_at"`
 }
