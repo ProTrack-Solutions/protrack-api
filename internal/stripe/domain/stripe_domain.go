@@ -9,8 +9,9 @@ type CreateSubscriptionInput struct {
 }
 
 type CreateSubscriptionOutput struct {
-	CustomerID     string `json:"customer_id"`
-	SubscriptionID string `json:"subscription_id"`
-	Status         string `json:"status"`
-	ClientSecret   string `json:"client_secret,omitempty"`
+	CustomerID             string `json:"customer_id"`
+	SubscriptionID         string `json:"subscription_id"`
+	Status                 string `json:"status"`
+	ClientSecret           string `json:"client_secret,omitempty"`
+	GatewayPaymentMethodId string `json:"gateway_payment_method_id"`
 }

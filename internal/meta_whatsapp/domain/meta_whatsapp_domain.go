@@ -5,7 +5,10 @@ import (
 	"context"
 	"time"
 
+	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
+	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -25,6 +28,22 @@ type RepositoryInterface interface {
 
 type MetaClientInterface interface {
 	SendTemplateMessage(ctx context.Context, phoneNumberID, accessToken string, req SendMessageRequest) (metaMessageID string, err error)
+}
+
+type CompaniesServiceInterface interface {
+	GetCompanyByID(ctx context.Context, id uuid.UUID) (companiesDomain.CompanyResponse, error)
+}
+
+type PlansServiceInterface interface {
+	GetPlanByID(ctx context.Context, planId uuid.UUID) (plansDomain.PlanResponse, error)
+}
+
+type SubscriptionsServiceInterface interface {
+	GetSubscriptionByCompanyID(ctx context.Context, companyID uuid.UUID) (subscriptionsDomain.SubscriptionResponse, error)
+}
+
+type BillingClientInterface interface {
+	ReportUsage(ctx context.Context, customerID string, quantity int, idempotencyKey string) error
 }
 
 type ServiceInterface interface{}

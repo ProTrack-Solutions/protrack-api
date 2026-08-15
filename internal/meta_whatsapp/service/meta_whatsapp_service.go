@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"time"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/crypto"
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -14,20 +16,36 @@ import (
 )
 
 type Service struct {
-	repo            domain.RepositoryInterface
-	metaClient      domain.MetaClientInterface
-	PhoneNumberID   string
-	MetaAccessToken string
-	MetaSecretKey   string
+	repo                domain.RepositoryInterface
+	metaClient          domain.MetaClientInterface
+	subscriptionService domain.SubscriptionsServiceInterface
+	plansService        domain.PlansServiceInterface
+	billingClient       domain.BillingClientInterface
+	companiesService    domain.CompaniesServiceInterface
+	PhoneNumberID       string
+	MetaAccessToken     string
+	MetaSecretKey       string
 }
 
-func NewService(repo domain.RepositoryInterface, metaClient domain.MetaClientInterface, cfg *config.Config) *Service {
+func NewService(
+	repo domain.RepositoryInterface,
+	metaClient domain.MetaClientInterface,
+	subscriptionService domain.SubscriptionsServiceInterface,
+	plansService domain.PlansServiceInterface,
+	billingClient domain.BillingClientInterface,
+	companiesService domain.CompaniesServiceInterface,
+	cfg *config.Config,
+) *Service {
 	return &Service{
-		repo:            repo,
-		metaClient:      metaClient,
-		PhoneNumberID:   cfg.PhoneNumberID,
-		MetaAccessToken: cfg.MetaAccessToken,
-		MetaSecretKey:   cfg.MetaSecretKey,
+		repo:                repo,
+		metaClient:          metaClient,
+		PhoneNumberID:       cfg.PhoneNumberID,
+		MetaAccessToken:     cfg.MetaAccessToken,
+		MetaSecretKey:       cfg.MetaSecretKey,
+		subscriptionService: subscriptionService,
+		plansService:        plansService,
+		billingClient:       billingClient,
+		companiesService:    companiesService,
 	}
 }
 
@@ -205,4 +223,114 @@ func (s *Service) ListApprovedTemplates(ctx context.Context) ([]domain.Template,
 	}
 
 	return response, nil
+}
+
+func (s *Service) HandleWebhookEvent(ctx context.Context, payload []byte) error {
+	var webhookPayload domain.WebhookPayload
+
+	if err := json.Unmarshal(payload, &webhookPayload); err != nil {
+		return err
+	}
+
+	for _, entry := range webhookPayload.Entry {
+		for _, change := range entry.Changes {
+			for _, status := range change.Value.Statuses {
+				var failureCode int
+				var failureReason string
+
+				if len(status.Errors) > 0 {
+
+					failureCode = status.Errors[0].Code
+					failureReason = status.Errors[0].Message
+
+				}
+
+				if _, err := s.repo.UpdateWhatsAppMessageStatus(ctx, db.UpdateWhatsAppMessageStatusParams{
+					MetaMessageID: pgconv.ParseStringToPgText(status.Id),
+					Status:        db.WhatsappMessageStatus(status.Status),
+					FailureCode:   pgconv.IntToPgInt4(failureCode),
+					FailureReason: pgconv.ParseStringToPgText(failureReason),
+				}); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, period time.Time) error {
+	startAt := time.Date(
+		period.Year(),
+		period.Month(),
+		1,
+		0, 0, 0, 0, period.Location(),
+	)
+
+	endAt := time.Date(
+		period.Year(),
+		period.Month()+1,
+		0,
+		0, 0, 0, 0, period.Location(),
+	)
+
+	countMessage, err := s.repo.CountMessagesInPeriod(ctx, db.CountMessagesInPeriodParams{
+		CompanyID:   pgconv.OptionalUUIDToPgType(companyId),
+		CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
+		CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+	})
+	if err != nil {
+		return err
+	}
+
+	sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyId)
+	if err != nil {
+		return err
+	}
+
+	plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
+	if err != nil {
+		return err
+	}
+
+	var quantityMessage int
+
+	for _, ft := range plan.Features {
+		if ft.FeatureKey == "whatsapp_integration" {
+			quantityMessage = int(ft.LimitValue)
+		}
+	}
+
+	restMessage := int(countMessage) - quantityMessage
+
+	overAllowance := 0
+	if restMessage > 0 {
+		overAllowance = restMessage
+	}
+
+	_, err = s.repo.UpsertMonthlyUsage(ctx, db.UpsertMonthlyUsageParams{
+		CompanyID:             pgconv.OptionalUUIDToPgType(companyId),
+		BillingPeriod:         pgconv.StringToPgDate(startAt.String()),
+		MessagesSent:          int32(countMessage),
+		MessagesOverAllowance: int32(overAllowance),
+	})
+	if err != nil {
+		return err
+	}
+
+	idempotencyKey := fmt.Sprintf("whatsapp-overage-%s-%s", companyId, period.Format("2006-01"))
+
+	company, err := s.companiesService.GetCompanyByID(ctx, companyId)
+	if err != nil {
+		return err
+	}
+
+	if overAllowance > 0 {
+		if err = s.billingClient.ReportUsage(ctx, company.ExternalCompanyId, overAllowance, idempotencyKey); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

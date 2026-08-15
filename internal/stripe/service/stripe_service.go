@@ -48,7 +48,7 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 	}
 
 	attachParams := &stripe.PaymentMethodAttachParams{Customer: stripe.String(cust.ID)}
-	_, err = paymentmethod.Attach(input.CardToken, attachParams)
+	paymentMethod, err := paymentmethod.Attach(input.CardToken, attachParams)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao vincular cartão ao cliente: %w", err)
 	}
@@ -85,9 +85,10 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 	}
 
 	output := &domain.CreateSubscriptionOutput{
-		CustomerID:     cust.ID,
-		SubscriptionID: sub.ID,
-		Status:         string(sub.Status),
+		CustomerID:             cust.ID,
+		SubscriptionID:         sub.ID,
+		Status:                 string(sub.Status),
+		GatewayPaymentMethodId: paymentMethod.ID,
 	}
 
 	if sub.LatestInvoice != nil && sub.LatestInvoice.ConfirmationSecret != nil {
@@ -254,4 +255,3 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 
 	return nil
 }
-

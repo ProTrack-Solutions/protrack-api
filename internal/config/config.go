@@ -49,10 +49,11 @@ type Config struct {
 
 	FrontendURL string
 
-	SuperAdiminPepper string
-	PhoneNumberID     string
-	MetaAccessToken   string
-	MetaSecretKey     string
+	SuperAdiminPepper            string
+	PhoneNumberID                string
+	MetaAccessToken              string
+	MetaSecretKey                string
+	StripeWhatsappMeterEventName string
 }
 
 func LoadConfig() (*Config, error) {

@@ -324,6 +324,7 @@ type Company struct {
 	InscricaoEstadualIsento bool               `json:"inscricao_estadual_isento"`
 	Cnae                    pgtype.Text        `json:"cnae"`
 	RegimeTributario        interface{}        `json:"regime_tributario"`
+	ExternalCompanyID       string             `json:"external_company_id"`
 }
 
 type CompanyCertificate struct {
