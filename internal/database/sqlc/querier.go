@@ -165,6 +165,7 @@ type Querier interface {
 	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
+	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)

@@ -60,8 +60,8 @@ func estimateCostCents(category domain.MessageCategory) int {
 	}
 }
 
-func (s *Service) SendMessage(ctx context.Context, req domain.SendMessageRequest) (*domain.Message, error) {
-	configCompany, err := s.repo.GetCompanyWhatsAppConfig(ctx, pgconv.OptionalUUIDToPgType(req.CompanyID))
+func (s *Service) SendMessage(ctx context.Context, companyId uuid.UUID, req domain.SendMessageRequest) (*domain.Message, error) {
+	configCompany, err := s.repo.GetCompanyWhatsAppConfig(ctx, pgconv.OptionalUUIDToPgType(companyId))
 	if err != nil {
 		return &domain.Message{}, err
 	}
@@ -104,7 +104,7 @@ func (s *Service) SendMessage(ctx context.Context, req domain.SendMessageRequest
 	}
 
 	menssage, err := s.repo.CreateWhatsAppMessage(ctx, db.CreateWhatsAppMessageParams{
-		CompanyID:          pgconv.OptionalUUIDToPgType(req.CompanyID),
+		CompanyID:          pgconv.OptionalUUIDToPgType(companyId),
 		TemplateID:         pgconv.OptionalPtrUUIDToPgType(templateId),
 		Category:           db.WhatsappMessageCategory(category),
 		RecipientPhone:     req.RecipientPhone,
@@ -260,25 +260,11 @@ func (s *Service) HandleWebhookEvent(ctx context.Context, payload []byte) error 
 	return nil
 }
 
-func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, period time.Time) error {
-	startAt := time.Date(
-		period.Year(),
-		period.Month(),
-		1,
-		0, 0, 0, 0, period.Location(),
-	)
-
-	endAt := time.Date(
-		period.Year(),
-		period.Month()+1,
-		0,
-		0, 0, 0, 0, period.Location(),
-	)
-
+func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) error {
 	countMessage, err := s.repo.CountMessagesInPeriod(ctx, db.CountMessagesInPeriodParams{
 		CompanyID:   pgconv.OptionalUUIDToPgType(companyId),
-		CreatedAt:   pgconv.TimeToPgTimestamptz(startAt),
-		CreatedAt_2: pgconv.TimeToPgTimestamptz(endAt),
+		CreatedAt:   pgconv.TimeToPgTimestamptz(periodStart),
+		CreatedAt_2: pgconv.TimeToPgTimestamptz(periodEnd),
 	})
 	if err != nil {
 		return err
@@ -311,7 +297,7 @@ func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, per
 
 	_, err = s.repo.UpsertMonthlyUsage(ctx, db.UpsertMonthlyUsageParams{
 		CompanyID:             pgconv.OptionalUUIDToPgType(companyId),
-		BillingPeriod:         pgconv.StringToPgDate(startAt.String()),
+		BillingPeriod:         pgconv.StringToPgDate(periodStart.String()),
 		MessagesSent:          int32(countMessage),
 		MessagesOverAllowance: int32(overAllowance),
 	})
@@ -319,7 +305,7 @@ func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, per
 		return err
 	}
 
-	idempotencyKey := fmt.Sprintf("whatsapp-overage-%s-%s", companyId, period.Format("2006-01"))
+	idempotencyKey := fmt.Sprintf("whatsapp-overage-%s-%s", companyId, periodStart.Format("2006-01-02"))
 
 	company, err := s.companiesService.GetCompanyByID(ctx, companyId)
 	if err != nil {

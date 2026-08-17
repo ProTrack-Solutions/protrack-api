@@ -46,7 +46,14 @@ type BillingClientInterface interface {
 	ReportUsage(ctx context.Context, customerID string, quantity int, idempotencyKey string) error
 }
 
-type ServiceInterface interface{}
+type ServiceInterface interface {
+	SendMessage(ctx context.Context, companyId uuid.UUID, req SendMessageRequest) (*Message, error)
+	GetCompanyConfig(ctx context.Context, companyId uuid.UUID) (*CompanyWhatsAppConfig, error)
+	UpsertCompanyConfig(ctx context.Context, companyId uuid.UUID, req UpsertCompanyConfigRequest) (*CompanyWhatsAppConfig, error)
+	ListApprovedTemplates(ctx context.Context) ([]Template, error)
+	HandleWebhookEvent(ctx context.Context, payload []byte) error
+	SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) error
+}
 
 type WhatsAppMode string
 
@@ -129,12 +136,11 @@ type Message struct {
 // IsPlatformSharedEligible = true — essa validação acontece na camada de service,
 // não aqui, pra manter o domain livre de I/O.
 type SendMessageRequest struct {
-	CompanyID      uuid.UUID
-	TemplateName   string
-	LanguageCode   string
-	RecipientPhone string
-	Category       MessageCategory
-	Variables      map[string]string
+	TemplateName   string            `json:"template_name"`
+	LanguageCode   string            `json:"language_code"`
+	RecipientPhone string            `json:"recipient_phone"`
+	Category       MessageCategory   `json:"category"`
+	Variables      map[string]string `json:"variables"`
 }
 
 type UpsertCompanyConfigRequest struct {
