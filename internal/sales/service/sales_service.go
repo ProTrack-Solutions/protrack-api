@@ -24,7 +24,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
-	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,7 +67,6 @@ type Service struct {
 	productService            *productService.Service
 	productCategoriesService  *productCategoriesService.Service
 	companiesService          *companiesService.Service
-	whatsApp                  *whatsapp.Whatsapp
 }
 
 func NewService(
@@ -80,7 +78,6 @@ func NewService(
 	productService *productService.Service,
 	productCategoriesService *productCategoriesService.Service,
 	companiesService *companiesService.Service,
-	whatsApp *whatsapp.Whatsapp,
 ) *Service {
 	return &Service{
 		repo:                      repo,
@@ -91,7 +88,6 @@ func NewService(
 		productService:            productService,
 		productCategoriesService:  productCategoriesService,
 		companiesService:          companiesService,
-		whatsApp:                  whatsApp,
 	}
 }
 
