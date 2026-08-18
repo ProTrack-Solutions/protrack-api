@@ -356,7 +356,7 @@ func main() {
 	worker.StartOverdueMonitor(salesService, ch, discordLogger)
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
 	worker.StartWhatsAppUsageSyncWorker(subscriptionsService, metaWhatsappService, plansService, discordLogger)
-	consumers.StartWhatsAppConsumer(ch, whatsapp)
+	consumers.StartWhatsAppConsumer(ch, metaWhatsappService)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 	consumers.StartEmailCOnsumer(ch, emailSender)
 

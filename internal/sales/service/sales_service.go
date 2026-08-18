@@ -544,9 +544,12 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 			CustomerName: sale.CustomerName,
 			PhoneNumber:  customer.Whatsapp,
 			Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
-			DueDate:      pgconv.PgTimestamptzToTime(sale.CreatedAt),
+			DueDate:      data.DueDate.Time,
 			InstanceName: instanceName,
 			Message:      msg,
+			CompanyName:  company.Name,
+			PurchaseDate: sale.SaleAt.Time,
+			ContactInfo:  company.Phone,
 		})
 
 		companyCounts[companyID]++
