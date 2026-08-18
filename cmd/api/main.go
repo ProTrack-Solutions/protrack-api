@@ -104,9 +104,6 @@ import (
 	vendorsHandler "github.com/ProTrack-Solutions/protrack-api/internal/vendors/handler"
 	vendorsRepository "github.com/ProTrack-Solutions/protrack-api/internal/vendors/repository"
 	vendorsService "github.com/ProTrack-Solutions/protrack-api/internal/vendors/service"
-	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
-	whatsappHandler "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/handler"
-	whatsappService "github.com/ProTrack-Solutions/protrack-api/internal/whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/worker"
 	"github.com/gin-contrib/cors"
 
@@ -217,11 +214,9 @@ func main() {
 	billing := billing.NewClient(clientStripe, *cfg)
 
 	metagraphClient := metagraph.NewClient(http.DefaultClient)
+	discordLogger.Send(domain.LevelInfo, "Whatsapp initialized", "Whatsapp client initialized successfully")
 
 	metaClient := client.NewClient(metagraphClient)
-
-	whatsapp := whatsapp.NewWhatsapp(cfg)
-	discordLogger.Send(domain.LevelInfo, "Whatsapp initialized", "Whatsapp client initialized successfully")
 
 	jwtManager := jwt.NewJWTManager(cfg.SecretKey)
 
@@ -274,7 +269,7 @@ func main() {
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
-	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService, whatsapp)
+	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService)
 	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
 	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
 	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
@@ -283,7 +278,6 @@ func main() {
 	paymentsService := paymentsService.NewService(db.Pool, paymentHistoryService, accountsReceivableService, customersService, salesService)
 	analyticsService := analyticsService.NewService(productsService, saleItemsService)
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
-	whatsappService := whatsappService.NewService(cfg, companiesService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 	metaWhatsappService := metaWhatsappService.NewService(metaWhatsappRepo, metaClient, subscriptionsService, plansService, billing, companiesService, cfg)
@@ -309,7 +303,6 @@ func main() {
 	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger)
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
-	whatsappHandler := whatsappHandler.NewHandler(whatsappService, jwtManager, blacklist)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService, jwtManager, blacklist)
 	platformAdminsHandler := platformAdminsHandler.NewHandler(platformAdminsService, cfg, rateLimiter)
@@ -338,7 +331,6 @@ func main() {
 	paymentsHandler.RegisterRoute(api)
 	reportsHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
-	whatsappHandler.RegisterRoute(api)
 	annoucementsHandler.RegisterRoutes(api)
 	plansHandler.RegisterRoutes(api)
 	platformAdminsHandler.RegisterRoutes(api)
@@ -356,7 +348,7 @@ func main() {
 	worker.StartOverdueMonitor(salesService, ch, discordLogger)
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
 	worker.StartWhatsAppUsageSyncWorker(subscriptionsService, metaWhatsappService, plansService, discordLogger)
-	consumers.StartWhatsAppConsumer(ch, whatsapp)
+	consumers.StartWhatsAppConsumer(ch, metaWhatsappService)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 	consumers.StartEmailCOnsumer(ch, emailSender)
 
