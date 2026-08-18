@@ -29,11 +29,13 @@ func (s *Service) GenerateProductsLabelPDF(ctx context.Context, productIDs []dom
 			return &bytes.Buffer{}, err
 		}
 
-		products = append(products, domain.GenetareTagProduct{
-			Name:    product.Name,
-			Amount:  product.SalePrice,
-			Barcode: product.Barcode,
-		})
+		for i := 0; i < int(product.Quantity); i++ {
+			products = append(products, domain.GenetareTagProduct{
+				Name:    product.Name,
+				Amount:  product.SalePrice,
+				Barcode: product.Barcode,
+			})
+		}
 
 	}
 
