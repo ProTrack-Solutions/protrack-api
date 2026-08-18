@@ -10,18 +10,10 @@ import (
 func ExtratorCompanyID(c *gin.Context) (uuid.UUID, error) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
-		return uuid.Nil, errors.New("unauthorized")
-	}
-
-	companyIdStr, ok := companyIdAny.(string)
-	if !ok {
 		return uuid.Nil, errors.New("unauthorized: invalid company_id type in context")
 	}
 
-	companyId, err := uuid.Parse(companyIdStr)
-	if err != nil {
-		return uuid.Nil, err
-	}
+	companyId := companyIdAny.(uuid.UUID)
 
 	return companyId, nil
 }
