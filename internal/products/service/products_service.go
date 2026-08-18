@@ -43,12 +43,10 @@ type RepositoryInterface interface {
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
-// PlansServiceInterface define o contrato de plans consumido pelo service de products.
 type PlansServiceInterface interface {
 	GetPlanByID(ctx context.Context, planId uuid.UUID) (plansDomain.PlanResponse, error)
 }
 
-// SubscriptionsServiceInterface define o contrato de subscriptions consumido pelo service de products.
 type SubscriptionsServiceInterface interface {
 	GetSubscriptionByCompanyID(ctx context.Context, companyID uuid.UUID) (subscriptionsDomain.SubscriptionResponse, error)
 }

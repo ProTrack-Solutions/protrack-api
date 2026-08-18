@@ -265,6 +265,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		Timezone:            req.Company.Timezone,
 		Status:              "ACTIVE",
 		CreatedBy:           uuid.Nil,
+		ExternalCompanyId:   stripe.CustomerID,
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro company")
@@ -287,7 +288,7 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 	}
 
 	paymentId, err := s.paymentMethodsService.CreateSubscriptionPaymentMethodTx(ctx, tx, companyId, userId, paymentMethodsDomain.CreateSubscriptionPaymentMethodRequest{
-		GatewayPaymentMethodId: stripe.CustomerID,
+		GatewayPaymentMethodId: stripe.GatewayPaymentMethodId,
 		Type:                   req.Payment.Type,
 		CardBrand:              req.Payment.CardBrand,
 		CardLastFour:           req.Payment.CardLastFour,
@@ -304,10 +305,9 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		PlanId:                 req.Payment.PlanID,
 		PaymentMethodsId:       paymentId,
 		ExternalSubscriptionID: stripe.SubscriptionID,
-
-		Status:             stripe.Status,
-		CurrentPeriodStart: periodStart,
-		CurrentPeriodEnd:   periodEnd,
+		Status:                 stripe.Status,
+		CurrentPeriodStart:     periodStart,
+		CurrentPeriodEnd:       periodEnd,
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro subscription")

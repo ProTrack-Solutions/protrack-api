@@ -58,3 +58,7 @@ func (r *Repository) GetSubscriptionByExternalSubscriptionId(ctx context.Context
 func (r *Repository) GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (db.Subscription, error) {
 	return r.queries().GetSubscriptionByCompanyID(ctx, companyID)
 }
+
+func (r *Repository) ListSubscriptionsDueOn(ctx context.Context, arg db.ListSubscriptionsDueOnParams) ([]db.Subscription, error) {
+	return r.queries().ListSubscriptionsDueOn(ctx, arg)
+}

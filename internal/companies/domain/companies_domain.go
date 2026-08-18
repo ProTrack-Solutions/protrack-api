@@ -56,6 +56,7 @@ type CreateCompanyParams struct {
 	CreatedBy           uuid.UUID `json:"created_by"`
 	UpdatedBy           uuid.UUID `json:"updated_by"`
 	DeletedBy           uuid.UUID `json:"deleted_by"`
+	ExternalCompanyId   string    `json:"external_company_id"`
 }
 
 type DeleteCompanyParams struct {
@@ -109,6 +110,7 @@ type CompanyResponse struct {
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
 	DeletedAt           time.Time `json:"deleted_at"`
+	ExternalCompanyId   string    `json:"external_company_id"`
 }
 
 type SetCompanyStatusParams struct {

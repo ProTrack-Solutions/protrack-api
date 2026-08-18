@@ -138,6 +138,51 @@ func (q *Queries) GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subs
 	return i, err
 }
 
+const listSubscriptionsDueOn = `-- name: ListSubscriptionsDueOn :many
+SELECT id, company_id, plan_id, payment_method_id, external_subscription_id, status, current_period_start, current_period_end, canceled_at, created_at, updated_at
+FROM subscriptions
+WHERE status = 'active'
+  AND current_period_end >= $1
+  AND current_period_end < $2
+`
+
+type ListSubscriptionsDueOnParams struct {
+	CurrentPeriodEnd   pgtype.Timestamptz `json:"current_period_end"`
+	CurrentPeriodEnd_2 pgtype.Timestamptz `json:"current_period_end_2"`
+}
+
+func (q *Queries) ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error) {
+	rows, err := q.db.Query(ctx, listSubscriptionsDueOn, arg.CurrentPeriodEnd, arg.CurrentPeriodEnd_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Subscription{}
+	for rows.Next() {
+		var i Subscription
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.PlanID,
+			&i.PaymentMethodID,
+			&i.ExternalSubscriptionID,
+			&i.Status,
+			&i.CurrentPeriodStart,
+			&i.CurrentPeriodEnd,
+			&i.CanceledAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateSubscriptionMethod = `-- name: UpdateSubscriptionMethod :exec
 UPDATE subscriptions
 SET

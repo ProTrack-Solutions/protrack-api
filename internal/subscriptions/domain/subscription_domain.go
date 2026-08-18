@@ -41,3 +41,8 @@ type UpdateSubscriptionStatusRequest struct {
 	Status           string    `json:"status"`
 	CurrentPeriodEnd time.Time `json:"current_period_end"`
 }
+
+type ListSubscriptionsDueOnRequest struct {
+	CurrentPeriodEnd   time.Time `json:"current_period_end"`
+	CurrentPeriodEnd_2 time.Time `json:"current_period_end_2"`
+}

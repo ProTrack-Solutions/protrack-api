@@ -23,6 +23,7 @@ import (
 	billCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/handler"
 	billCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/repository"
 	billCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/bill_categories/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/billing"
 	billsPayableHandler "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/handler"
 	billsPayableRepository "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/repository"
 	billsPayableService "github.com/ProTrack-Solutions/protrack-api/internal/bills_payable/service"
@@ -49,6 +50,11 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/client"
+	metaWhatsappHandler "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/handler"
+	metaWhatsappRepo "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/repository"
+	metaWhatsappService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/metagraph"
 	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
 	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
@@ -208,6 +214,12 @@ func main() {
 	clientStripe := clientStripe.NewStripeClient(cfg)
 	discordLogger.Send(domain.LevelInfo, "Stripe client created", "Stripe client initialized successfully")
 
+	billing := billing.NewClient(clientStripe, *cfg)
+
+	metagraphClient := metagraph.NewClient(http.DefaultClient)
+
+	metaClient := client.NewClient(metagraphClient)
+
 	whatsapp := whatsapp.NewWhatsapp(cfg)
 	discordLogger.Send(domain.LevelInfo, "Whatsapp initialized", "Whatsapp client initialized successfully")
 
@@ -242,6 +254,7 @@ func main() {
 	subscriptionPaymentMethodsRepository := subscriptionPaymentMethodsRepository.NewRepository(db.Pool)
 	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
+	metaWhatsappRepo := metaWhatsappRepo.NewRepository(db.Pool)
 
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
 	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
@@ -273,6 +286,7 @@ func main() {
 	whatsappService := whatsappService.NewService(cfg, companiesService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
+	metaWhatsappService := metaWhatsappService.NewService(metaWhatsappRepo, metaClient, subscriptionsService, plansService, billing, companiesService, cfg)
 
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
@@ -302,6 +316,7 @@ func main() {
 	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
+	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -332,6 +347,7 @@ func main() {
 	stripeHandler.RegisterRoutes(api)
 	subscriptionManagementHandler.RegisterRoutes(api)
 	labelHandler.RegisterRoutes(api)
+	metaWhatsappHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
@@ -339,6 +355,7 @@ func main() {
 
 	worker.StartOverdueMonitor(salesService, ch, discordLogger)
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
+	worker.StartWhatsAppUsageSyncWorker(subscriptionsService, metaWhatsappService, plansService, discordLogger)
 	consumers.StartWhatsAppConsumer(ch, whatsapp)
 	consumers.StartAnnouncementsConsumer(ch, annountmentsService)
 	consumers.StartEmailCOnsumer(ch, emailSender)

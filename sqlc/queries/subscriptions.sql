@@ -56,3 +56,10 @@ SET
     canceled_at = NOW(),
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: ListSubscriptionsDueOn :many
+SELECT *
+FROM subscriptions
+WHERE status = 'active'
+  AND current_period_end >= $1
+  AND current_period_end < $2;
