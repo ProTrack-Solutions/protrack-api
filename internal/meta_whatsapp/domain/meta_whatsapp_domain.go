@@ -44,6 +44,7 @@ type SubscriptionsServiceInterface interface {
 
 type BillingClientInterface interface {
 	ReportUsage(ctx context.Context, customerID string, quantity int, idempotencyKey string) error
+	AttachOverageItem(ctx context.Context, subscriptionID, priceID string) error
 }
 
 type ServiceInterface interface {
@@ -136,19 +137,20 @@ type Message struct {
 // IsPlatformSharedEligible = true — essa validação acontece na camada de service,
 // não aqui, pra manter o domain livre de I/O.
 type SendMessageRequest struct {
-	TemplateName   string            `json:"template_name"`
-	LanguageCode   string            `json:"language_code"`
-	RecipientPhone string            `json:"recipient_phone"`
-	Category       MessageCategory   `json:"category"`
-	Variables      map[string]string `json:"variables"`
+	TemplateName    string            `json:"template_name"`
+	LanguageCode    string            `json:"language_code"`
+	RecipientPhone  string            `json:"recipient_phone"`
+	Category        MessageCategory   `json:"category"`
+	HeaderVariables map[string]string `json:"header_variables"` // chaves "1", "2"... posição no cabeçalho
+	Variables       map[string]string `json:"variables"`        // chaves "1", "2"... posição no corpo
 }
 
 type UpsertCompanyConfigRequest struct {
-	Mode                    WhatsAppMode
-	WABAID                  *string
-	PhoneNumberId           *string
-	DisplayPhoneNumber      *string
-	AccessToken             *string
-	MonthlyMessageAllowance int
-	IsActive                bool
+	Mode                    WhatsAppMode `json:"mode"`
+	WABAID                  *string      `json:"waba_id"`
+	PhoneNumberId           *string      `json:"phone_number_id"`
+	DisplayPhoneNumber      *string      `json:"display_phone_number"`
+	AccessToken             *string      `json:"access_token"`
+	MonthlyMessageAllowance int          `json:"monthly_message_allowance"`
+	IsActive                bool         `json:"is_active"`
 }

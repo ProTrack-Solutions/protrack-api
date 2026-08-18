@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/metagraph"
@@ -17,7 +19,6 @@ func NewClient(graph *metagraph.Client) *Client {
 	return &Client{graph: graph}
 }
 
-// templatePayload espelha o formato que a Graph API espera pro envio de template.
 type templatePayload struct {
 	MessagingProduct string       `json:"messaging_product"`
 	To               string       `json:"to"`
@@ -51,6 +52,36 @@ type sendMessageResponse struct {
 	} `json:"messages"`
 }
 
+// orderedParameters converte um map de variáveis posicionais (chaves "1", "2", "3"...)
+// numa slice ordenada de templateParameter, respeitando a posição numérica —
+// resolve o problema de map[string]string não ter ordem de iteração garantida.
+func orderedParameters(variables map[string]string) []templateParameter {
+	if len(variables) == 0 {
+		return nil
+	}
+
+	keys := make([]string, 0, len(variables))
+	for k := range variables {
+		keys = append(keys, k)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		numI, errI := strconv.Atoi(keys[i])
+		numJ, errJ := strconv.Atoi(keys[j])
+		if errI != nil || errJ != nil {
+			return keys[i] < keys[j] // fallback: ordem alfabética se a chave não for numérica
+		}
+		return numI < numJ
+	})
+
+	parameters := make([]templateParameter, 0, len(keys))
+	for _, k := range keys {
+		parameters = append(parameters, templateParameter{Type: "text", Text: variables[k]})
+	}
+
+	return parameters
+}
+
 func (c *Client) SendTemplateMessage(ctx context.Context, phoneNumberID, accessToken string, req domain.SendMessageRequest) (string, error) {
 	payload := templatePayload{
 		MessagingProduct: "whatsapp",
@@ -62,14 +93,18 @@ func (c *Client) SendTemplateMessage(ctx context.Context, phoneNumberID, accessT
 		},
 	}
 
-	if len(req.Variables) > 0 {
-		var parameters []templateParameter
-		for _, value := range req.Variables {
-			parameters = append(parameters, templateParameter{Type: "text", Text: value})
-		}
-		payload.Template.Components = []templateComponent{
-			{Type: "body", Parameters: parameters},
-		}
+	var components []templateComponent
+
+	if headerParams := orderedParameters(req.HeaderVariables); len(headerParams) > 0 {
+		components = append(components, templateComponent{Type: "header", Parameters: headerParams})
+	}
+
+	if bodyParams := orderedParameters(req.Variables); len(bodyParams) > 0 {
+		components = append(components, templateComponent{Type: "body", Parameters: bodyParams})
+	}
+
+	if len(components) > 0 {
+		payload.Template.Components = components
 	}
 
 	respBody, err := c.graph.Do(ctx, "POST", phoneNumberID+"/messages", accessToken, payload)

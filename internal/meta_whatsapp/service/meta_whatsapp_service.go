@@ -16,15 +16,16 @@ import (
 )
 
 type Service struct {
-	repo                domain.RepositoryInterface
-	metaClient          domain.MetaClientInterface
-	subscriptionService domain.SubscriptionsServiceInterface
-	plansService        domain.PlansServiceInterface
-	billingClient       domain.BillingClientInterface
-	companiesService    domain.CompaniesServiceInterface
-	PhoneNumberID       string
-	MetaAccessToken     string
-	MetaSecretKey       string
+	repo                         domain.RepositoryInterface
+	metaClient                   domain.MetaClientInterface
+	subscriptionService          domain.SubscriptionsServiceInterface
+	plansService                 domain.PlansServiceInterface
+	billingClient                domain.BillingClientInterface
+	companiesService             domain.CompaniesServiceInterface
+	PhoneNumberID                string
+	MetaAccessToken              string
+	MetaSecretKey                string
+	StripeWhatsappOveragePriceID string
 }
 
 func NewService(
@@ -37,24 +38,25 @@ func NewService(
 	cfg *config.Config,
 ) *Service {
 	return &Service{
-		repo:                repo,
-		metaClient:          metaClient,
-		PhoneNumberID:       cfg.PhoneNumberID,
-		MetaAccessToken:     cfg.MetaAccessToken,
-		MetaSecretKey:       cfg.MetaSecretKey,
-		subscriptionService: subscriptionService,
-		plansService:        plansService,
-		billingClient:       billingClient,
-		companiesService:    companiesService,
+		repo:                         repo,
+		metaClient:                   metaClient,
+		PhoneNumberID:                cfg.PhoneNumberID,
+		MetaAccessToken:              cfg.MetaAccessToken,
+		MetaSecretKey:                cfg.MetaSecretKey,
+		subscriptionService:          subscriptionService,
+		plansService:                 plansService,
+		billingClient:                billingClient,
+		companiesService:             companiesService,
+		StripeWhatsappOveragePriceID: cfg.StripeWhatsappOveragePriceID,
 	}
 }
 
 func estimateCostCents(category domain.MessageCategory) int {
 	switch category {
 	case domain.CategoryMarketing:
-		return 250 // valor placeholder, em centavos
+		return 35 // valor placeholder, em centavos
 	case domain.CategoryUtility, domain.CategoryAuthentication:
-		return 50
+		return 4
 	default:
 		return 0
 	}
@@ -177,6 +179,17 @@ func (s *Service) UpsertCompanyConfig(ctx context.Context, companyId uuid.UUID, 
 	})
 	if err != nil {
 		return &domain.CompanyWhatsAppConfig{}, err
+	}
+
+	if req.Mode == domain.WhatsAppModePlatformShared {
+		sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyId)
+		if err != nil {
+			return &domain.CompanyWhatsAppConfig{}, fmt.Errorf("erro ao buscar subscription para anexar item de billing: %w", err)
+		}
+
+		if err := s.billingClient.AttachOverageItem(ctx, sub.ExternalSubscriptionID, s.StripeWhatsappOveragePriceID); err != nil {
+			return &domain.CompanyWhatsAppConfig{}, fmt.Errorf("erro ao anexar item de billing do WhatsApp: %w", err)
+		}
 	}
 
 	return &domain.CompanyWhatsAppConfig{

@@ -56,6 +56,7 @@ type Config struct {
 	StripeWhatsappMeterEventName string
 	MetaWebhookVerifyToken       string
 	MetaAppSecret                string
+	StripeWhatsappOveragePriceID string
 }
 
 func LoadConfig() (*Config, error) {
@@ -97,6 +98,7 @@ func LoadConfig() (*Config, error) {
 		StripeWhatsappMeterEventName: getEnv("STRIPE_WHATSAPP_METER_EVENT_NAME"),
 		MetaWebhookVerifyToken:       getEnv("META_WEBHOOK_VERIFY_TOKEN"),
 		MetaAppSecret:                getEnv("META_APP_SECRET"),
+		StripeWhatsappOveragePriceID: getEnv("STRIPE_WHATSAPP_OVERAGE_PRICE_ID"),
 	}
 
 	return config, nil

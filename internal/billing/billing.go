@@ -34,3 +34,14 @@ func (c *Client) ReportUsage(ctx context.Context, customerID string, quantity in
 	_, err := c.stripeClient.V1BillingMeterEvents.Create(ctx, billing)
 	return err
 }
+
+func (c *Client) AttachOverageItem(ctx context.Context, subscriptionID, priceID string) error {
+	params := &stripe.SubscriptionItemCreateParams{
+		Subscription: stripe.String(subscriptionID),
+		Price:        stripe.String(priceID),
+	}
+	params.SetIdempotencyKey("attach-overage-" + subscriptionID + "-" + priceID)
+
+	_, err := c.stripeClient.V1SubscriptionItems.Create(ctx, params)
+	return err
+}
