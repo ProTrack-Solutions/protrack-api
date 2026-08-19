@@ -69,6 +69,8 @@ SET name = $2,
     address_country = $16,
     timezone = $17,
     updated_by = $18,
+    is_whatsapp = $19,
+    is_excess_usage = $20,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL

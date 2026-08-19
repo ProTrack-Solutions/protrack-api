@@ -993,7 +993,7 @@ func TestSyncMonthlyUsage_WithinAllowance_DoesNotReportUsage(t *testing.T) {
 
 	d.plansSvc.EXPECT().
 		GetPlanByID(gomock.Any(), planID).
-		Return(buildPlanResponse(planID, "whatsapp_integration", 1000), nil)
+		Return(buildPlanResponse(planID, "max_whatsapp_integration", 1000), nil)
 
 	d.repo.EXPECT().
 		UpsertMonthlyUsage(gomock.Any(), db.UpsertMonthlyUsageParams{
@@ -1040,7 +1040,7 @@ func TestSyncMonthlyUsage_OverAllowance_ReportsUsage(t *testing.T) {
 
 	d.plansSvc.EXPECT().
 		GetPlanByID(gomock.Any(), planID).
-		Return(buildPlanResponse(planID, "whatsapp_integration", 1000), nil)
+		Return(buildPlanResponse(planID, "max_whatsapp_integration", 1000), nil)
 
 	d.repo.EXPECT().
 		UpsertMonthlyUsage(gomock.Any(), db.UpsertMonthlyUsageParams{

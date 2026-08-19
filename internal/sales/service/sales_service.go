@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	accountsReceivableDomain "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/domain"
@@ -17,6 +18,8 @@ import (
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	metaWhatsAppService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
+	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	productCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
 	saleItemDomain "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/domain"
@@ -24,6 +27,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
+	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -67,6 +71,9 @@ type Service struct {
 	productService            *productService.Service
 	productCategoriesService  *productCategoriesService.Service
 	companiesService          *companiesService.Service
+	subscriptionService       *subscriptionService.Service
+	plansService              *plansService.Service
+	metaWhatsAppService       *metaWhatsAppService.Service
 }
 
 func NewService(
@@ -78,6 +85,9 @@ func NewService(
 	productService *productService.Service,
 	productCategoriesService *productCategoriesService.Service,
 	companiesService *companiesService.Service,
+	subscriptionService *subscriptionService.Service,
+	plansService *plansService.Service,
+	metaWhatsAppService *metaWhatsAppService.Service,
 ) *Service {
 	return &Service{
 		repo:                      repo,
@@ -88,6 +98,18 @@ func NewService(
 		productService:            productService,
 		productCategoriesService:  productCategoriesService,
 		companiesService:          companiesService,
+		subscriptionService:       subscriptionService,
+		plansService:              plansService,
+		metaWhatsAppService:       metaWhatsAppService,
+	}
+}
+
+func calculatePeriodStart(currentPeriodEnd time.Time, billingCycle string) time.Time {
+	switch strings.ToLower(billingCycle) {
+	case "yearly":
+		return currentPeriodEnd.AddDate(-1, 0, 0)
+	default: // "monthly" e qualquer valor não reconhecido caem aqui
+		return currentPeriodEnd.AddDate(0, -1, 0)
 	}
 }
 
@@ -510,7 +532,10 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 	// agrupa contagem de vendas vencidas por empresa
 	companyCounts := make(map[uuid.UUID]int)
 
+	whatsAppEligibility := make(map[uuid.UUID]bool)
+
 	for _, data := range response {
+
 		customer, err := s.customerService.GetCustomerByIdTx(ctx, tx, pgconv.PgUUIDToUUID(data.CustomerID))
 		if err != nil {
 			return domain.OverdueSalesResult{}, err
@@ -528,25 +553,59 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 		}
 
 		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
-		instanceName := fmt.Sprintf("%s-%s", company.Name, companyID.String())
 
-		msg := fmt.Sprintf("⚠️ *Aviso de Vencimento*\n\n"+
-			"Informamos que a sua parcela com vencimento no dia %d venceu hoje.\n"+
-			"Pedimos que entre em contato para realizar a regularização.", sale.DueDays.Int32)
+		isWhatsappPlan, cached := whatsAppEligibility[companyID]
 
-		whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
-			IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
-			CompanyID:    companyID,
-			CustomerName: sale.CustomerName,
-			PhoneNumber:  customer.Whatsapp,
-			Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
-			DueDate:      data.DueDate.Time,
-			InstanceName: instanceName,
-			Message:      msg,
-			CompanyName:  company.Name,
-			PurchaseDate: sale.SaleAt.Time,
-			ContactInfo:  company.Phone,
-		})
+		if !cached {
+			sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
+			if err != nil {
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve subscription: %w", err)
+			}
+
+			plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
+			if err != nil {
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve plan: %w", err)
+			}
+
+			periodStart := calculatePeriodStart(sub.CurrentPeriodEnd, plan.BillingCycle)
+
+			countMessages, err := s.metaWhatsAppService.CountMessagesInPeriod(ctx, companyID, periodStart, sub.CurrentPeriodEnd)
+			if err != nil {
+				return domain.OverdueSalesResult{}, err
+			}
+			if countMessages == nil {
+				return domain.OverdueSalesResult{}, fmt.Errorf("contagem de mensagens indisponível para empresa %s", companyID)
+			}
+
+			for _, ft := range plan.Features {
+				if ft.FeatureKey == "max_whatsapp_integration" {
+					switch {
+					case ft.LimitValue > *countMessages:
+						isWhatsappPlan = true
+					case ft.LimitValue <= *countMessages && company.IsExcessUsage:
+						isWhatsappPlan = true
+					default:
+						isWhatsappPlan = false
+					}
+				}
+			}
+
+			whatsAppEligibility[companyID] = isWhatsappPlan
+		}
+
+		if isWhatsappPlan {
+			whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
+				IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
+				CompanyID:    companyID,
+				CustomerName: sale.CustomerName,
+				PhoneNumber:  customer.Whatsapp,
+				Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
+				DueDate:      data.DueDate.Time,
+				CompanyName:  company.Name,
+				PurchaseDate: sale.SaleAt.Time,
+				ContactInfo:  company.Phone,
+			})
+		}
 
 		companyCounts[companyID]++
 
