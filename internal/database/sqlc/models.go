@@ -325,6 +325,8 @@ type Company struct {
 	Cnae                    pgtype.Text        `json:"cnae"`
 	RegimeTributario        interface{}        `json:"regime_tributario"`
 	ExternalCompanyID       string             `json:"external_company_id"`
+	IsWhatsapp              bool               `json:"is_whatsapp"`
+	IsExcessUsage           bool               `json:"is_excess_usage"`
 }
 
 type CompanyCertificate struct {

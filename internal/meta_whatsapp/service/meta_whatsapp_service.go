@@ -296,7 +296,7 @@ func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, per
 	var quantityMessage int
 
 	for _, ft := range plan.Features {
-		if ft.FeatureKey == "whatsapp_integration" {
+		if ft.FeatureKey == "max_whatsapp_integration" {
 			quantityMessage = int(ft.LimitValue)
 		}
 	}
@@ -332,4 +332,17 @@ func (s *Service) SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, per
 	}
 
 	return nil
+}
+
+func (s *Service) CountMessagesInPeriod(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) (*int64, error) {
+	countMessage, err := s.repo.CountMessagesInPeriod(ctx, db.CountMessagesInPeriodParams{
+		CompanyID:   pgconv.OptionalUUIDToPgType(companyId),
+		CreatedAt:   pgconv.TimeToPgTimestamptz(periodStart),
+		CreatedAt_2: pgconv.TimeToPgTimestamptz(periodEnd),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &countMessage, err
 }
