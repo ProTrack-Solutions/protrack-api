@@ -1,15 +1,18 @@
 package consumers
 
 import (
+	"context"
 	"encoding/json"
+	"strconv"
 
+	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
+	metaWhatsapp "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
-	"github.com/ProTrack-Solutions/protrack-api/internal/whatsapp"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
 )
 
-func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Whatsapp) {
+func StartWhatsAppConsumer(amqpChan *amqp.Channel, metaWhatsapp *metaWhatsapp.Service) {
 	go func() {
 		// 1. Garante que a fila existe (Boa prática caso o container caia ou resete)
 		q, err := amqpChan.QueueDeclare(
@@ -64,12 +67,28 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, whatsAppService *whatsapp.Wha
 
 			log.Info().Str("sale_id", event.IDSale.String()).Msg("Nova mensagem recebida na fila do WhatsApp. Processando...")
 
-			err = whatsAppService.SendWhatsAppMessage(event.PhoneNumber, event.Message, event.InstanceName)
+			_, err = metaWhatsapp.SendMessage(context.Background(), event.CompanyID, domain.SendMessageRequest{
+				TemplateName:   "venda_vencida",
+				LanguageCode:   "pt_BR",
+				RecipientPhone: event.PhoneNumber,
+				Category:       "utility",
+				HeaderVariables: map[string]string{
+					"1": event.CompanyName,
+				},
+				Variables: map[string]string{
+					"1": event.CustomerName,
+					"2": event.PurchaseDate.Format("02/01/2006"),
+					"3": strconv.FormatFloat(event.Value, 'f', 2, 64),
+					"4": event.DueDate.Format("02/01/2006"),
+					"5": event.ContactInfo,
+				},
+			})
+
 			if err != nil {
 				log.Error().Err(err).Str("sale_id", event.IDSale.String()).Msg("Erro ao disparar WhatsApp. Mensagem será devolvida para a fila.")
 
-				// Nack com 'requeue=true' faz a mensagem voltar para o topo da fila para tentar novamente
-				// Dica: No futuro você pode acoplar uma DLQ aqui para evitar loops infinitos de erro
+				// requeue=false: em caso de falha, a mensagem é descartada (não há DLQ configurada ainda).
+				// TODO: considerar DLQ + retry com backoff antes de produção com volume real.
 				d.Nack(false, false)
 			} else {
 				log.Info().Str("sale_id", event.IDSale.String()).Msg("WhatsApp enviado com sucesso!")

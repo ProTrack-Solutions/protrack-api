@@ -1139,24 +1139,33 @@ WITH updated_accounts AS (
     SET status = 'overdue'
     WHERE status = 'pending'
         AND due_date::DATE < CURRENT_DATE
-    RETURNING sale_id
+    RETURNING sale_id, due_date
+),
+updated_sales AS (
+    UPDATE sales
+    SET status = 'overdue',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id IN (
+            SELECT sale_id
+            FROM updated_accounts
+        )
+        AND status NOT IN ('paid', 'canceled')
+    RETURNING id AS sale_id, customer_id, company_id
 )
-UPDATE sales
-SET status = 'overdue',
-    updated_at = CURRENT_TIMESTAMP
-WHERE id IN (
-        SELECT sale_id
-        FROM updated_accounts
-    )
-    AND status NOT IN ('paid', 'canceled')
-RETURNING id AS sale_id,
-    customer_id, company_id
+SELECT
+    us.sale_id,
+    us.customer_id,
+    us.company_id,
+    ua.due_date
+FROM updated_sales us
+JOIN updated_accounts ua ON ua.sale_id = us.sale_id
 `
 
 type UpdateOverdueSalesAndAccountsGlobalRow struct {
 	SaleID     pgtype.UUID `json:"sale_id"`
 	CustomerID pgtype.UUID `json:"customer_id"`
 	CompanyID  pgtype.UUID `json:"company_id"`
+	DueDate    pgtype.Date `json:"due_date"`
 }
 
 func (q *Queries) UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]UpdateOverdueSalesAndAccountsGlobalRow, error) {
@@ -1168,7 +1177,12 @@ func (q *Queries) UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]Up
 	items := []UpdateOverdueSalesAndAccountsGlobalRow{}
 	for rows.Next() {
 		var i UpdateOverdueSalesAndAccountsGlobalRow
-		if err := rows.Scan(&i.SaleID, &i.CustomerID, &i.CompanyID); err != nil {
+		if err := rows.Scan(
+			&i.SaleID,
+			&i.CustomerID,
+			&i.CompanyID,
+			&i.DueDate,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

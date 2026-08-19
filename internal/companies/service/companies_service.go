@@ -156,6 +156,7 @@ func (s *Service) GetCompanyByID(ctx context.Context, id uuid.UUID) (domain.Comp
 		CreatedAt:           pgconv.PgTimestamptzToTime(company.CreatedAt),
 		UpdatedAt:           pgconv.PgTimestamptzToTime(company.UpdatedAt),
 		DeletedAt:           pgconv.PgTimestamptzToTime(company.DeletedAt),
+		ExternalCompanyId:   company.ExternalCompanyID,
 	}, nil
 }
 
@@ -327,6 +328,7 @@ func (s *Service) CreateCompanyTx(ctx context.Context, tx db.DBTX, req domain.Cr
 		AddressCountry:      pgconv.ParseStringToPgText(req.AddressCountry),
 		Timezone:            pgconv.ParseStringToPgText(req.Timezone),
 		CreatedBy:           pgconv.ParseUUIDToPgType(uuid.Nil),
+		ExternalCompanyID:   req.ExternalCompanyId,
 	})
 	if err != nil {
 		return uuid.Nil, err

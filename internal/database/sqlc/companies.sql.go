@@ -40,7 +40,8 @@ INSERT INTO companies(
         address_zipcode,
         address_country,
         timezone,
-        created_by
+        created_by,
+        external_company_id
     )
 VALUES (
         $1,
@@ -59,9 +60,10 @@ VALUES (
         $14,
         $15,
         $16,
-        $17
+        $17,
+        $18
     )
-RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
+RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
 `
 
 type CreateCompanyParams struct {
@@ -82,6 +84,7 @@ type CreateCompanyParams struct {
 	AddressCountry      pgtype.Text `json:"address_country"`
 	Timezone            pgtype.Text `json:"timezone"`
 	CreatedBy           pgtype.UUID `json:"created_by"`
+	ExternalCompanyID   string      `json:"external_company_id"`
 }
 
 func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error) {
@@ -103,6 +106,7 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		arg.AddressCountry,
 		arg.Timezone,
 		arg.CreatedBy,
+		arg.ExternalCompanyID,
 	)
 	var i Company
 	err := row.Scan(
@@ -134,6 +138,7 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.InscricaoEstadualIsento,
 		&i.Cnae,
 		&i.RegimeTributario,
+		&i.ExternalCompanyID,
 	)
 	return i, err
 }
@@ -157,7 +162,7 @@ func (q *Queries) DeleteCompany(ctx context.Context, arg DeleteCompanyParams) er
 }
 
 const getCompanyByDocument = `-- name: GetCompanyByDocument :one
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
 FROM companies
 WHERE document = $1
     AND deleted_at IS NULL
@@ -195,12 +200,13 @@ func (q *Queries) GetCompanyByDocument(ctx context.Context, document pgtype.Text
 		&i.InscricaoEstadualIsento,
 		&i.Cnae,
 		&i.RegimeTributario,
+		&i.ExternalCompanyID,
 	)
 	return i, err
 }
 
 const getCompanyByID = `-- name: GetCompanyByID :one
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
 FROM companies
 WHERE id = $1
     AND deleted_at IS NULL
@@ -238,12 +244,13 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, 
 		&i.InscricaoEstadualIsento,
 		&i.Cnae,
 		&i.RegimeTributario,
+		&i.ExternalCompanyID,
 	)
 	return i, err
 }
 
 const listCompanies = `-- name: ListCompanies :many
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
 FROM companies
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
@@ -287,6 +294,7 @@ func (q *Queries) ListCompanies(ctx context.Context) ([]Company, error) {
 			&i.InscricaoEstadualIsento,
 			&i.Cnae,
 			&i.RegimeTributario,
+			&i.ExternalCompanyID,
 		); err != nil {
 			return nil, err
 		}
@@ -339,7 +347,7 @@ SET name = $2,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
-RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario
+RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
 `
 
 type UpdateCompanyParams struct {
@@ -414,6 +422,7 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.InscricaoEstadualIsento,
 		&i.Cnae,
 		&i.RegimeTributario,
+		&i.ExternalCompanyID,
 	)
 	return i, err
 }

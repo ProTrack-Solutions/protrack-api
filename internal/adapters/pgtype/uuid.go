@@ -26,10 +26,28 @@ func OptionalUUIDToPgType(value uuid.UUID) pgtype.UUID {
 	}
 }
 
+func OptionalPtrUUIDToPgType(value *uuid.UUID) pgtype.UUID {
+	if value == nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{
+		Bytes: *value,
+		Valid: true,
+	}
+}
+
 // ParsePgUUIDToUUID converte pgtype.UUID para uuid.UUID
 func PgUUIDToUUID(value pgtype.UUID) uuid.UUID {
 	if !value.Valid {
 		return uuid.Nil
 	}
 	return value.Bytes
+}
+
+func PgUUIDToUUIDPtr(value pgtype.UUID) *uuid.UUID {
+	if !value.Valid {
+		return nil
+	}
+	converted := uuid.UUID(value.Bytes)
+	return &converted
 }

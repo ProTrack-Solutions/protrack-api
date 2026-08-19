@@ -21,6 +21,8 @@ type Querier interface {
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountInvoices(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	// Alimenta o job de sincronização de uso mensal com o Stripe.
+	CountMessagesInPeriod(ctx context.Context, arg CountMessagesInPeriodParams) (int64, error)
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -48,6 +50,7 @@ type Querier interface {
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
+	CreateWhatsAppMessage(ctx context.Context, arg CreateWhatsAppMessageParams) (WhatsappMessage, error)
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
 	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
 	DeleteAnnoucements(ctx context.Context, arg DeleteAnnoucementsParams) error
@@ -73,17 +76,22 @@ type Querier interface {
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
+	GetCompanyWhatsAppConfig(ctx context.Context, companyID pgtype.UUID) (CompanyWhatsappConfig, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
 	GetCustomerById(ctx context.Context, id pgtype.UUID) (Customer, error)
 	GetCustomerDebtSummary(ctx context.Context, customerID pgtype.UUID) (GetCustomerDebtSummaryRow, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetCustomersPerformanceSummaryRow, error)
 	GetDepartmentById(ctx context.Context, id pgtype.UUID) (Department, error)
+	// Usado pelo serviço de disparo pra validar se um template pode ser usado
+	// no WABA compartilhado antes de chamar a Graph API.
+	GetEligibleTemplateByName(ctx context.Context, arg GetEligibleTemplateByNameParams) (WhatsappTemplate, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
 	GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHistory, error)
 	GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error)
+	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -125,6 +133,7 @@ type Querier interface {
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
+	ListApprovedTemplates(ctx context.Context) ([]WhatsappTemplate, error)
 	ListBillCategories(ctx context.Context, companyID pgtype.UUID) ([]BillCategory, error)
 	ListBillCategoriesActive(ctx context.Context, id pgtype.UUID) ([]BillCategory, error)
 	ListBillsPayable(ctx context.Context, arg ListBillsPayableParams) ([]ListBillsPayableRow, error)
@@ -156,9 +165,11 @@ type Querier interface {
 	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
+	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
+	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error
 	PayBill(ctx context.Context, arg PayBillParams) error
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
@@ -197,6 +208,10 @@ type Querier interface {
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
+	// Chamado pelo handler de webhook quando chega um status novo (sent/delivered/failed).
+	UpdateWhatsAppMessageStatus(ctx context.Context, arg UpdateWhatsAppMessageStatusParams) (WhatsappMessage, error)
+	UpsertCompanyWhatsAppConfig(ctx context.Context, arg UpsertCompanyWhatsAppConfigParams) (CompanyWhatsappConfig, error)
+	UpsertMonthlyUsage(ctx context.Context, arg UpsertMonthlyUsageParams) (WhatsappUsageMonthly, error)
 }
 
 var _ Querier = (*Queries)(nil)

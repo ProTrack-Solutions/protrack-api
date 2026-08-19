@@ -21,6 +21,7 @@ type RepositoryInterface interface {
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionId pgtype.Text) (db.Subscription, error)
 	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (db.Subscription, error)
+	ListSubscriptionsDueOn(ctx context.Context, arg db.ListSubscriptionsDueOnParams) ([]db.Subscription, error)
 }
 
 type Service struct {
@@ -136,4 +137,33 @@ func (s *Service) GetSubscriptionByExternalSubscriptionId(ctx context.Context, e
 		CreatedAt:              pgconv.PgTimestamptzToTime(subscription.CreatedAt),
 		UpdatedAt:              pgconv.PgTimestamptzToTime(subscription.UpdatedAt),
 	}, nil
+}
+
+func (s *Service) ListSubscriptionsDueOn(ctx context.Context, req domain.ListSubscriptionsDueOnRequest) ([]domain.SubscriptionResponse, error) {
+	subscriptions, err := s.repo.ListSubscriptionsDueOn(ctx, db.ListSubscriptionsDueOnParams{
+		CurrentPeriodEnd:   pgconv.TimeToPgTimestamptz(req.CurrentPeriodEnd),
+		CurrentPeriodEnd_2: pgconv.TimeToPgTimestamptz(req.CurrentPeriodEnd_2),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]domain.SubscriptionResponse, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		responses = append(responses, domain.SubscriptionResponse{
+			ID:                     pgconv.PgUUIDToUUID(subscription.ID),
+			CompanyID:              pgconv.PgUUIDToUUID(subscription.CompanyID),
+			PlanID:                 pgconv.PgUUIDToUUID(subscription.PlanID),
+			PaymentMethodID:        pgconv.PgUUIDToUUID(subscription.PaymentMethodID),
+			ExternalSubscriptionID: pgconv.ParsePgTextToString(subscription.ExternalSubscriptionID),
+			Status:                 subscription.Status,
+			CurrentPeriodStart:     pgconv.PgTimestamptzToTime(subscription.CurrentPeriodStart),
+			CurrentPeriodEnd:       pgconv.PgTimestamptzToTime(subscription.CurrentPeriodEnd),
+			CanceledAt:             pgconv.PgTimestamptzToTime(subscription.CanceledAt),
+			CreatedAt:              pgconv.PgTimestamptzToTime(subscription.CreatedAt),
+			UpdatedAt:              pgconv.PgTimestamptzToTime(subscription.UpdatedAt),
+		})
+	}
+
+	return responses, nil
 }

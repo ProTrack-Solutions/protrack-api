@@ -124,3 +124,10 @@ func PgDateToString(pgDate pgtype.Date) string {
 	// Formatamos usando o layout padrão de data do Go
 	return pgDate.Time.Format("2006-01-02")
 }
+
+func PgTimestamptzToTimePtr(value pgtype.Timestamptz) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	return &value.Time
+}

@@ -136,18 +136,26 @@ WITH updated_accounts AS (
     SET status = 'overdue'
     WHERE status = 'pending'
         AND due_date::DATE < CURRENT_DATE
-    RETURNING sale_id
+    RETURNING sale_id, due_date
+),
+updated_sales AS (
+    UPDATE sales
+    SET status = 'overdue',
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id IN (
+            SELECT sale_id
+            FROM updated_accounts
+        )
+        AND status NOT IN ('paid', 'canceled')
+    RETURNING id AS sale_id, customer_id, company_id
 )
-UPDATE sales
-SET status = 'overdue',
-    updated_at = CURRENT_TIMESTAMP
-WHERE id IN (
-        SELECT sale_id
-        FROM updated_accounts
-    )
-    AND status NOT IN ('paid', 'canceled')
-RETURNING id AS sale_id,
-    customer_id, company_id;
+SELECT
+    us.sale_id,
+    us.customer_id,
+    us.company_id,
+    ua.due_date
+FROM updated_sales us
+JOIN updated_accounts ua ON ua.sale_id = us.sale_id;
 -- name: GetSaleByIdWhatsapp :one
 SELECT s.*,
     COALESCE(c.full_name, '') as customer_name,

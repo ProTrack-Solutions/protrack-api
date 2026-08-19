@@ -49,7 +49,14 @@ type Config struct {
 
 	FrontendURL string
 
-	SuperAdiminPepper string
+	SuperAdiminPepper            string
+	PhoneNumberID                string
+	MetaAccessToken              string
+	MetaSecretKey                string
+	StripeWhatsappMeterEventName string
+	MetaWebhookVerifyToken       string
+	MetaAppSecret                string
+	StripeWhatsappOveragePriceID string
 }
 
 func LoadConfig() (*Config, error) {
@@ -57,34 +64,41 @@ func LoadConfig() (*Config, error) {
 	_ = godotenv.Load(".env")
 
 	config := &Config{
-		AppEnv:              getEnv("APP_ENV"),
-		DBHost:              getEnv("DB_HOST"),
-		DBPort:              getEnv("DB_PORT"),
-		DBUser:              getEnv("DB_USER"),
-		DBPassword:          getEnv("DB_PASSWORD"),
-		DBName:              getEnv("DB_NAME"),
-		DBSSLMode:           getEnv("DB_SSLMODE"),
-		ApiPort:             getEnv("API_PORT"),
-		SecretKey:           getEnv("JWT_SECRET"),
-		EvolutionApi:        getEnv("EVOLUTION_API"),
-		EvolutionKey:        getEnv("EVOLUTION_KEY"),
-		RedisHost:           getEnv("REDIS_HOST"),
-		RedisPort:           getEnv("REDIS_PORT"),
-		Pepper:              getEnv("PEPPER"),
-		EvolutionApiUrl:     getEnv("EVOLUTION_API_URL"),
-		RabbitURL:           getEnv("RABBITMQ_URL"),
-		StripeSecretKey:     getEnv("STRIPE_SECRET_KEY"),
-		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET"),
-		WebhookURLDiscord:   getEnv("WEBHOOK_URL_DISCORD"),
-		DBSimpleProtocol:    getEnvBool("DB_SIMPLE_PROTOCOL"),
-		SMTPHost:            getEnv("SMTP_HOST"),
-		SMTPPort:            getEnv("SMTP_PORT"),
-		SMTPUser:            getEnv("SMTP_USER"),
-		SMTPPassword:        getEnv("SMTP_PASSWORD"),
-		SMTPFrom:            getEnv("SMTP_FROM"),
-		FrontendURL:         getEnv("FRONTEND_URL"),
-		SuperAdiminPepper:   getEnv("SUPER_ADMIN_PEPPER"),
-		IsProduction:        getEnvBool("IS_PRODUCTION"),
+		AppEnv:                       getEnv("APP_ENV"),
+		DBHost:                       getEnv("DB_HOST"),
+		DBPort:                       getEnv("DB_PORT"),
+		DBUser:                       getEnv("DB_USER"),
+		DBPassword:                   getEnv("DB_PASSWORD"),
+		DBName:                       getEnv("DB_NAME"),
+		DBSSLMode:                    getEnv("DB_SSLMODE"),
+		ApiPort:                      getEnv("API_PORT"),
+		SecretKey:                    getEnv("JWT_SECRET"),
+		EvolutionApi:                 getEnv("EVOLUTION_API"),
+		EvolutionKey:                 getEnv("EVOLUTION_KEY"),
+		RedisHost:                    getEnv("REDIS_HOST"),
+		RedisPort:                    getEnv("REDIS_PORT"),
+		Pepper:                       getEnv("PEPPER"),
+		EvolutionApiUrl:              getEnv("EVOLUTION_API_URL"),
+		RabbitURL:                    getEnv("RABBITMQ_URL"),
+		StripeSecretKey:              getEnv("STRIPE_SECRET_KEY"),
+		StripeWebhookSecret:          getEnv("STRIPE_WEBHOOK_SECRET"),
+		WebhookURLDiscord:            getEnv("WEBHOOK_URL_DISCORD"),
+		DBSimpleProtocol:             getEnvBool("DB_SIMPLE_PROTOCOL"),
+		SMTPHost:                     getEnv("SMTP_HOST"),
+		SMTPPort:                     getEnv("SMTP_PORT"),
+		SMTPUser:                     getEnv("SMTP_USER"),
+		SMTPPassword:                 getEnv("SMTP_PASSWORD"),
+		SMTPFrom:                     getEnv("SMTP_FROM"),
+		FrontendURL:                  getEnv("FRONTEND_URL"),
+		SuperAdiminPepper:            getEnv("SUPER_ADMIN_PEPPER"),
+		IsProduction:                 getEnvBool("IS_PRODUCTION"),
+		PhoneNumberID:                getEnv("META_PHONE_NUMBER_ID"),
+		MetaAccessToken:              getEnv("META_ACCESS_TOKEN"),
+		MetaSecretKey:                getEnv("META_SECRET_KEY"),
+		StripeWhatsappMeterEventName: getEnv("STRIPE_WHATSAPP_METER_EVENT_NAME"),
+		MetaWebhookVerifyToken:       getEnv("META_WEBHOOK_VERIFY_TOKEN"),
+		MetaAppSecret:                getEnv("META_APP_SECRET"),
+		StripeWhatsappOveragePriceID: getEnv("STRIPE_WHATSAPP_OVERAGE_PRICE_ID"),
 	}
 
 	return config, nil
