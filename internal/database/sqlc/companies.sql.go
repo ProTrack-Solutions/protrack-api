@@ -63,7 +63,7 @@ VALUES (
         $17,
         $18
     )
-RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
+RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id, is_whatsapp, is_excess_usage
 `
 
 type CreateCompanyParams struct {
@@ -139,6 +139,8 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.Cnae,
 		&i.RegimeTributario,
 		&i.ExternalCompanyID,
+		&i.IsWhatsapp,
+		&i.IsExcessUsage,
 	)
 	return i, err
 }
@@ -162,7 +164,7 @@ func (q *Queries) DeleteCompany(ctx context.Context, arg DeleteCompanyParams) er
 }
 
 const getCompanyByDocument = `-- name: GetCompanyByDocument :one
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id, is_whatsapp, is_excess_usage
 FROM companies
 WHERE document = $1
     AND deleted_at IS NULL
@@ -201,12 +203,14 @@ func (q *Queries) GetCompanyByDocument(ctx context.Context, document pgtype.Text
 		&i.Cnae,
 		&i.RegimeTributario,
 		&i.ExternalCompanyID,
+		&i.IsWhatsapp,
+		&i.IsExcessUsage,
 	)
 	return i, err
 }
 
 const getCompanyByID = `-- name: GetCompanyByID :one
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id, is_whatsapp, is_excess_usage
 FROM companies
 WHERE id = $1
     AND deleted_at IS NULL
@@ -245,12 +249,14 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, 
 		&i.Cnae,
 		&i.RegimeTributario,
 		&i.ExternalCompanyID,
+		&i.IsWhatsapp,
+		&i.IsExcessUsage,
 	)
 	return i, err
 }
 
 const listCompanies = `-- name: ListCompanies :many
-SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
+SELECT id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id, is_whatsapp, is_excess_usage
 FROM companies
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
@@ -295,6 +301,8 @@ func (q *Queries) ListCompanies(ctx context.Context) ([]Company, error) {
 			&i.Cnae,
 			&i.RegimeTributario,
 			&i.ExternalCompanyID,
+			&i.IsWhatsapp,
+			&i.IsExcessUsage,
 		); err != nil {
 			return nil, err
 		}
@@ -344,10 +352,12 @@ SET name = $2,
     address_country = $16,
     timezone = $17,
     updated_by = $18,
+    is_whatsapp = $19,
+    is_excess_usage = $20,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
-RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id
+RETURNING id, name, trade_name, document, document_type, email, phone, website, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, status, timezone, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, inscricao_estadual, inscricao_estadual_isento, cnae, regime_tributario, external_company_id, is_whatsapp, is_excess_usage
 `
 
 type UpdateCompanyParams struct {
@@ -369,6 +379,8 @@ type UpdateCompanyParams struct {
 	AddressCountry      pgtype.Text `json:"address_country"`
 	Timezone            pgtype.Text `json:"timezone"`
 	UpdatedBy           pgtype.UUID `json:"updated_by"`
+	IsWhatsapp          bool        `json:"is_whatsapp"`
+	IsExcessUsage       bool        `json:"is_excess_usage"`
 }
 
 func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error) {
@@ -391,6 +403,8 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		arg.AddressCountry,
 		arg.Timezone,
 		arg.UpdatedBy,
+		arg.IsWhatsapp,
+		arg.IsExcessUsage,
 	)
 	var i Company
 	err := row.Scan(
@@ -423,6 +437,8 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.Cnae,
 		&i.RegimeTributario,
 		&i.ExternalCompanyID,
+		&i.IsWhatsapp,
+		&i.IsExcessUsage,
 	)
 	return i, err
 }
