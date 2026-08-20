@@ -24,6 +24,15 @@ func NewHandler(service domain.ServiceInterface, jwt *jwt.JWTManager, blacklist 
 	}
 }
 
+// ListCompanySettings godoc
+// @Summary      Lista as configurações da empresa
+// @Tags         company-settings
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.CompanySettingResponse
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /company-settings [get]
 func (h *Handler) ListCompanySettings(c *gin.Context) {
 	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
@@ -40,6 +49,20 @@ func (h *Handler) ListCompanySettings(c *gin.Context) {
 	c.JSON(http.StatusOK, settings)
 }
 
+// UpsertCompanySetting godoc
+// @Summary      Cria ou atualiza uma configuração da empresa
+// @Description  Retorna 201 quando a configuração é criada e 200 quando uma configuração existente é atualizada
+// @Tags         company-settings
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        setting body domain.UpsertCompanySettingRequest true "Configuração"
+// @Success      200
+// @Success      201
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /company-settings [post]
 func (h *Handler) UpsertCompanySetting(c *gin.Context) {
 	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
@@ -67,6 +90,15 @@ func (h *Handler) UpsertCompanySetting(c *gin.Context) {
 	}
 }
 
+// RestorDefaultSettings godoc
+// @Summary      Restaura as configurações padrão da empresa
+// @Tags         company-settings
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200
+// @Failure      401 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /company-settings [put]
 func (h *Handler) RestorDefaultSettings(c *gin.Context) {
 	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
