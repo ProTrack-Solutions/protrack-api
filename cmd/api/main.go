@@ -33,6 +33,9 @@ import (
 	companiesHandler "github.com/ProTrack-Solutions/protrack-api/internal/companies/handler"
 	companiesRepository "github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	companySettingsHandler "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/handler"
+	companySettingsRepo "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/repository"
+	companySettingsService "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/consumers"
 	customersHandler "github.com/ProTrack-Solutions/protrack-api/internal/customers/handler"
@@ -250,7 +253,9 @@ func main() {
 	subscriptionManagementRepository := subscriptionManagementRepository.NewRepository(db.Pool)
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 	metaWhatsappRepo := metaWhatsappRepo.NewRepository(db.Pool)
+	companySettingsRepo := companySettingsRepo.NewRepository(db.Pool)
 
+	companySettingsService := companySettingsService.NewService(companySettingsRepo)
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
 	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
 	platformAdminsService := platformAdminsService.NewService(platformAdminsRepository, cfg, jwtManager)
@@ -265,12 +270,41 @@ func main() {
 	invoiceHistoryService := invoiceHistoryService.NewServie(invoiceHistoryRepository, db.Pool)
 	stripeService := stripeService.NewService(cfg, subscriptionsService, invoiceHistoryService)
 	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
-	authService := authService.NewService(stripeService, usersService, companiesService, subscriptionPaymentMethodsService, subscriptionsService, plansService, jwtManager, db.Pool, passwordResetStore, rateLimiter, blacklist, ch, cfg)
+	authService := authService.NewService(
+		stripeService,
+		usersService,
+		companiesService,
+		subscriptionPaymentMethodsService,
+		subscriptionsService,
+		plansService,
+		jwtManager,
+		db.Pool,
+		passwordResetStore,
+		rateLimiter,
+		blacklist,
+		ch,
+		cfg,
+		companySettingsService,
+	)
+
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
 	metaWhatsappService := metaWhatsappService.NewService(metaWhatsappRepo, metaClient, subscriptionsService, plansService, billing, companiesService, cfg)
-	salesService := salesService.NewService(salesRepository, db.Pool, saleItemsService, customersService, accountsReceivableService, productsService, productsCategoriesService, companiesService, subscriptionsService, plansService, metaWhatsappService)
+	salesService := salesService.NewService(
+		salesRepository,
+		db.Pool,
+		saleItemsService,
+		customersService,
+		accountsReceivableService,
+		productsService,
+		productsCategoriesService,
+		companiesService,
+		subscriptionsService,
+		plansService,
+		metaWhatsappService,
+		companySettingsService,
+	)
 	paymentMethodsService := paymentMethodsService.NewService(paymentMethodsRepository, db.Pool)
 	vendorsService := vendorsService.NewService(vendorsRepository, db.Pool)
 	billCategoriesService := billCategoriesService.NewService(billCategoriesRepository, db.Pool)
@@ -282,6 +316,7 @@ func main() {
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 
+	companySettingsHandler := companySettingsHandler.NewHandler(companySettingsService, jwtManager, blacklist)
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
@@ -340,6 +375,7 @@ func main() {
 	subscriptionManagementHandler.RegisterRoutes(api)
 	labelHandler.RegisterRoutes(api)
 	metaWhatsappHandler.RegisterRoutes(api)
+	companySettingsHandler.RegisterRoute(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

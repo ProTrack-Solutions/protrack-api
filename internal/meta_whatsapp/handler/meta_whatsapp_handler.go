@@ -10,7 +10,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	discordDomain "github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
-	extratorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extratorContext"
+	extractorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extractorContext"
 	"github.com/gin-gonic/gin"
 )
 
@@ -35,7 +35,7 @@ func NewHandler(service domain.ServiceInterface, cfg *config.Config, discordLogg
 }
 
 func (h *Handler) SendMessage(c *gin.Context) {
-	companyId, err := extratorcontext.ExtratorCompanyID(c)
+	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -58,7 +58,7 @@ func (h *Handler) SendMessage(c *gin.Context) {
 }
 
 func (h *Handler) GetCompanyConfig(c *gin.Context) {
-	companyId, err := extratorcontext.ExtratorCompanyID(c)
+	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -74,7 +74,7 @@ func (h *Handler) GetCompanyConfig(c *gin.Context) {
 }
 
 func (h *Handler) UpsertCompanyConfig(c *gin.Context) {
-	companyId, err := extratorcontext.ExtratorCompanyID(c)
+	companyId, err := extractorcontext.ExtratorCompanyID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return

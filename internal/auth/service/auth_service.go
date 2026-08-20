@@ -12,6 +12,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	companySettingsDomain "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
@@ -45,6 +46,7 @@ type Service struct {
 	subscriptionService   *subscriptionService.Service
 	plansService          *plansService.Service
 	stripeService         *stripeService.Service
+	companySettings       companySettingsDomain.ServiceInterface
 	jwtManager            *jwt.JWTManager
 	pool                  *pgxpool.Pool
 
@@ -68,6 +70,7 @@ func NewService(stripeService *stripeService.Service,
 	blacklist *cache.TokenBlacklist,
 	amqpChan *amqp091.Channel,
 	cfg *config.Config,
+	companySettings companySettingsDomain.ServiceInterface,
 ) *Service {
 	return &Service{
 		stripeService:         stripeService,
@@ -83,6 +86,7 @@ func NewService(stripeService *stripeService.Service,
 		blacklist:             blacklist,
 		amqpChan:              amqpChan,
 		cfg:                   cfg,
+		companySettings:       companySettings,
 	}
 }
 
@@ -311,6 +315,10 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro subscription")
+		return nil, err
+	}
+
+	if err = s.companySettings.SetDefaultSettings(ctx, tx, companyId); err != nil {
 		return nil, err
 	}
 

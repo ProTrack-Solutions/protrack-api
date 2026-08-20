@@ -1,4 +1,4 @@
-package extratorcontext
+package extractorcontext
 
 import (
 	"errors"
