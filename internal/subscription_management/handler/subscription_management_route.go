@@ -14,5 +14,6 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		authorized.POST("/payment-methods", h.AddPaymentMethod)
 		authorized.PUT("/payment-methods/:id/default", h.UpdateDefaultPaymentMethod)
 		authorized.PUT("/subscription/cancel", h.CancelSubscription)
+		authorized.GET("/whatsapp-use", h.CountMenssageInvitAmount)
 	}
 }

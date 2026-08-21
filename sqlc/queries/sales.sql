@@ -134,9 +134,9 @@ from sales;
 WITH updated_accounts AS (
     UPDATE accounts_receivable
     SET status = 'overdue'
-    WHERE status = 'pending'
+    WHERE status IN ('pending', 'partial')
         AND due_date::DATE < CURRENT_DATE
-    RETURNING sale_id, due_date
+    RETURNING sale_id, due_date, balance
 ),
 updated_sales AS (
     UPDATE sales
@@ -153,7 +153,8 @@ SELECT
     us.sale_id,
     us.customer_id,
     us.company_id,
-    ua.due_date
+    ua.due_date,
+    ua.balance
 FROM updated_sales us
 JOIN updated_accounts ua ON ua.sale_id = us.sale_id;
 -- name: GetSaleByIdWhatsapp :one

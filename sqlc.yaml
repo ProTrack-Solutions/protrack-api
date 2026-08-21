@@ -13,3 +13,12 @@ sql:
         emit_interface: true
         emit_exact_table_names: false
         emit_empty_slices: true
+        overrides:
+          # Com DB_SIMPLE_PROTOCOL=true (necessário pro pooler transaction-mode
+          # do Supabase), o pgx serializa parâmetros []byte como literais bytea
+          # (`'\x...'`) em vez de texto puro — o que quebra o parser de JSON no
+          # Postgres ("invalid input syntax for type json") ao inserir numa
+          # coluna jsonb. Usando string aqui, o valor vai como literal de texto
+          # normal, que o Postgres consegue converter pra jsonb sem problema.
+          - column: "company_settings.value"
+            go_type: "string"

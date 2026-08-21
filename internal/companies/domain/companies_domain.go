@@ -84,8 +84,6 @@ type UpdateCompanyRequest struct {
 	Status              any       `json:"status"`
 	Timezone            string    `json:"timezone"`
 	UpdatedBy           uuid.UUID `json:"updated_by"`
-	IsWhatsapp          bool      `json:"is_whatsapp"`
-	IsExcessUsage       bool      `json:"is_excess_usage"`
 }
 
 type CompanyResponse struct {
@@ -113,8 +111,6 @@ type CompanyResponse struct {
 	UpdatedAt           time.Time `json:"updated_at"`
 	DeletedAt           time.Time `json:"deleted_at"`
 	ExternalCompanyId   string    `json:"external_company_id"`
-	IsWhatsapp          bool      `json:"is_whatsapp"`
-	IsExcessUsage       bool      `json:"is_excess_usage"`
 }
 
 type SetCompanyStatusParams struct {

@@ -11,6 +11,7 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
 	"github.com/google/uuid"
 )
@@ -345,4 +346,32 @@ func (s *Service) CountMessagesInPeriod(ctx context.Context, companyId uuid.UUID
 	}
 
 	return &countMessage, err
+}
+
+func (s *Service) GetEligibleTemplateByName(ctx context.Context, key enums.CompanySettingsKey, LanguageCode string) (domain.Template, error) {
+	template, err := s.repo.GetEligibleTemplateByName(ctx, db.GetEligibleTemplateByNameParams{
+		MetaTemplateName: string(key),
+		LanguageCode:     LanguageCode,
+	})
+	if err != nil {
+		return domain.Template{}, err
+	}
+
+	var variables []string
+	if err := json.Unmarshal(template.Variables, &variables); err != nil {
+		return domain.Template{}, err
+	}
+
+	return domain.Template{
+		ID:                       pgconv.PgUUIDToUUID(template.ID),
+		MetaTemplateName:         template.MetaTemplateName,
+		Category:                 domain.MessageCategory(template.Category),
+		LanguageCode:             template.LanguageCode,
+		BodyText:                 template.BodyText,
+		Variables:                variables,
+		IsPlatformSharedEligible: template.IsPlatformSharedEligible,
+		MetaApprovalStatus:       template.MetaApprovalStatus,
+		CreatedAt:                pgconv.PgTimestamptzToTime(template.CreatedAt),
+		UpdatedAt:                pgconv.PgTimestamptzToTime(template.UpdatedAt),
+	}, nil
 }

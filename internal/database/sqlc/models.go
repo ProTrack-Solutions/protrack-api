@@ -325,8 +325,6 @@ type Company struct {
 	Cnae                    pgtype.Text        `json:"cnae"`
 	RegimeTributario        interface{}        `json:"regime_tributario"`
 	ExternalCompanyID       string             `json:"external_company_id"`
-	IsWhatsapp              bool               `json:"is_whatsapp"`
-	IsExcessUsage           bool               `json:"is_excess_usage"`
 }
 
 type CompanyCertificate struct {
@@ -345,6 +343,15 @@ type CompanyCertificate struct {
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type CompanySetting struct {
+	ID        pgtype.UUID        `json:"id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	Key       string             `json:"key"`
+	Value     string             `json:"value"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
 type CompanyWhatsappConfig struct {

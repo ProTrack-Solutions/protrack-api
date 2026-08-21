@@ -13,6 +13,7 @@ import (
 	accountsReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
+	companySettingsDomain "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/domain"
 	customerDomain "github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
@@ -28,6 +29,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/repository"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,6 +76,7 @@ type Service struct {
 	subscriptionService       *subscriptionService.Service
 	plansService              *plansService.Service
 	metaWhatsAppService       *metaWhatsAppService.Service
+	companySettings           companySettingsDomain.ServiceInterface
 }
 
 func NewService(
@@ -88,6 +91,7 @@ func NewService(
 	subscriptionService *subscriptionService.Service,
 	plansService *plansService.Service,
 	metaWhatsAppService *metaWhatsAppService.Service,
+	companySettings companySettingsDomain.ServiceInterface,
 ) *Service {
 	return &Service{
 		repo:                      repo,
@@ -101,6 +105,7 @@ func NewService(
 		subscriptionService:       subscriptionService,
 		plansService:              plansService,
 		metaWhatsAppService:       metaWhatsAppService,
+		companySettings:           companySettings,
 	}
 }
 
@@ -554,6 +559,16 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
 
+		settingTemplate, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.SaleOverdueTemplate)
+		if err != nil {
+			return domain.OverdueSalesResult{}, err
+		}
+
+		settingLanguage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.LanguageSaleOverdueTemplate)
+		if err != nil {
+			return domain.OverdueSalesResult{}, err
+		}
+
 		isWhatsappPlan, cached := whatsAppEligibility[companyID]
 
 		if !cached {
@@ -577,12 +592,22 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 				return domain.OverdueSalesResult{}, fmt.Errorf("contagem de mensagens indisponível para empresa %s", companyID)
 			}
 
+			isExcessUsage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsExcessUsage)
+			if err != nil {
+				return domain.OverdueSalesResult{}, err
+			}
+
+			isWhatsAppActive, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsWhatsappActive)
+			if err != nil {
+				return domain.OverdueSalesResult{}, err
+			}
+
 			for _, ft := range plan.Features {
-				if ft.FeatureKey == "max_whatsapp_integration" {
+				if ft.FeatureKey == "max_whatsapp_integration" && isWhatsAppActive.Value.(bool) {
 					switch {
 					case ft.LimitValue > *countMessages:
 						isWhatsappPlan = true
-					case ft.LimitValue <= *countMessages && company.IsExcessUsage:
+					case ft.LimitValue <= *countMessages && isExcessUsage.Value.(bool):
 						isWhatsappPlan = true
 					default:
 						isWhatsappPlan = false
@@ -599,11 +624,13 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 				CompanyID:    companyID,
 				CustomerName: sale.CustomerName,
 				PhoneNumber:  customer.Whatsapp,
-				Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
+				Value:        pgconv.PgNumericToFloat64(data.Balance),
 				DueDate:      data.DueDate.Time,
 				CompanyName:  company.Name,
 				PurchaseDate: sale.SaleAt.Time,
 				ContactInfo:  company.Phone,
+				TemplateName: settingTemplate.Value.(string),
+				LanguageCode: settingLanguage.Value.(string),
 			})
 		}
 

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
@@ -16,9 +18,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	metaWhatsappDomain "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
+	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
 	subPaymentMethodDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/domain"
 	subPaymentMethod "github.com/ProTrack-Solutions/protrack-api/internal/subscription_payment_methods/service"
-	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
+	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	"github.com/stripe/stripe-go/v86"
 	"github.com/stripe/stripe-go/v86/customer"
 	"github.com/stripe/stripe-go/v86/paymentmethod"
@@ -31,20 +35,46 @@ type RepositoryInterface interface {
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
+// SubscriptionsServiceInterface é o subconjunto do serviço de subscriptions
+// consumido por este pacote, permitindo mockar em testes.
+type SubscriptionsServiceInterface interface {
+	GetSubscriptionByCompanyID(ctx context.Context, companyID uuid.UUID) (subscriptionsDomain.SubscriptionResponse, error)
+	CancelSubscription(ctx context.Context, id uuid.UUID) error
+}
+
+// PlansServiceInterface é o subconjunto do serviço de plans consumido por
+// este pacote, permitindo mockar em testes.
+type PlansServiceInterface interface {
+	GetPlanByID(ctx context.Context, planId uuid.UUID) (plansDomain.PlanResponse, error)
+}
+
 type Service struct {
 	repo                RepositoryInterface
 	subPaymentMethod    *subPaymentMethod.Service
-	subscriptionService *subscriptionService.Service
+	subscriptionService SubscriptionsServiceInterface
+	metaWhatsappService metaWhatsappDomain.ServiceInterface
+	planService         PlansServiceInterface
 	loggerDiscord       *discord.DiscordLogger
 }
 
-func NewService(cfg *config.Config, subscriptionService *subscriptionService.Service, subPaymentMethod *subPaymentMethod.Service, loggerDiscord *discord.DiscordLogger, repo *repository.Repository) *Service {
+func calculatePeriodStart(currentPeriodEnd time.Time, billingCycle string) time.Time {
+	switch strings.ToLower(billingCycle) {
+	case "yearly":
+		return currentPeriodEnd.AddDate(-1, 0, 0)
+	default: // "monthly" e qualquer valor não reconhecido caem aqui
+		return currentPeriodEnd.AddDate(0, -1, 0)
+	}
+}
+
+func NewService(cfg *config.Config, subscriptionService SubscriptionsServiceInterface, subPaymentMethod *subPaymentMethod.Service, loggerDiscord *discord.DiscordLogger, repo *repository.Repository, metaWhatsappService metaWhatsappDomain.ServiceInterface, planService PlansServiceInterface) *Service {
 	stripe.Key = cfg.StripeSecretKey
 	return &Service{
 		subscriptionService: subscriptionService,
 		subPaymentMethod:    subPaymentMethod,
 		loggerDiscord:       loggerDiscord,
 		repo:                repo,
+		metaWhatsappService: metaWhatsappService,
+		planService:         planService,
 	}
 }
 
@@ -338,4 +368,47 @@ func (s *Service) AddPaymentMethod(ctx context.Context, companyID uuid.UUID, use
 		fmt.Sprintf("company=%s pm=%s customerErr=%v", companyID, pm.ID, custErr))
 
 	return fmt.Errorf("payment method salvo, mas erro ao definir como padrão do cliente: %w", custErr)
+}
+
+func (s *Service) CountMenssageInvitAmount(ctx context.Context, comppanyId uuid.UUID) (domain.CountMenssageInvitAmountResponse, error) {
+	sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, comppanyId)
+	if err != nil {
+		return domain.CountMenssageInvitAmountResponse{}, err
+	}
+
+	plan, err := s.planService.GetPlanByID(ctx, sub.PlanID)
+	if err != nil {
+		return domain.CountMenssageInvitAmountResponse{}, err
+	}
+
+	periodStart := calculatePeriodStart(sub.CurrentPeriodEnd, plan.BillingCycle)
+
+	countMessage, err := s.metaWhatsappService.CountMessagesInPeriod(ctx, comppanyId, periodStart, sub.CurrentPeriodEnd)
+	if err != nil {
+		return domain.CountMenssageInvitAmountResponse{}, err
+	}
+
+	var limitMenssage int
+
+	for _, ft := range plan.Features {
+		if ft.FeatureKey == "max_whatsapp_integration" {
+			limitMenssage = int(ft.LimitValue)
+		}
+	}
+
+	var messageAmount int
+	if countMessage != nil {
+		messageAmount = int(*countMessage)
+	}
+
+	var percentage float64
+	if limitMenssage > 0 {
+		percentage = (float64(messageAmount) * 100) / float64(limitMenssage)
+	}
+
+	return domain.CountMenssageInvitAmountResponse{
+		LimitMenssage:  limitMenssage,
+		MenssageAmount: messageAmount,
+		Percentage:     percentage,
+	}, nil
 }
