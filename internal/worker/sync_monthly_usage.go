@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -41,6 +42,12 @@ func StartWhatsAppUsageSyncWorker(
 			discordLog.Send(domain.LevelWarning, "Erro ao ListSubscriptionsDueOn", err.Error())
 			return
 		}
+
+		countSubs := len(subs)
+
+		messageLogger := fmt.Sprintf("%d contas com uso excedente de mensagens", countSubs)
+
+		discordLog.Send(domain.LevelInfo, "Worker WhatsApp Usage Sync rodando", messageLogger)
 
 		for _, sub := range subs {
 
