@@ -240,6 +240,12 @@ func TestUpsertCompanySetting_Success(t *testing.T) {
 	rawValueStr := string(rawValue)
 
 	repo.EXPECT().
+		ListCompanySettings(gomock.Any(), pgconv.OptionalUUIDToPgType(companyID)).
+		Return([]db.CompanySetting{
+			buildDbCompanySetting(uuid.New(), companyID, string(enums.LowStock), 2),
+		}, nil)
+
+	repo.EXPECT().
 		UpsertCompanySetting(gomock.Any(), db.UpsertCompanySettingParams{
 			CompanyID: pgconv.OptionalUUIDToPgType(companyID),
 			Key:       string(enums.LowStock),
@@ -274,11 +280,19 @@ func TestUpsertCompanySetting_RepositoryError(t *testing.T) {
 	repo := mocks.NewMockRepositoryInterface(ctrl)
 	svc := newSvc(t, repo)
 
+	companyID := uuid.New()
+
+	repo.EXPECT().
+		ListCompanySettings(gomock.Any(), gomock.Any()).
+		Return([]db.CompanySetting{
+			buildDbCompanySetting(uuid.New(), companyID, string(enums.LowStock), 2),
+		}, nil)
+
 	repo.EXPECT().
 		UpsertCompanySetting(gomock.Any(), gomock.Any()).
 		Return(db.CompanySetting{}, errDatabase)
 
-	_, err := svc.UpsertCompanySetting(context.Background(), uuid.New(), domain.UpsertCompanySettingRequest{
+	_, err := svc.UpsertCompanySetting(context.Background(), companyID, domain.UpsertCompanySettingRequest{
 		Key:   enums.LowStock,
 		Value: 3,
 	})

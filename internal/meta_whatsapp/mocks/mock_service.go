@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 	time "time"
 
+	enums "github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	domain "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
 	uuid "github.com/google/uuid"
 	gomock "go.uber.org/mock/gomock"
@@ -71,6 +72,21 @@ func (m *MockServiceInterface) GetCompanyConfig(ctx context.Context, companyId u
 func (mr *MockServiceInterfaceMockRecorder) GetCompanyConfig(ctx, companyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompanyConfig", reflect.TypeOf((*MockServiceInterface)(nil).GetCompanyConfig), ctx, companyId)
+}
+
+// GetEligibleTemplateByName mocks base method.
+func (m *MockServiceInterface) GetEligibleTemplateByName(ctx context.Context, key enums.CompanySettingsKey, LanguageCode string) (domain.Template, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEligibleTemplateByName", ctx, key, LanguageCode)
+	ret0, _ := ret[0].(domain.Template)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetEligibleTemplateByName indicates an expected call of GetEligibleTemplateByName.
+func (mr *MockServiceInterfaceMockRecorder) GetEligibleTemplateByName(ctx, key, LanguageCode any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEligibleTemplateByName", reflect.TypeOf((*MockServiceInterface)(nil).GetEligibleTemplateByName), ctx, key, LanguageCode)
 }
 
 // HandleWebhookEvent mocks base method.

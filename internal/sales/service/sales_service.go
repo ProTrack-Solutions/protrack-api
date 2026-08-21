@@ -559,6 +559,16 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
 
+		settingTemplate, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.SaleOverdueTemplate)
+		if err != nil {
+			return domain.OverdueSalesResult{}, err
+		}
+
+		settingLanguage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.LanguageSaleOverdueTemplate)
+		if err != nil {
+			return domain.OverdueSalesResult{}, err
+		}
+
 		isWhatsappPlan, cached := whatsAppEligibility[companyID]
 
 		if !cached {
@@ -614,11 +624,13 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 				CompanyID:    companyID,
 				CustomerName: sale.CustomerName,
 				PhoneNumber:  customer.Whatsapp,
-				Value:        pgconv.PgNumericToFloat64(sale.TotalAmount),
+				Value:        pgconv.PgNumericToFloat64(data.Balance),
 				DueDate:      data.DueDate.Time,
 				CompanyName:  company.Name,
 				PurchaseDate: sale.SaleAt.Time,
 				ContactInfo:  company.Phone,
+				TemplateName: settingTemplate.Value.(string),
+				LanguageCode: settingLanguage.Value.(string),
 			})
 		}
 

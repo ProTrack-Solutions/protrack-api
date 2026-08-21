@@ -16,6 +16,8 @@ type WhatsApp struct {
 	DueDate      time.Time `json:"due_date"`
 	PurchaseDate time.Time `json:"purchase_date"`
 	ContactInfo  string    `json:"contact_info"` // novo — telefone/e-mail da empresa
+	TemplateName string    `json:"template_name"`
+	LanguageCode string    `json:"language_code"`
 }
 
 type Announcement struct {

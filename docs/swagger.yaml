@@ -650,6 +650,8 @@ definitions:
         type: string
       email:
         type: string
+      external_company_id:
+        type: string
       id:
         type: string
       name:
@@ -711,6 +713,26 @@ definitions:
         type: string
       website:
         type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_company_settings_domain.CompanySettingResponse:
+    properties:
+      company_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      key:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.CompanySettingsKey'
+      updated_at:
+        type: string
+      value: {}
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_company_settings_domain.UpsertCompanySettingRequest:
+    properties:
+      key:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.CompanySettingsKey'
+      value: {}
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CreateCustomersRequest:
     properties:
@@ -942,6 +964,20 @@ definitions:
       total_rows:
         type: integer
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.CompanySettingsKey:
+    enum:
+    - is_whatsapp_active
+    - is_excess_usage
+    - low_stock
+    - mediun_stock
+    - normal_stock
+    type: string
+    x-enum-varnames:
+    - IsWhatsappActive
+    - IsExcessUsage
+    - LowStock
+    - MediumStock
+    - NormalStock
   github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender:
     enum:
     - MALE
@@ -987,6 +1023,158 @@ definitions:
       product_id:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.CompanyWhatsAppConfig:
+    properties:
+      companyID:
+        type: string
+      createdAt:
+        type: string
+      displayPhoneNumber:
+        type: string
+      id:
+        type: string
+      isActive:
+        type: boolean
+      mode:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.WhatsAppMode'
+      monthlyMessageAllowance:
+        type: integer
+      phoneNumberID:
+        type: string
+      updatedAt:
+        type: string
+      wabaid:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Message:
+    properties:
+      category:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory'
+      companyID:
+        type: string
+      createdAt:
+        type: string
+      deliveredAt:
+        type: string
+      estimatedCostCents:
+        format: int32
+        type: integer
+      failureCode:
+        format: int32
+        type: integer
+      failureReason:
+        type: string
+      id:
+        type: string
+      metaMessageID:
+        type: string
+      recipientPhone:
+        type: string
+      sentAt:
+        type: string
+      status:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageStatus'
+      templateID:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory:
+    enum:
+    - marketing
+    - utility
+    - authentication
+    - service
+    type: string
+    x-enum-varnames:
+    - CategoryMarketing
+    - CategoryUtility
+    - CategoryAuthentication
+    - CategoryService
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageStatus:
+    enum:
+    - queued
+    - sent
+    - delivered
+    - read
+    - failed
+    type: string
+    x-enum-varnames:
+    - StatusQueued
+    - StatusSent
+    - StatusDelivered
+    - StatusRead
+    - StatusFailed
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.SendMessageRequest:
+    properties:
+      category:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory'
+      header_variables:
+        additionalProperties:
+          type: string
+        description: chaves "1", "2"... posição no cabeçalho
+        type: object
+      language_code:
+        type: string
+      recipient_phone:
+        type: string
+      template_name:
+        type: string
+      variables:
+        additionalProperties:
+          type: string
+        description: chaves "1", "2"... posição no corpo
+        type: object
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Template:
+    properties:
+      bodyText:
+        type: string
+      category:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory'
+      createdAt:
+        type: string
+      id:
+        type: string
+      isPlatformSharedEligible:
+        type: boolean
+      languageCode:
+        type: string
+      metaApprovalStatus:
+        description: pending | approved | rejected | paused
+        type: string
+      metaTemplateName:
+        type: string
+      updatedAt:
+        type: string
+      variables:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.UpsertCompanyConfigRequest:
+    properties:
+      access_token:
+        type: string
+      display_phone_number:
+        type: string
+      is_active:
+        type: boolean
+      mode:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.WhatsAppMode'
+      monthly_message_allowance:
+        type: integer
+      phone_number_id:
+        type: string
+      waba_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.WhatsAppMode:
+    enum:
+    - platform_shared
+    - own_waba
+    type: string
+    x-enum-varnames:
+    - WhatsAppModePlatformShared
+    - WhatsAppModeOwnWABA
   github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest:
     properties:
       amount_paid:
@@ -1591,6 +1779,15 @@ definitions:
         type: string
     required:
     - idempotency_key
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CountMenssageInvitAmountResponse:
+    properties:
+      limit_menssage:
+        type: integer
+      menssage_amount:
+        type: integer
+      percentage:
+        type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PaymentMethodDetails:
     properties:
@@ -2995,6 +3192,99 @@ paths:
       summary: Altera o status de uma empresa
       tags:
       - companies
+  /company-settings:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_company_settings_domain.CompanySettingResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista as configurações da empresa
+      tags:
+      - company-settings
+    post:
+      consumes:
+      - application/json
+      description: Retorna 201 quando a configuração é criada e 200 quando uma configuração
+        existente é atualizada
+      parameters:
+      - description: Configuração
+        in: body
+        name: setting
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_company_settings_domain.UpsertCompanySettingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "201":
+          description: Created
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria ou atualiza uma configuração da empresa
+      tags:
+      - company-settings
+    put:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Restaura as configurações padrão da empresa
+      tags:
+      - company-settings
   /customers:
     post:
       consumes:
@@ -3521,6 +3811,190 @@ paths:
       summary: Retorna o usuário autenticado
       tags:
       - auth
+  /meta-whatsapp/config:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.CompanyWhatsAppConfig'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Busca a configuração de WhatsApp da empresa
+      tags:
+      - meta-whatsapp
+  /meta-whatsapp/list-templates:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Template'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os templates de WhatsApp aprovados
+      tags:
+      - meta-whatsapp
+  /meta-whatsapp/send-message:
+    post:
+      consumes:
+      - application/json
+      description: Dispara uma mensagem de template aprovado para o número informado,
+        respeitando o modo de envio (platform_shared ou own_waba) configurado para
+        a empresa
+      parameters:
+      - description: Dados da mensagem
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Message'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Envia uma mensagem de template via WhatsApp
+      tags:
+      - meta-whatsapp
+  /meta-whatsapp/upsert-config:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Configuração de WhatsApp
+        in: body
+        name: config
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.UpsertCompanyConfigRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.CompanyWhatsAppConfig'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria ou atualiza a configuração de WhatsApp da empresa
+      tags:
+      - meta-whatsapp
+  /meta-whatsapp/webhook:
+    get:
+      description: 'Endpoint de handshake exigido pela Meta ao configurar o webhook:
+        valida hub.verify_token e ecoa hub.challenge quando hub.mode é "subscribe"'
+      parameters:
+      - description: Modo do handshake (subscribe)
+        in: query
+        name: hub.mode
+        required: true
+        type: string
+      - description: Token de verificação configurado na Meta
+        in: query
+        name: hub.verify_token
+        required: true
+        type: string
+      - description: Valor a ser ecoado quando a verificação for bem-sucedida
+        in: query
+        name: hub.challenge
+        required: true
+        type: string
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: challenge
+          schema:
+            type: string
+        "403":
+          description: Forbidden
+      summary: Verifica o webhook do WhatsApp junto à Meta
+      tags:
+      - meta-whatsapp
+    post:
+      consumes:
+      - application/json
+      description: Endpoint chamado pela Meta para notificar status de mensagens e
+        eventos da conta. A assinatura da requisição é validada pelo MetaWhatsappMiddleware
+        via header X-Hub-Signature-256. Sempre responde 200 para evitar reenvios da
+        Meta, mesmo em caso de falha no processamento (o erro é registrado no Discord)
+      responses:
+        "200":
+          description: OK
+      summary: Recebe eventos do webhook do WhatsApp
+      tags:
+      - meta-whatsapp
   /payment-history:
     get:
       produces:
@@ -4970,6 +5444,35 @@ paths:
       summary: Cancela a assinatura da empresa autenticada
       tags:
       - subscription-management
+  /subscription-management/whatsapp-use:
+    get:
+      description: Retorna o limite de mensagens do plano contratado, a quantidade
+        de mensagens de convite enviadas no período de cobrança vigente e o percentual
+        já utilizado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.CountMenssageInvitAmountResponse'
+        "401":
+          description: Não autenticado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno do servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Consulta o uso de mensagens de WhatsApp da assinatura autenticada
+      tags:
+      - subscription-management
   /subscription/{id}:
     get:
       parameters:
@@ -5319,102 +5822,6 @@ paths:
       summary: Ativa ou desativa um fornecedor
       tags:
       - vendors
-  /whatsapp/instance/connect:
-    get:
-      description: Solicita a conexão da instância do WhatsApp para a empresa autenticada
-        e retorna o QR Code/Payload para escaneamento.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: 'Exemplo: {\"qr_code\": \"...\"}'
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Empresa não autenticada no contexto
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Falha ao conectar a instância no serviço
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Conecta a instância WhatsApp e retorna QR Code
-      tags:
-      - whatsapp
-  /whatsapp/instance/connection-state:
-    get:
-      description: 'Consulta o status da instância na Evolution API (ex: open, connecting,
-        close) e retorna os dados da conexão.'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Estado atual do WhatsApp obtido com sucesso
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Empresa não autenticada no contexto
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Falha na comunicação com o serviço ou Evolution API
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Obtém o estado de conexão do WhatsApp
-      tags:
-      - whatsapp
-  /whatsapp/instance/create:
-    post:
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Cria instância WhatsApp e retorna QR Code
-      tags:
-      - whatsapp
-  /whatsapp/instance/delete:
-    delete:
-      description: Remove/desconecta a instância do WhatsApp associada à empresa do
-        usuário autenticado.
-      produces:
-      - application/json
-      responses:
-        "204":
-          description: Instância deletada com sucesso
-        "401":
-          description: Empresa não autenticada no contexto
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Falha ao deletar a instância no serviço
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Deleta a instância do WhatsApp
-      tags:
-      - whatsapp
 securityDefinitions:
   BearerAuth:
     in: header
