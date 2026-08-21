@@ -1137,9 +1137,9 @@ const updateOverdueSalesAndAccountsGlobal = `-- name: UpdateOverdueSalesAndAccou
 WITH updated_accounts AS (
     UPDATE accounts_receivable
     SET status = 'overdue'
-    WHERE status = 'pending'
+    WHERE status IN ('pending', 'partial')
         AND due_date::DATE < CURRENT_DATE
-    RETURNING sale_id, due_date
+    RETURNING sale_id, due_date, balance
 ),
 updated_sales AS (
     UPDATE sales
@@ -1156,16 +1156,18 @@ SELECT
     us.sale_id,
     us.customer_id,
     us.company_id,
-    ua.due_date
+    ua.due_date,
+    ua.balance
 FROM updated_sales us
 JOIN updated_accounts ua ON ua.sale_id = us.sale_id
 `
 
 type UpdateOverdueSalesAndAccountsGlobalRow struct {
-	SaleID     pgtype.UUID `json:"sale_id"`
-	CustomerID pgtype.UUID `json:"customer_id"`
-	CompanyID  pgtype.UUID `json:"company_id"`
-	DueDate    pgtype.Date `json:"due_date"`
+	SaleID     pgtype.UUID    `json:"sale_id"`
+	CustomerID pgtype.UUID    `json:"customer_id"`
+	CompanyID  pgtype.UUID    `json:"company_id"`
+	DueDate    pgtype.Date    `json:"due_date"`
+	Balance    pgtype.Numeric `json:"balance"`
 }
 
 func (q *Queries) UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]UpdateOverdueSalesAndAccountsGlobalRow, error) {
@@ -1182,6 +1184,7 @@ func (q *Queries) UpdateOverdueSalesAndAccountsGlobal(ctx context.Context) ([]Up
 			&i.CustomerID,
 			&i.CompanyID,
 			&i.DueDate,
+			&i.Balance,
 		); err != nil {
 			return nil, err
 		}

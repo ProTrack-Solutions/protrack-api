@@ -7,6 +7,7 @@ import (
 
 	companiesDomain "github.com/ProTrack-Solutions/protrack-api/internal/companies/domain"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
+	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	plansDomain "github.com/ProTrack-Solutions/protrack-api/internal/plans/domain"
 	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	"github.com/google/uuid"
@@ -54,6 +55,8 @@ type ServiceInterface interface {
 	ListApprovedTemplates(ctx context.Context) ([]Template, error)
 	HandleWebhookEvent(ctx context.Context, payload []byte) error
 	SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) error
+	CountMessagesInPeriod(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) (*int64, error)
+	GetEligibleTemplateByName(ctx context.Context, key enums.CompanySettingsKey, LanguageCode string) (Template, error)
 }
 
 type WhatsAppMode string
@@ -102,16 +105,16 @@ type CompanyWhatsAppConfig struct {
 // IsPlatformSharedEligible controla a whitelist do modo platform_shared —
 // é a trava central que impede uso livre/conversacional no número compartilhado.
 type Template struct {
-	ID                       uuid.UUID
-	MetaTemplateName         string
-	Category                 MessageCategory
-	LanguageCode             string
-	BodyText                 string
-	Variables                []string
-	IsPlatformSharedEligible bool
-	MetaApprovalStatus       string // pending | approved | rejected | paused
-	CreatedAt                time.Time
-	UpdatedAt                time.Time
+	ID                       uuid.UUID       `json:"id"`
+	MetaTemplateName         string          `json:"meta_template_name"`
+	Category                 MessageCategory `json:"category"`
+	LanguageCode             string          `json:"language_code"`
+	BodyText                 string          `json:"body_text"`
+	Variables                []string        `json:"variables"`
+	IsPlatformSharedEligible bool            `json:"is_platform_shared_eligible"`
+	MetaApprovalStatus       string          `json:"meta_approval_status"` // pending | approved | rejected | paused
+	CreatedAt                time.Time       `json:"created_at"`
+	UpdatedAt                time.Time       `json:"updated_at"`
 }
 
 // Message é o registro de cada disparo, atualizado pelo handler de webhook

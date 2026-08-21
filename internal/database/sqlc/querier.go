@@ -53,9 +53,16 @@ type Querier interface {
 	CreateWhatsAppMessage(ctx context.Context, arg CreateWhatsAppMessageParams) (WhatsappMessage, error)
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
 	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
+	// Remove todas as configs de uma empresa — normalmente não precisa ser chamado
+	// manualmente (o ON DELETE CASCADE da FK já cuida disso quando a empresa é
+	// deletada), mas é útil pra um "reset de configurações" administrativo.
+	DeleteAllCompanySettings(ctx context.Context, companyID pgtype.UUID) error
 	DeleteAnnoucements(ctx context.Context, arg DeleteAnnoucementsParams) error
 	DeleteBillCategories(ctx context.Context, id pgtype.UUID) error
 	DeleteCompany(ctx context.Context, arg DeleteCompanyParams) error
+	// Remove uma config específica, voltando pro comportamento padrão do sistema
+	// (útil quando "ausência da linha" significa "usar o valor default").
+	DeleteCompanySetting(ctx context.Context, arg DeleteCompanySettingParams) error
 	DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error
 	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
 	DeleteItemsBySale(ctx context.Context, saleID pgtype.UUID) error
@@ -76,6 +83,8 @@ type Querier interface {
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
+	// Busca o valor de uma config específica de uma empresa.
+	GetCompanySetting(ctx context.Context, arg GetCompanySettingParams) (CompanySetting, error)
 	GetCompanyWhatsAppConfig(ctx context.Context, companyID pgtype.UUID) (CompanyWhatsappConfig, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
@@ -138,6 +147,9 @@ type Querier interface {
 	ListBillCategoriesActive(ctx context.Context, id pgtype.UUID) ([]BillCategory, error)
 	ListBillsPayable(ctx context.Context, arg ListBillsPayableParams) ([]ListBillsPayableRow, error)
 	ListCompanies(ctx context.Context) ([]Company, error)
+	// Lista todas as configs de uma empresa de uma vez — útil pra telas de
+	// "configurações" que mostram tudo junto, evitando N chamadas separadas.
+	ListCompanySettings(ctx context.Context, companyID pgtype.UUID) ([]CompanySetting, error)
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
@@ -210,6 +222,9 @@ type Querier interface {
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
 	// Chamado pelo handler de webhook quando chega um status novo (sent/delivered/failed).
 	UpdateWhatsAppMessageStatus(ctx context.Context, arg UpdateWhatsAppMessageStatusParams) (WhatsappMessage, error)
+	// Cria a config se não existir, ou atualiza o valor se já existir
+	// (aproveita o UNIQUE (company_id, key) da tabela).
+	UpsertCompanySetting(ctx context.Context, arg UpsertCompanySettingParams) (CompanySetting, error)
 	UpsertCompanyWhatsAppConfig(ctx context.Context, arg UpsertCompanyWhatsAppConfigParams) (CompanyWhatsappConfig, error)
 	UpsertMonthlyUsage(ctx context.Context, arg UpsertMonthlyUsageParams) (WhatsappUsageMonthly, error)
 }

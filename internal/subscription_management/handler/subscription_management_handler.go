@@ -5,6 +5,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	extractorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extractorContext"
 	"github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/subscription_management/service"
 	"github.com/gin-gonic/gin"
@@ -182,4 +183,30 @@ func (h *Handler) CancelSubscription(c *gin.Context) {
 	}
 
 	c.Status(http.StatusOK)
+}
+
+// CountMenssageInvitAmount godoc
+// @Summary      Consulta o uso de mensagens de WhatsApp da assinatura autenticada
+// @Description  Retorna o limite de mensagens do plano contratado, a quantidade de mensagens de convite enviadas no período de cobrança vigente e o percentual já utilizado
+// @Tags         subscription-management
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.CountMenssageInvitAmountResponse
+// @Failure      401 {object} map[string]string "Não autenticado"
+// @Failure      500 {object} map[string]string "Erro interno do servidor"
+// @Router       /subscription-management/whatsapp-use [get]
+func (h *Handler) CountMenssageInvitAmount(c *gin.Context) {
+	companyID, err := extractorcontext.ExtratorCompanyID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	summary, err := h.service.CountMenssageInvitAmount(c.Request.Context(), companyID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
 }

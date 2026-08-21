@@ -192,8 +192,6 @@ func (s *Service) GetCompanyByIDTx(ctx context.Context, tx db.DBTX, id uuid.UUID
 		CreatedAt:           pgconv.PgTimestamptzToTime(company.CreatedAt),
 		UpdatedAt:           pgconv.PgTimestamptzToTime(company.UpdatedAt),
 		DeletedAt:           pgconv.PgTimestamptzToTime(company.DeletedAt),
-		IsWhatsapp:          company.IsWhatsapp,
-		IsExcessUsage:       company.IsExcessUsage,
 	}, nil
 }
 
@@ -273,8 +271,6 @@ func (s *Service) UpdateCompany(ctx context.Context, id uuid.UUID, req domain.Up
 		AddressCountry:      currentCompany.AddressCountry,
 		Timezone:            currentCompany.Timezone,
 		UpdatedBy:           currentCompany.UpdatedBy,
-		IsWhatsapp:          currentCompany.IsWhatsapp,
-		IsExcessUsage:       currentCompany.IsExcessUsage,
 	}
 
 	domain.ApplyUpdateCompanyParams(req, &arg)

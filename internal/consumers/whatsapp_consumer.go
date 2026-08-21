@@ -68,8 +68,8 @@ func StartWhatsAppConsumer(amqpChan *amqp.Channel, metaWhatsapp *metaWhatsapp.Se
 			log.Info().Str("sale_id", event.IDSale.String()).Msg("Nova mensagem recebida na fila do WhatsApp. Processando...")
 
 			_, err = metaWhatsapp.SendMessage(context.Background(), event.CompanyID, domain.SendMessageRequest{
-				TemplateName:   "venda_vencida",
-				LanguageCode:   "pt_BR",
+				TemplateName:   event.TemplateName,
+				LanguageCode:   event.LanguageCode,
 				RecipientPhone: event.PhoneNumber,
 				Category:       "utility",
 				HeaderVariables: map[string]string{
