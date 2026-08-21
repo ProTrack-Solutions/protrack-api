@@ -125,7 +125,7 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		hasCompany = false
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.CompanyID, user.Role, req.Aud)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, req.Aud)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens")
 		return nil, err

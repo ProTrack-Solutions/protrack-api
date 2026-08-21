@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	AddModuleToDepartment(ctx context.Context, arg AddModuleToDepartmentParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -73,6 +74,7 @@ type Querier interface {
 	DeleteSaleItem(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscriptionPaymentMethod(ctx context.Context, id pgtype.UUID) error
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
+	DepartmentHasModule(ctx context.Context, arg DepartmentHasModuleParams) (bool, error)
 	GetBillCategoriesById(ctx context.Context, id pgtype.UUID) (BillCategory, error)
 	GetBillsById(ctx context.Context, arg GetBillsByIdParams) (BillsPayable, error)
 	GetBillsByStatus(ctx context.Context, arg GetBillsByStatusParams) ([]BillsPayable, error)
@@ -101,6 +103,7 @@ type Querier interface {
 	GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHistory, error)
 	GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error)
 	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
+	GetModule(ctx context.Context, code string) (Module, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -159,6 +162,8 @@ type Querier interface {
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
 	ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UUID) ([]ListItemsFromPendingSaleRow, error)
+	ListModules(ctx context.Context) ([]Module, error)
+	ListModulesByDepartment(ctx context.Context, departmentID pgtype.UUID) ([]Module, error)
 	ListOverdueReceivables(ctx context.Context, companyID pgtype.UUID) ([]ListOverdueReceivablesRow, error)
 	ListPaymentHistory(ctx context.Context, companyID pgtype.UUID) ([]ListPaymentHistoryRow, error)
 	ListPaymentMethod(ctx context.Context, companyID pgtype.UUID) ([]PaymentMethod, error)
@@ -183,6 +188,8 @@ type Querier interface {
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error
 	PayBill(ctx context.Context, arg PayBillParams) error
+	RemoveModuleFromDepartment(ctx context.Context, arg RemoveModuleFromDepartmentParams) error
+	ReplaceDepartmentModules(ctx context.Context, departmentID pgtype.UUID) error
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
