@@ -40,7 +40,7 @@ func buildDbCompanySetting(id, companyID uuid.UUID, key string, value any) db.Co
 		ID:        pgconv.ParseUUIDToPgType(id),
 		CompanyID: pgconv.ParseUUIDToPgType(companyID),
 		Key:       key,
-		Value:     raw,
+		Value:     string(raw),
 		CreatedAt: pgconv.TimeToPgTimestamptz(now),
 		UpdatedAt: pgconv.TimeToPgTimestamptz(now),
 	}
@@ -110,7 +110,7 @@ func TestGetCompanySetting_InvalidJSONValue(t *testing.T) {
 
 	companyID := uuid.New()
 	setting := buildDbCompanySetting(uuid.New(), companyID, string(enums.LowStock), 2)
-	setting.Value = []byte(`{invalido`)
+	setting.Value = `{invalido`
 
 	repo.EXPECT().
 		GetCompanySetting(gomock.Any(), gomock.Any()).
@@ -203,7 +203,7 @@ func TestListCompanySettings_InvalidJSONValue(t *testing.T) {
 
 	companyID := uuid.New()
 	setting := buildDbCompanySetting(uuid.New(), companyID, string(enums.LowStock), 2)
-	setting.Value = []byte(`{invalido`)
+	setting.Value = `{invalido`
 
 	repo.EXPECT().
 		ListCompanySettings(gomock.Any(), gomock.Any()).
@@ -237,18 +237,19 @@ func TestUpsertCompanySetting_Success(t *testing.T) {
 	}
 
 	rawValue, _ := json.Marshal(req.Value)
+	rawValueStr := string(rawValue)
 
 	repo.EXPECT().
 		UpsertCompanySetting(gomock.Any(), db.UpsertCompanySettingParams{
 			CompanyID: pgconv.OptionalUUIDToPgType(companyID),
 			Key:       string(enums.LowStock),
-			Value:     rawValue,
+			Value:     rawValueStr,
 		}).
 		Return(db.CompanySetting{
 			ID:        pgconv.ParseUUIDToPgType(settingID),
 			CompanyID: pgconv.ParseUUIDToPgType(companyID),
 			Key:       string(enums.LowStock),
-			Value:     rawValue,
+			Value:     rawValueStr,
 			CreatedAt: pgconv.TimeToPgTimestamptz(now),
 			UpdatedAt: pgconv.TimeToPgTimestamptz(now),
 		}, nil)

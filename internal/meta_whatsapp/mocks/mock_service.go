@@ -43,6 +43,21 @@ func (m *MockServiceInterface) EXPECT() *MockServiceInterfaceMockRecorder {
 	return m.recorder
 }
 
+// CountMessagesInPeriod mocks base method.
+func (m *MockServiceInterface) CountMessagesInPeriod(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) (*int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CountMessagesInPeriod", ctx, companyId, periodStart, periodEnd)
+	ret0, _ := ret[0].(*int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CountMessagesInPeriod indicates an expected call of CountMessagesInPeriod.
+func (mr *MockServiceInterfaceMockRecorder) CountMessagesInPeriod(ctx, companyId, periodStart, periodEnd any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CountMessagesInPeriod", reflect.TypeOf((*MockServiceInterface)(nil).CountMessagesInPeriod), ctx, companyId, periodStart, periodEnd)
+}
+
 // GetCompanyConfig mocks base method.
 func (m *MockServiceInterface) GetCompanyConfig(ctx context.Context, companyId uuid.UUID) (*domain.CompanyWhatsAppConfig, error) {
 	m.ctrl.T.Helper()

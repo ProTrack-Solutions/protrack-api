@@ -63,3 +63,9 @@ type AddPaymentMethodRequest struct {
 	SetAsDefault          bool   `json:"set_as_default"`
 	IdempotencyKey        string `json:"idempotency_key" binding:"required"`
 }
+
+type CountMenssageInvitAmountResponse struct {
+	LimitMenssage  int     `json:"limit_menssage"`
+	MenssageAmount int     `json:"menssage_amount"`
+	Percentage     float64 `json:"percentage"`
+}

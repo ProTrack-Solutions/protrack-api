@@ -116,7 +116,7 @@ RETURNING id, company_id, key, value, created_at, updated_at
 type UpsertCompanySettingParams struct {
 	CompanyID pgtype.UUID `json:"company_id"`
 	Key       string      `json:"key"`
-	Value     []byte      `json:"value"`
+	Value     string      `json:"value"`
 }
 
 // Cria a config se não existir, ou atualiza o valor se já existir

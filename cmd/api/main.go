@@ -269,7 +269,6 @@ func main() {
 	productsService := productsService.NewService(productsRepository, db.Pool, plansService, subscriptionsService)
 	invoiceHistoryService := invoiceHistoryService.NewServie(invoiceHistoryRepository, db.Pool)
 	stripeService := stripeService.NewService(cfg, subscriptionsService, invoiceHistoryService)
-	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository)
 	authService := authService.NewService(
 		stripeService,
 		usersService,
@@ -291,6 +290,7 @@ func main() {
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
 	metaWhatsappService := metaWhatsappService.NewService(metaWhatsappRepo, metaClient, subscriptionsService, plansService, billing, companiesService, cfg)
+	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository, metaWhatsappService, plansService)
 	salesService := salesService.NewService(
 		salesRepository,
 		db.Pool,

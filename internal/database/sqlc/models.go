@@ -349,7 +349,7 @@ type CompanySetting struct {
 	ID        pgtype.UUID        `json:"id"`
 	CompanyID pgtype.UUID        `json:"company_id"`
 	Key       string             `json:"key"`
-	Value     []byte             `json:"value"`
+	Value     string             `json:"value"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }

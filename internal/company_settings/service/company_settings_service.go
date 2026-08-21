@@ -32,7 +32,7 @@ func (s *Service) GetCompanySetting(ctx context.Context, companyId uuid.UUID, ke
 
 	var value any
 
-	if err = json.Unmarshal(setting.Value, &value); err != nil {
+	if err = json.Unmarshal([]byte(setting.Value), &value); err != nil {
 		return domain.CompanySettingResponse{}, err
 	}
 
@@ -56,7 +56,7 @@ func (s *Service) ListCompanySettings(ctx context.Context, companyId uuid.UUID) 
 
 	for _, setting := range settings {
 		var value any
-		if err = json.Unmarshal(setting.Value, &value); err != nil {
+		if err = json.Unmarshal([]byte(setting.Value), &value); err != nil {
 			return []domain.CompanySettingResponse{}, err
 		}
 		response = append(response, domain.CompanySettingResponse{
@@ -72,16 +72,42 @@ func (s *Service) ListCompanySettings(ctx context.Context, companyId uuid.UUID) 
 	return response, nil
 }
 
-func (s *Service) UpsertCompanySetting(ctx context.Context, componyId uuid.UUID, req domain.UpsertCompanySettingRequest) (domain.CompanySettingResponse, error) {
+func (s *Service) UpsertCompanySetting(ctx context.Context, companyId uuid.UUID, req domain.UpsertCompanySettingRequest) (domain.CompanySettingResponse, error) {
+	settings, err := s.repo.ListCompanySettings(ctx, pgconv.OptionalUUIDToPgType(companyId))
+	if err != nil {
+		return domain.CompanySettingResponse{}, err
+	}
+
+	if len(settings) <= 0 {
+		for k, v := range domain.DefaultSettings {
+
+			value, err := json.Marshal(v)
+			if err != nil {
+				return domain.CompanySettingResponse{}, err
+			}
+
+			_, err = s.repo.UpsertCompanySetting(ctx, db.UpsertCompanySettingParams{
+				CompanyID: pgconv.OptionalUUIDToPgType(companyId),
+				Key:       string(k),
+				Value:     string(value),
+			})
+			if err != nil {
+				return domain.CompanySettingResponse{}, err
+			}
+		}
+
+		return domain.CompanySettingResponse{}, err
+	}
+
 	value, err := json.Marshal(req.Value)
 	if err != nil {
 		return domain.CompanySettingResponse{}, err
 	}
 
 	setting, err := s.repo.UpsertCompanySetting(ctx, db.UpsertCompanySettingParams{
-		CompanyID: pgconv.OptionalUUIDToPgType(componyId),
+		CompanyID: pgconv.OptionalUUIDToPgType(companyId),
 		Key:       string(req.Key),
-		Value:     value,
+		Value:     string(value),
 	})
 	if err != nil {
 		return domain.CompanySettingResponse{}, err
@@ -116,7 +142,7 @@ func (s *Service) RestorDefaultSettings(ctx context.Context, companyId uuid.UUID
 		_, err = s.repo.UpsertCompanySetting(ctx, db.UpsertCompanySettingParams{
 			CompanyID: pgconv.OptionalUUIDToPgType(companyId),
 			Key:       string(k),
-			Value:     value,
+			Value:     string(value),
 		})
 		if err != nil {
 			return err
@@ -139,7 +165,7 @@ func (s *Service) SetDefaultSettings(ctx context.Context, tx db.DBTX, companyId 
 		_, err = repoTx.UpsertCompanySetting(ctx, db.UpsertCompanySettingParams{
 			CompanyID: pgconv.OptionalUUIDToPgType(companyId),
 			Key:       string(k),
-			Value:     value,
+			Value:     string(value),
 		})
 		if err != nil {
 			return err

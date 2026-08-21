@@ -54,6 +54,7 @@ type ServiceInterface interface {
 	ListApprovedTemplates(ctx context.Context) ([]Template, error)
 	HandleWebhookEvent(ctx context.Context, payload []byte) error
 	SyncMonthlyUsage(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) error
+	CountMessagesInPeriod(ctx context.Context, companyId uuid.UUID, periodStart, periodEnd time.Time) (*int64, error)
 }
 
 type WhatsAppMode string
