@@ -6,9 +6,12 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
-	modules := r.Group("/modules").Use(middleware.RequireRole("SUPER_ADMIN"))
+	modules := r.Group("/modules")
+	modules.Use(middleware.AuthMiddleware(h.jwt, h.blackList))
+
+	admin := modules.Use(middleware.RequireRole("ADMIN"))
 	{
-		modules.GET("/list", h.ListModules)
-		modules.GET("/:code", h.GetModule)
+		admin.GET("/list", h.ListModules)
+		admin.GET("/:code", h.GetModule)
 	}
 }

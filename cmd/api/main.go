@@ -42,6 +42,9 @@ import (
 	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/database"
+	departmentModulesHandler "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/handler"
+	departmentModulesRepo "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/repository"
+	departmentModulesService "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/service"
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
@@ -58,6 +61,9 @@ import (
 	metaWhatsappRepo "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/repository"
 	metaWhatsappService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/metagraph"
+	modulesHandler "github.com/ProTrack-Solutions/protrack-api/internal/modules/handler"
+	modulesRepo "github.com/ProTrack-Solutions/protrack-api/internal/modules/repository"
+	modulesService "github.com/ProTrack-Solutions/protrack-api/internal/modules/service"
 	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
 	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
@@ -254,6 +260,8 @@ func main() {
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 	metaWhatsappRepo := metaWhatsappRepo.NewRepository(db.Pool)
 	companySettingsRepo := companySettingsRepo.NewRepository(db.Pool)
+	modulesRepo := modulesRepo.NewRepository(db.Pool)
+	departmentModulesRepo := departmentModulesRepo.NewRepository(db.Pool)
 
 	companySettingsService := companySettingsService.NewService(companySettingsRepo)
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
@@ -285,7 +293,6 @@ func main() {
 		cfg,
 		companySettingsService,
 	)
-
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
@@ -315,6 +322,8 @@ func main() {
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
+	modulesService := modulesService.NewService(modulesRepo)
+	departmentModulesService := departmentModulesService.NewService(departmentModulesRepo)
 
 	companySettingsHandler := companySettingsHandler.NewHandler(companySettingsService, jwtManager, blacklist)
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
@@ -345,6 +354,8 @@ func main() {
 	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
 	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
 	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist)
+	modulesHandler := modulesHandler.NewHandler(modulesService, jwtManager, blacklist)
+	departmentModulesHandler := departmentModulesHandler.NewHandler(departmentModulesService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -376,6 +387,8 @@ func main() {
 	labelHandler.RegisterRoutes(api)
 	metaWhatsappHandler.RegisterRoutes(api)
 	companySettingsHandler.RegisterRoute(api)
+	modulesHandler.RegisterRoutes(api)
+	departmentModulesHandler.RegisterRoute(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
