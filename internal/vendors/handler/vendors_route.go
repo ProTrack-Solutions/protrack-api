@@ -7,6 +7,7 @@ import (
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	vendors := r.Group("/vendors").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	vendors.Use(middleware.RequireModule("inventory", h.queries))
 	{
 		vendors.POST("", h.CreateVendors)
 		vendors.GET("/:id", h.GetVendorsById)

@@ -8,6 +8,7 @@ import (
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	billCategories := r.Group("/bill-categories")
 	billCategories.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	billCategories.Use(middleware.RequireModule("financial", h.queries))
 	{
 		// leitura: ADMIN e USER podem consultar as categorias ao lançar/ver contas
 		billCategories.GET("/:id", h.GetBillCategoriesById)

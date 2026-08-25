@@ -9,6 +9,7 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	billsPayable := r.Group("/bills-payable").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	// contas a pagar: dado/ação financeira da empresa toda -> ADMIN
 	billsPayable.Use(middleware.RequireRole("ADMIN"))
+	billsPayable.Use(middleware.RequireModule("financial", h.queries))
 	{
 		billsPayable.POST("", h.CreateBillPayable)
 		billsPayable.GET("/:id", h.GetBillsPayableById)

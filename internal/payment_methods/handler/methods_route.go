@@ -8,6 +8,7 @@ import (
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	methods := r.Group("/payment-methods")
 	methods.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	methods.Use(middleware.RequireModule("sales", h.queries))
 	{
 		// leitura: ADMIN e USER precisam consultar ao registrar uma venda/pagamento
 		methods.GET("", h.ListPaymentMethod)

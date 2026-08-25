@@ -155,7 +155,7 @@ type Querier interface {
 	ListCompanySettings(ctx context.Context, companyID pgtype.UUID) ([]CompanySetting, error)
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error)
-	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error)
+	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]ListDepartmentsByCompanyIdRow, error)
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)

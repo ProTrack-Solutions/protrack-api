@@ -102,22 +102,48 @@ func (q *Queries) GetDepartmentById(ctx context.Context, id pgtype.UUID) (Depart
 }
 
 const listDepartmentsByCompanyId = `-- name: ListDepartmentsByCompanyId :many
-SELECT id, company_id, name, description, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
-FROM departments
-WHERE company_id = $1
-    AND deleted_at IS NULL
-ORDER BY created_at DESC
+SELECT
+    d.id, d.company_id, d.name, d.description, d.status, d.created_by, d.updated_by, d.deleted_by, d.created_at, d.updated_at, d.deleted_at,
+    COALESCE(
+        json_agg(
+            json_build_object('code', m.code, 'name', m.name)
+            ORDER BY m.name
+        ) FILTER (WHERE m.code IS NOT NULL),
+        '[]'
+    ) AS modules
+FROM departments d
+LEFT JOIN department_modules dm ON dm.department_id = d.id
+LEFT JOIN modules m ON m.code = dm.module_code
+WHERE d.company_id = $1
+    AND d.deleted_at IS NULL
+GROUP BY d.id
+ORDER BY d.created_at DESC
 `
 
-func (q *Queries) ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]Department, error) {
+type ListDepartmentsByCompanyIdRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	CompanyID   pgtype.UUID        `json:"company_id"`
+	Name        string             `json:"name"`
+	Description pgtype.Text        `json:"description"`
+	Status      interface{}        `json:"status"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+	UpdatedBy   pgtype.UUID        `json:"updated_by"`
+	DeletedBy   pgtype.UUID        `json:"deleted_by"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	Modules     interface{}        `json:"modules"`
+}
+
+func (q *Queries) ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]ListDepartmentsByCompanyIdRow, error) {
 	rows, err := q.db.Query(ctx, listDepartmentsByCompanyId, companyID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Department{}
+	items := []ListDepartmentsByCompanyIdRow{}
 	for rows.Next() {
-		var i Department
+		var i ListDepartmentsByCompanyIdRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CompanyID,
@@ -130,6 +156,7 @@ func (q *Queries) ListDepartmentsByCompanyId(ctx context.Context, companyID pgty
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.Modules,
 		); err != nil {
 			return nil, err
 		}

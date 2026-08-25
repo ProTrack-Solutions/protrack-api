@@ -7,6 +7,7 @@ import (
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	payments := r.Group("/payments").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	payments.Use(middleware.RequireModule("sales", h.queries))
 	{
 		payments.POST("", h.NewPayment)
 	}

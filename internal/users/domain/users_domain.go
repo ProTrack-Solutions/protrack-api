@@ -70,6 +70,11 @@ type UserResponse struct {
 	UpdatedAt      time.Time `json:"updated_at"`
 	DeletedAt      time.Time `json:"deleted_at"`
 	DepartmentName string    `json:"department_name"`
+	// Modules lista os códigos dos módulos liberados para o departamento do
+	// usuário (mesma fonte usada pelo middleware RequireModule). ADMIN sempre
+	// tem acesso a tudo independente do que estiver aqui — o front deve tratar
+	// role == "ADMIN" como bypass, igual ao backend.
+	Modules []string `json:"modules"`
 }
 
 type UpdateOwnProfileRequest struct {

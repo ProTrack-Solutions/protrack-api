@@ -22,6 +22,7 @@ type ServiceInterface interface {
 	AddModuleToDepartment(ctx context.Context, req AddModuleToDepartmentRequest) error
 	RemoveModuleFromDepartment(ctx context.Context, departmentId uuid.UUID, req RemoveModuleFromDepartmentRequest) error
 	ReplaceDepartmentModules(ctx context.Context, departmentId uuid.UUID) error
+	AddModuleToDepartmentTx(ctx context.Context, tx db.DBTX, req AddModuleToDepartmentRequest) error
 }
 
 type ModuleResponse struct {

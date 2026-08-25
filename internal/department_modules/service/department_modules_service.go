@@ -53,6 +53,15 @@ func (s *Service) AddModuleToDepartment(ctx context.Context, req domain.AddModul
 	})
 }
 
+func (s *Service) AddModuleToDepartmentTx(ctx context.Context, tx db.DBTX, req domain.AddModuleToDepartmentRequest) error {
+	repoTx := db.New(tx)
+
+	return repoTx.AddModuleToDepartment(ctx, db.AddModuleToDepartmentParams{
+		DepartmentID: pgconv.OptionalUUIDToPgType(req.DepartmentID),
+		ModuleCode:   req.ModuleCode,
+	})
+}
+
 func (s *Service) RemoveModuleFromDepartment(ctx context.Context, departmentId uuid.UUID, req domain.RemoveModuleFromDepartmentRequest) error {
 	return s.repo.RemoveModuleFromDepartment(ctx, db.RemoveModuleFromDepartmentParams{
 		DepartmentID: pgconv.OptionalUUIDToPgType(departmentId),
