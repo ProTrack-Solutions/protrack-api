@@ -7,6 +7,7 @@ import (
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	reports := r.Group("/reports").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	reports.Use(middleware.RequireModule("reports", h.queries))
 	{
 		reports.GET("", h.GenerateReports)
 	}

@@ -14,6 +14,7 @@ import (
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	companySettingsDomain "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
 	stripeDomain "github.com/ProTrack-Solutions/protrack-api/internal/stripe/domain"
@@ -47,6 +48,7 @@ type Service struct {
 	plansService          *plansService.Service
 	stripeService         *stripeService.Service
 	companySettings       companySettingsDomain.ServiceInterface
+	departmentModules     departmentModulesDomain.ServiceInterface
 	jwtManager            *jwt.JWTManager
 	pool                  *pgxpool.Pool
 
@@ -71,6 +73,7 @@ func NewService(stripeService *stripeService.Service,
 	amqpChan *amqp091.Channel,
 	cfg *config.Config,
 	companySettings companySettingsDomain.ServiceInterface,
+	departmentModules departmentModulesDomain.ServiceInterface,
 ) *Service {
 	return &Service{
 		stripeService:         stripeService,
@@ -87,6 +90,7 @@ func NewService(stripeService *stripeService.Service,
 		amqpChan:              amqpChan,
 		cfg:                   cfg,
 		companySettings:       companySettings,
+		departmentModules:     departmentModules,
 	}
 }
 
@@ -125,7 +129,7 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		hasCompany = false
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.ID, user.CompanyID, user.Role, req.Aud)
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, req.Aud)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens")
 		return nil, err
@@ -196,6 +200,23 @@ func (s *Service) GetUserFromContext(ctx context.Context, id uuid.UUID) (userDom
 		return userDomain.UserResponse{}, err
 	}
 
+	// Módulos liberados para o departamento do usuário, mesma fonte usada pelo
+	// middleware RequireModule. ADMIN não depende disso (bypassa no backend e
+	// deve bypassar no front também), então erro/ausência de departamento aqui
+	// não impede o login: o usuário só fica sem módulos extras no front.
+	var moduleCodes []string
+	if user.DepartmentID != uuid.Nil {
+		modules, err := s.departmentModules.ListModulesByDepartment(ctx, user.DepartmentID)
+		if err != nil {
+			log.Warn().Err(err).Str("department_id", user.DepartmentID.String()).Msg("failed to load department modules for /me")
+		} else {
+			moduleCodes = make([]string, 0, len(modules))
+			for _, module := range modules {
+				moduleCodes = append(moduleCodes, module.Code)
+			}
+		}
+	}
+
 	return userDomain.UserResponse{
 		ID:             user.ID,
 		Name:           user.Name,
@@ -213,6 +234,7 @@ func (s *Service) GetUserFromContext(ctx context.Context, id uuid.UUID) (userDom
 		UpdatedAt:      user.UpdatedAt,
 		DeletedAt:      user.DeletedAt,
 		DepartmentName: user.DepartmentName,
+		Modules:        moduleCodes,
 	}, nil
 }
 

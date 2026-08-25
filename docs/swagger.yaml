@@ -905,6 +905,20 @@ definitions:
       whatsapp:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.AddModuleToDepartmentRequest:
+    properties:
+      department_id:
+        type: string
+      module_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams:
     properties:
       description:
@@ -971,6 +985,8 @@ definitions:
     - low_stock
     - mediun_stock
     - normal_stock
+    - sale_overdue_template
+    - language_sale_overdue_template
     type: string
     x-enum-varnames:
     - IsWhatsappActive
@@ -978,6 +994,8 @@ definitions:
     - LowStock
     - MediumStock
     - NormalStock
+    - SaleOverdueTemplate
+    - LanguageSaleOverdueTemplate
   github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender:
     enum:
     - MALE
@@ -1126,24 +1144,24 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Template:
     properties:
-      bodyText:
+      body_text:
         type: string
       category:
         $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory'
-      createdAt:
+      created_at:
         type: string
       id:
         type: string
-      isPlatformSharedEligible:
+      is_platform_shared_eligible:
         type: boolean
-      languageCode:
+      language_code:
         type: string
-      metaApprovalStatus:
+      meta_approval_status:
         description: pending | approved | rejected | paused
         type: string
-      metaTemplateName:
+      meta_template_name:
         type: string
-      updatedAt:
+      updated_at:
         type: string
       variables:
         items:
@@ -1175,6 +1193,13 @@ definitions:
     x-enum-varnames:
     - WhatsAppModePlatformShared
     - WhatsAppModeOwnWABA
+  github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse:
+    properties:
+      code:
+        type: string
+      name:
+        type: string
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest:
     properties:
       amount_paid:
@@ -3528,6 +3553,90 @@ paths:
       summary: Resumo de performance dos clientes
       tags:
       - customers
+  /department-modules:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Módulo
+        in: body
+        name: module
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.AddModuleToDepartmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+      security:
+      - BearerAuth: []
+      summary: Adiciona um módulo a um departamento
+      tags:
+      - department-modules
+  /department-modules/{departmentId}:
+    get:
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: departmentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista os módulos de um departamento
+      tags:
+      - department-modules
+  /department-modules/remove/{departmentId}:
+    delete:
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: departmentId
+        required: true
+        type: string
+      - description: Código do módulo
+        in: query
+        name: module_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Remove um módulo de um departamento
+      tags:
+      - department-modules
+  /department-modules/replace/{departmentId}:
+    delete:
+      parameters:
+      - description: ID do departamento
+        in: path
+        name: departmentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Restaura os módulos padrão de um departamento
+      tags:
+      - department-modules
   /departments:
     post:
       consumes:
@@ -3995,6 +4104,42 @@ paths:
       summary: Recebe eventos do webhook do WhatsApp
       tags:
       - meta-whatsapp
+  /modules/{code}:
+    get:
+      parameters:
+      - description: Código do módulo
+        in: path
+        name: code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca módulo por código
+      tags:
+      - modules
+  /modules/list:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista todos os módulos
+      tags:
+      - modules
   /payment-history:
     get:
       produces:

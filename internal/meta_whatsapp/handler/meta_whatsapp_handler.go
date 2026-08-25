@@ -7,6 +7,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	discordDomain "github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/domain"
@@ -21,9 +22,10 @@ type Handler struct {
 	AppSecret     string
 	jwtManager    *jwt.JWTManager
 	blacklist     *cache.TokenBlacklist
+	queries       departmentModulesDomain.ServiceInterface
 }
 
-func NewHandler(service domain.ServiceInterface, cfg *config.Config, discordLogger *discord.DiscordLogger, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
+func NewHandler(service domain.ServiceInterface, cfg *config.Config, discordLogger *discord.DiscordLogger, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface) *Handler {
 	return &Handler{
 		service:       service,
 		VerifyToken:   cfg.MetaWebhookVerifyToken,
@@ -31,6 +33,7 @@ func NewHandler(service domain.ServiceInterface, cfg *config.Config, discordLogg
 		jwtManager:    jwtManager,
 		blacklist:     blacklist,
 		AppSecret:     cfg.MetaAppSecret,
+		queries:       queries,
 	}
 }
 

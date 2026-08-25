@@ -9,8 +9,9 @@ import (
 )
 
 type Claims struct {
-	CompanyId uuid.UUID `json:"company_id"`
-	Role      string    `json:"role"`
+	CompanyId    uuid.UUID `json:"company_id"`
+	Role         string    `json:"role"`
+	DepartmentId uuid.UUID `json:"department_id"`
 	jwt.RegisteredClaims
 }
 
@@ -34,10 +35,11 @@ func NewJWTManager(secretKey string) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateTokenPair(sub uuid.UUID, companyId uuid.UUID, role string, aud string) (*TokenPair, error) {
+func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, role string, aud string) (*TokenPair, error) {
 	accessClaims := &Claims{
-		CompanyId: companyId,
-		Role:      role,
+		CompanyId:    companyId,
+		Role:         role,
+		DepartmentId: departmentId,
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessTokenTTL)),
@@ -56,8 +58,9 @@ func (j *JWTManager) GenerateTokenPair(sub uuid.UUID, companyId uuid.UUID, role 
 	}
 
 	refreshClaims := &Claims{
-		CompanyId: companyId,
-		Role:      role,
+		CompanyId:    companyId,
+		Role:         role,
+		DepartmentId: departmentId,
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshTokenTTL)),
@@ -115,5 +118,5 @@ func (j *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 		return nil, errors.New("missing audience")
 	}
 
-	return j.GenerateTokenPair(userID, claims.CompanyId, claims.Role, claims.Audience[0])
+	return j.GenerateTokenPair(claims.DepartmentId, userID, claims.CompanyId, claims.Role, claims.Audience[0])
 }

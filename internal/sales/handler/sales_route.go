@@ -8,6 +8,7 @@ import (
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	sales := r.Group("/sales")
 	sales.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
+	sales.Use(middleware.RequireModule("sales", h.queries))
 	{
 		// operação do dia a dia de vendas -> aberto
 		sales.POST("", h.CreateSale)

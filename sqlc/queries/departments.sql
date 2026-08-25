@@ -18,11 +18,22 @@ FROM departments
 WHERE id = $1
     AND deleted_at IS NULL;
 -- name: ListDepartmentsByCompanyId :many
-SELECT *
-FROM departments
-WHERE company_id = $1
-    AND deleted_at IS NULL
-ORDER BY created_at DESC;
+SELECT
+    d.*,
+    COALESCE(
+        json_agg(
+            json_build_object('code', m.code, 'name', m.name)
+            ORDER BY m.name
+        ) FILTER (WHERE m.code IS NOT NULL),
+        '[]'
+    ) AS modules
+FROM departments d
+LEFT JOIN department_modules dm ON dm.department_id = d.id
+LEFT JOIN modules m ON m.code = dm.module_code
+WHERE d.company_id = $1
+    AND d.deleted_at IS NULL
+GROUP BY d.id
+ORDER BY d.created_at DESC;
 -- name: SetStatusDepartment :execrows
 UPDATE departments
 SET status = $2::status_enum,
