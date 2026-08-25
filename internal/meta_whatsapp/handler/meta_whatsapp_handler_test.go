@@ -36,7 +36,7 @@ func newTestHandler(mockSvc *mocks.MockServiceInterface) *handler.Handler {
 		MetaAppSecret:          "app-secret",
 	}
 	discordLogger := discord.NewDiscordLogger(&config.Config{})
-	return handler.NewHandler(mockSvc, cfg, discordLogger, nil, nil)
+	return handler.NewHandler(mockSvc, cfg, discordLogger, nil, nil, nil)
 }
 
 // withCompanyID injeta "company_id" no contexto antes do handler real rodar,

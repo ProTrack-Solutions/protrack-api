@@ -350,9 +350,10 @@ func (s *Service) ValidatePassword(ctx context.Context, email string, password s
 	}
 
 	return domain.UserResponse{
-		ID:        pgconv.PgUUIDToUUID(user.ID),
-		CompanyID: pgconv.PgUUIDToUUID(user.CompanyID),
-		Role:      user.Role,
+		ID:           pgconv.PgUUIDToUUID(user.ID),
+		CompanyID:    pgconv.PgUUIDToUUID(user.CompanyID),
+		DepartmentID: pgconv.PgUUIDToUUID(user.DepartmentID),
+		Role:         user.Role,
 	}, nil
 }
 

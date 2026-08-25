@@ -58,6 +58,7 @@ func AuthMiddleware(jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist)
 		c.Set("sub", claims.Subject)
 		c.Set("company_id", claims.CompanyId)
 		c.Set("role", claims.Role)
+		c.Set("department_id", claims.DepartmentId)
 
 		c.Next()
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
+	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -16,13 +17,15 @@ type Handler struct {
 	service    *service.Service
 	jwtManager *jwt.JWTManager
 	blacklist  *cache.TokenBlacklist
+	queries    departmentModulesDomain.ServiceInterface
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface) *Handler {
 	return &Handler{
 		service:    service,
 		jwtManager: jwtManager,
 		blacklist:  blacklist,
+		queries:    queries,
 	}
 }
 

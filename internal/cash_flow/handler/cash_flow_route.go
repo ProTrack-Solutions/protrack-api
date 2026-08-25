@@ -7,8 +7,7 @@ import (
 
 func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	cashFlow := r.Group("/cash-flow").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
-	// fluxo de caixa: dado financeiro da empresa toda -> ADMIN
-	cashFlow.Use(middleware.RequireRole("ADMIN"))
+	cashFlow.Use(middleware.RequireModule("financial", h.queries))
 	{
 		cashFlow.GET("/summary", h.CashFlowSummary)
 		cashFlow.GET("/history-projection", h.GetCashFlowHistoryProjections)

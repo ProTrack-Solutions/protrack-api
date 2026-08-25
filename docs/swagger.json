@@ -2320,6 +2320,144 @@
                 }
             }
         },
+        "/department-modules": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "department-modules"
+                ],
+                "summary": "Adiciona um módulo a um departamento",
+                "parameters": [
+                    {
+                        "description": "Módulo",
+                        "name": "module",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.AddModuleToDepartmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created"
+                    }
+                }
+            }
+        },
+        "/department-modules/remove/{departmentId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "department-modules"
+                ],
+                "summary": "Remove um módulo de um departamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do departamento",
+                        "name": "departmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Código do módulo",
+                        "name": "module_code",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/department-modules/replace/{departmentId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "department-modules"
+                ],
+                "summary": "Restaura os módulos padrão de um departamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do departamento",
+                        "name": "departmentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/department-modules/{departmentId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "department-modules"
+                ],
+                "summary": "Lista os módulos de um departamento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do departamento",
+                        "name": "departmentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/departments": {
             "post": {
                 "consumes": [
@@ -3042,6 +3180,66 @@
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/modules/list": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modules"
+                ],
+                "summary": "Lista todos os módulos",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/modules/{code}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "modules"
+                ],
+                "summary": "Busca módulo por código",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Código do módulo",
+                        "name": "code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse"
+                        }
                     }
                 }
             }
@@ -7329,6 +7527,28 @@
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.AddModuleToDepartmentRequest": {
+            "type": "object",
+            "properties": {
+                "department_id": {
+                    "type": "string"
+                },
+                "module_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_departments_domain.CreateDepartmentParams": {
             "type": "object",
             "properties": {
@@ -7427,14 +7647,18 @@
                 "is_excess_usage",
                 "low_stock",
                 "mediun_stock",
-                "normal_stock"
+                "normal_stock",
+                "sale_overdue_template",
+                "language_sale_overdue_template"
             ],
             "x-enum-varnames": [
                 "IsWhatsappActive",
                 "IsExcessUsage",
                 "LowStock",
                 "MediumStock",
-                "NormalStock"
+                "NormalStock",
+                "SaleOverdueTemplate",
+                "LanguageSaleOverdueTemplate"
             ]
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender": {
@@ -7641,32 +7865,32 @@
         "github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.Template": {
             "type": "object",
             "properties": {
-                "bodyText": {
+                "body_text": {
                     "type": "string"
                 },
                 "category": {
                     "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.MessageCategory"
                 },
-                "createdAt": {
+                "created_at": {
                     "type": "string"
                 },
                 "id": {
                     "type": "string"
                 },
-                "isPlatformSharedEligible": {
+                "is_platform_shared_eligible": {
                     "type": "boolean"
                 },
-                "languageCode": {
+                "language_code": {
                     "type": "string"
                 },
-                "metaApprovalStatus": {
+                "meta_approval_status": {
                     "description": "pending | approved | rejected | paused",
                     "type": "string"
                 },
-                "metaTemplateName": {
+                "meta_template_name": {
                     "type": "string"
                 },
-                "updatedAt": {
+                "updated_at": {
                     "type": "string"
                 },
                 "variables": {
@@ -7713,6 +7937,17 @@
                 "WhatsAppModePlatformShared",
                 "WhatsAppModeOwnWABA"
             ]
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_modules_domain.ModuleResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_payment_history_domain.CreatePaymentHistoryRequest": {
             "type": "object",

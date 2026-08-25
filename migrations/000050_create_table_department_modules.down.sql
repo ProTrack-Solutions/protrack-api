@@ -1,0 +1,1 @@
+DROP TABLE ID NOT EXISTS department_modules;

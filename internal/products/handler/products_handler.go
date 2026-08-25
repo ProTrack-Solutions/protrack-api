@@ -6,6 +6,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/service"
@@ -29,13 +30,15 @@ type Handler struct {
 	service    *service.Service
 	jwtManager *jwt.JWTManager
 	blacklist  *cache.TokenBlacklist
+	queries    departmentModulesDomain.ServiceInterface
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface) *Handler {
 	return &Handler{
 		service:    service,
 		jwtManager: jwtManager,
 		blacklist:  blacklist,
+		queries:    queries,
 	}
 }
 

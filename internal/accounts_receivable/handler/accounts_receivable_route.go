@@ -9,6 +9,7 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	accountsReceivable := r.Group("/accounts-receivable").Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 	// contas a receber: dado financeiro da empresa toda -> ADMIN
 	accountsReceivable.Use(middleware.RequireRole("ADMIN"))
+	accountsReceivable.Use(middleware.RequireModule("financial", h.queries))
 	{
 		accountsReceivable.GET("", h.GetCustomerDebtSummary)
 		accountsReceivable.GET("/list", h.ListOverdueReceivables)

@@ -412,6 +412,11 @@ type Department struct {
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type DepartmentModule struct {
+	DepartmentID pgtype.UUID `json:"department_id"`
+	ModuleCode   string      `json:"module_code"`
+}
+
 type FiscalInvoice struct {
 	ID                   pgtype.UUID        `json:"id"`
 	CompanyID            pgtype.UUID        `json:"company_id"`
@@ -456,6 +461,11 @@ type InvoiceHistory struct {
 	PaidAt            pgtype.Timestamptz `json:"paid_at"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Module struct {
+	Code string `json:"code"`
+	Name string `json:"name"`
 }
 
 type PaymentHistory struct {

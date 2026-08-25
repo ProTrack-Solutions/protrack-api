@@ -42,6 +42,9 @@ import (
 	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/database"
+	departmentModulesHandler "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/handler"
+	departmentModulesRepo "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/repository"
+	departmentModulesService "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/service"
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
@@ -58,6 +61,9 @@ import (
 	metaWhatsappRepo "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/repository"
 	metaWhatsappService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/metagraph"
+	modulesHandler "github.com/ProTrack-Solutions/protrack-api/internal/modules/handler"
+	modulesRepo "github.com/ProTrack-Solutions/protrack-api/internal/modules/repository"
+	modulesService "github.com/ProTrack-Solutions/protrack-api/internal/modules/service"
 	paymentHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/handler"
 	paymentHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/repository"
 	paymentHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/service"
@@ -254,7 +260,10 @@ func main() {
 	plansFeatureRepo := planFeaturesRepository.NewRepository(db.Pool)
 	metaWhatsappRepo := metaWhatsappRepo.NewRepository(db.Pool)
 	companySettingsRepo := companySettingsRepo.NewRepository(db.Pool)
+	modulesRepo := modulesRepo.NewRepository(db.Pool)
+	departmentModulesRepo := departmentModulesRepo.NewRepository(db.Pool)
 
+	departmentModulesService := departmentModulesService.NewService(departmentModulesRepo)
 	companySettingsService := companySettingsService.NewService(companySettingsRepo)
 	plansFeatureSvc := planFeaturesService.NewService(plansFeatureRepo, db.Pool)
 	plansService := plansService.NewService(clientStripe, plansRepository, plansFeatureSvc, db.Pool)
@@ -264,7 +273,7 @@ func main() {
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg, plansService, subscriptionsService)
 	companiesService := companiesService.NewService(db.Pool, companiesRepository, usersRepository)
-	departmentsService := departmentsService.NewService(departmentsRepository)
+	departmentsService := departmentsService.NewService(departmentsRepository, departmentModulesService, db.Pool)
 	productsCategoriesService := productsCategoriesService.NewService(productsCategoriesRepository)
 	productsService := productsService.NewService(productsRepository, db.Pool, plansService, subscriptionsService)
 	invoiceHistoryService := invoiceHistoryService.NewServie(invoiceHistoryRepository, db.Pool)
@@ -284,8 +293,8 @@ func main() {
 		ch,
 		cfg,
 		companySettingsService,
+		departmentModulesService,
 	)
-
 	customersService := customersService.NewService(customersRepository, db.Pool)
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
@@ -315,36 +324,39 @@ func main() {
 	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
+	modulesService := modulesService.NewService(modulesRepo)
 
 	companySettingsHandler := companySettingsHandler.NewHandler(companySettingsService, jwtManager, blacklist)
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
-	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist)
+	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist, departmentModulesService)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
 	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
 	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
-	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist)
-	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist)
+	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist, departmentModulesService)
+	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist, departmentModulesService)
 	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist, cfg, rateLimiter)
-	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist)
-	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist)
-	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist)
-	paymentMethodsHandler := paymentMethodsHandler.NewHandler(paymentMethodsService, jwtManager, blacklist)
-	vendorsHandler := vendorsHandler.NewHandler(vendorsService, jwtManager, blacklist)
-	billCategoriesHandler := billCategoriesHandler.NewHandler(billCategoriesService, jwtManager, blacklist)
-	billsPayableHandler := billsPayableHandler.NewHandler(billsPayableService, jwtManager, blacklist)
-	paymentHistoryHandler := paymentHistoryHandler.NewHandler(paymentHistoryService, jwtManager, blacklist)
+	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist, departmentModulesService)
+	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist, departmentModulesService)
+	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist, departmentModulesService)
+	paymentMethodsHandler := paymentMethodsHandler.NewHandler(paymentMethodsService, jwtManager, blacklist, departmentModulesService)
+	vendorsHandler := vendorsHandler.NewHandler(vendorsService, jwtManager, blacklist, departmentModulesService)
+	billCategoriesHandler := billCategoriesHandler.NewHandler(billCategoriesService, jwtManager, blacklist, departmentModulesService)
+	billsPayableHandler := billsPayableHandler.NewHandler(billsPayableService, jwtManager, blacklist, departmentModulesService)
+	paymentHistoryHandler := paymentHistoryHandler.NewHandler(paymentHistoryService, jwtManager, blacklist, departmentModulesService)
 	invoiceHistoryHandler := invoiceHistoryHandler.NewHandler(invoiceHistoryService, jwtManager, blacklist)
-	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger)
-	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist)
-	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist)
+	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger, departmentModulesService)
+	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist, departmentModulesService)
+	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist, departmentModulesService)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService, jwtManager, blacklist)
 	platformAdminsHandler := platformAdminsHandler.NewHandler(platformAdminsService, cfg, rateLimiter)
 	stripeHandler := stripeHandler.NewHandler(stripeService, cfg)
 	subscriptionManagementHandler := subscriptionManagementHandler.NewHandler(subscriptionManagementService, jwtManager, blacklist)
-	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist)
-	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist)
+	labelHandler := labelHandler.NewHandler(labelService, jwtManager, blacklist, departmentModulesService)
+	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist, departmentModulesService)
+	modulesHandler := modulesHandler.NewHandler(modulesService, jwtManager, blacklist)
+	departmentModulesHandler := departmentModulesHandler.NewHandler(departmentModulesService, jwtManager, blacklist)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -376,6 +388,8 @@ func main() {
 	labelHandler.RegisterRoutes(api)
 	metaWhatsappHandler.RegisterRoutes(api)
 	companySettingsHandler.RegisterRoute(api)
+	modulesHandler.RegisterRoutes(api)
+	departmentModulesHandler.RegisterRoute(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
