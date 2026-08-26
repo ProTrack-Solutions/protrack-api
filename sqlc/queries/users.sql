@@ -77,3 +77,5 @@ WHERE id = $1
     AND deleted_at IS NULL;
 -- name: CountUser :one
 SELECT COUNT(*) FROM users;
+-- name: ListUsersByCompany :many
+SELECT * FROM users WHERE company_id = $1;

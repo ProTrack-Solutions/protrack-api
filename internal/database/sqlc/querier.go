@@ -184,6 +184,7 @@ type Querier interface {
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	ListUsersByCompany(ctx context.Context, companyID pgtype.UUID) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error

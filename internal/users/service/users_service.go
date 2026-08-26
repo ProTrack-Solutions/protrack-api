@@ -37,6 +37,7 @@ type RepositoryInterface interface {
 	CountUsersByCompanyID(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountUsers(ctx context.Context) (int64, error)
 	UpdateOwnProfile(ctx context.Context, req db.UpdateOwnProfileParams) error
+	ListUsersByCompanyID(ctx context.Context, companyId pgtype.UUID) ([]db.User, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -83,7 +84,7 @@ func (s *Service) CreateUser(ctx context.Context, userId, companyId uuid.UUID, r
 		}
 	}
 
-	if err := validate.ValidPassword(req.PasswordHash); err != nil {
+	if err := validate.ValidPassword(req.Password); err != nil {
 		return domain.UserResponse{}, err
 	}
 
@@ -94,7 +95,7 @@ func (s *Service) CreateUser(ctx context.Context, userId, companyId uuid.UUID, r
 
 	// hashPassword, err := bcrypt.GenerateFromPassword([]byte(req.PasswordHash), 12)
 
-	passwordPepper := req.PasswordHash + s.cfg.Pepper
+	passwordPepper := req.Password + s.cfg.Pepper
 
 	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
 	if err != nil {
@@ -106,13 +107,12 @@ func (s *Service) CreateUser(ctx context.Context, userId, companyId uuid.UUID, r
 		Email:        req.Email,
 		Username:     pgconv.ParseStringToPgText(req.Username),
 		PasswordHash: string(hashPassword),
-		Role:         req.Role,
-		Status:       req.Status,
+		Role:         "USER",
+		Status:       "ACTIVE",
 		CompanyID:    pgconv.ParseUUIDToPgType(companyId),
 		DepartmentID: pgconv.ParseUUIDToPgType(req.DepartmentID),
 		CreatedBy:    pgconv.ParseUUIDToPgType(userId),
 		UpdatedBy:    pgconv.ParseUUIDToPgType(userId),
-		CreatedAt:    pgconv.TimeToPgTimestamptz(req.CreatedAt),
 	})
 	if err != nil {
 		return domain.UserResponse{}, err
@@ -390,9 +390,9 @@ func (s *Service) ResetPasswordHash(ctx context.Context, userId uuid.UUID, newPa
 func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, companyId uuid.UUID, req domain.CreateUserParams) (uuid.UUID, error) {
 	repoTx := db.New(tx)
 
-	log.Info().Str("password", req.PasswordHash).Msg("password")
+	log.Info().Str("password", req.Password).Msg("password")
 
-	if err := validate.ValidPassword(req.PasswordHash); err != nil {
+	if err := validate.ValidPassword(req.Password); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -403,7 +403,7 @@ func (s *Service) CreateUserTx(ctx context.Context, tx db.DBTX, companyId uuid.U
 
 	// hashPassword, err := bcrypt.GenerateFromPassword([]byte(req.PasswordHash), 12)
 
-	passwordPepper := req.PasswordHash + s.cfg.Pepper
+	passwordPepper := req.Password + s.cfg.Pepper
 
 	hashPassword, err := argon2id.CreateHash(passwordPepper, argon2id.DefaultParams)
 	if err != nil {
@@ -450,4 +450,35 @@ func (s *Service) UpdateOwnProfile(ctx context.Context, userId uuid.UUID, req do
 
 func (s *Service) CountUsers(ctx context.Context) (int64, error) {
 	return s.repo.CountUsers(ctx)
+}
+
+func (s *Service) ListUsersByCOmpany(ctx context.Context, companyId uuid.UUID) ([]domain.UserResponse, error) {
+	users, err := s.repo.ListUsersByCompanyID(ctx, pgconv.OptionalUUIDToPgType(companyId))
+	if err != nil {
+		return []domain.UserResponse{}, err
+	}
+
+	var response []domain.UserResponse
+
+	for _, user := range users {
+		response = append(response, domain.UserResponse{
+			ID:           pgconv.PgUUIDToUUID(user.ID),
+			Name:         user.Name,
+			Email:        user.Email,
+			Username:     pgconv.ParsePgTextToString(user.Username),
+			Role:         user.Role,
+			Status:       user.Status,
+			CompanyID:    pgconv.PgUUIDToUUID(user.CompanyID),
+			DepartmentID: pgconv.PgUUIDToUUID(user.DepartmentID),
+			LastLoginAt:  pgconv.PgTimestamptzToTime(user.LastLoginAt),
+			CreatedBy:    pgconv.PgUUIDToUUID(user.CreatedBy),
+			UpdatedBy:    pgconv.PgUUIDToUUID(user.UpdatedBy),
+			DeletedBy:    pgconv.PgUUIDToUUID(user.DeletedBy),
+			CreatedAt:    pgconv.PgTimestamptzToTime(user.CreatedAt),
+			UpdatedAt:    pgconv.PgTimestamptzToTime(user.UpdatedAt),
+			DeletedAt:    pgconv.PgTimestamptzToTime(user.DeletedAt),
+		})
+	}
+
+	return response, nil
 }

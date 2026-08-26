@@ -20,6 +20,8 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		{
 			admin.DELETE("/:id", h.DeleteUser)
 			admin.PUT("/:id", h.UpdateUser)
+			admin.GET("/list-company", h.ListUsersByCompany)
+			admin.POST("", h.CreateUser)
 		}
 
 		superadmin := protected.Group("")

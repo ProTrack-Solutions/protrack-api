@@ -31,11 +31,8 @@ type CreateUserParams struct {
 	Name         string    `json:"name"`
 	Email        string    `json:"email"`
 	Username     string    `json:"username"`
-	PasswordHash string    `json:"password_hash"`
-	Role         string    `json:"role"`
-	Status       any       `json:"status"`
+	Password     string    `json:"password"`
 	DepartmentID uuid.UUID `json:"department_id"`
-	CreatedAt    time.Time `json:"created_at"`
 }
 
 type UpdatePasswordParams struct {

@@ -5,6 +5,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	extractorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extractorContext"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/gin-gonic/gin"
@@ -263,4 +264,27 @@ func (h *Handler) CountUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+// ListUsersByCompany godoc
+// @Summary      Lista os usuários da empresa do usuário autenticado
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.UserResponse
+// @Router       /user/list-company [get]
+func (h *Handler) ListUsersByCompany(c *gin.Context) {
+	companyId, err := extractorcontext.ExtratorCompanyID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	users, err := h.service.ListUsersByCOmpany(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
 }
