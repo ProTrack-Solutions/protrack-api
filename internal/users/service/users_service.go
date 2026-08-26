@@ -38,6 +38,7 @@ type RepositoryInterface interface {
 	CountUsers(ctx context.Context) (int64, error)
 	UpdateOwnProfile(ctx context.Context, req db.UpdateOwnProfileParams) error
 	ListUsersByCompanyID(ctx context.Context, companyId pgtype.UUID) ([]db.User, error)
+	UpdateUserStatus(ctx context.Context,arg db.UpdateUserStatusParams)error
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -481,4 +482,12 @@ func (s *Service) ListUsersByCOmpany(ctx context.Context, companyId uuid.UUID) (
 	}
 
 	return response, nil
+}
+
+func (s *Service) UpdateUserStatus(ctx context.Context,id, userId uuid.UUID, req domain.UpdateUserStatusRequest) error {
+	return s.repo.UpdateUserStatus(ctx,db.UpdateUserStatusParams{
+		ID: pgconv.OptionalUUIDToPgType(id),
+		Status: req.Status,
+		UpdatedBy: pgconv.OptionalUUIDToPgType(userId),
+	})
 }

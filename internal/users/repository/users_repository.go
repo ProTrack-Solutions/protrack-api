@@ -86,3 +86,7 @@ func (r *Repository) CountUsers(ctx context.Context) (int64, error) {
 func (r *Repository) ListUsersByCompanyID(ctx context.Context, companyId pgtype.UUID) ([]db.User, error) {
 	return r.queries().ListUsersByCompany(ctx, companyId)
 }
+
+func (r *Repository) UpdateUserStatus(ctx context.Context,arg db.UpdateUserStatusParams)error{
+	return r.queries().UpdateUserStatus(ctx, arg)
+}

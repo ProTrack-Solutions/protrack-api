@@ -923,6 +923,10 @@ definitions:
     properties:
       description:
         type: string
+      modules:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse'
+        type: array
       name:
         type: string
     type: object
@@ -942,6 +946,10 @@ definitions:
         type: string
       id:
         type: string
+      modules:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse'
+        type: array
       name:
         type: string
       status:
@@ -960,6 +968,10 @@ definitions:
     properties:
       description:
         type: string
+      modules:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse'
+        type: array
       name:
         type: string
     type: object
@@ -1953,10 +1965,14 @@ definitions:
         type: string
       role:
         type: string
-      status: {}
       updated_by:
         type: string
       username:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest:
+    properties:
+      status:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse:
@@ -1981,6 +1997,15 @@ definitions:
         type: string
       last_login_at:
         type: string
+      modules:
+        description: |-
+          Modules lista os códigos dos módulos liberados para o departamento do
+          usuário (mesma fonte usada pelo middleware RequireModule). ADMIN sempre
+          tem acesso a tudo independente do que estiver aqui — o front deve tratar
+          role == "ADMIN" como bypass, igual ao backend.
+        items:
+          type: string
+        type: array
       name:
         type: string
       role:
@@ -5820,6 +5845,22 @@ paths:
       summary: Atualiza um usuário
       tags:
       - users
+  /user/list-company:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Lista os usuários da empresa do usuário autenticado
+      tags:
+      - users
   /user/password:
     put:
       consumes:
@@ -5841,6 +5882,27 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza a senha do usuário autenticado
+      tags:
+      - users
+  /user/status:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Novo status do usuário
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Atualiza o status de um usuário
       tags:
       - users
   /vendors:

@@ -45,7 +45,6 @@ type UpdateUserRequest struct {
 	Email        string    `json:"email"`
 	Username     string    `json:"username"`
 	Role         string    `json:"role"`
-	Status       any       `json:"status"`
 	DepartmentID uuid.UUID `json:"department_id"`
 	UpdatedBy    uuid.UUID `json:"updated_by"`
 }
@@ -93,10 +92,6 @@ func ApplyUpdateUserParams(req UpdateUserRequest, arg *db.UpdateUserParams) {
 		arg.Username = pgconv.ParseStringToPgText(req.Username)
 	}
 
-	if req.Status != nil {
-		arg.Status = req.Status
-	}
-
 	if req.DepartmentID != (uuid.UUID{}) {
 		arg.DepartmentID = pgconv.ParseUUIDToPgType(req.DepartmentID)
 	}
@@ -120,8 +115,13 @@ func ApplyUpdateOwnProfile(req UpdateOwnProfileRequest, arg *db.UpdateOwnProfile
 	}
 }
 
+
 type UpdateUserCompanyAndRoleParams struct {
 	ID        uuid.UUID `json:"id"`
 	CompanyID uuid.UUID `json:"company_id"`
 	Role      string    `json:"role"`
+}
+
+type UpdateUserStatusRequest struct {
+	Status       string       `json:"status"`
 }

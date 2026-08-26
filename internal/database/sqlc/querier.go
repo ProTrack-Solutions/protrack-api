@@ -227,6 +227,7 @@ type Querier interface {
 	UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
+	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
 	// Chamado pelo handler de webhook quando chega um status novo (sent/delivered/failed).
 	UpdateWhatsAppMessageStatus(ctx context.Context, arg UpdateWhatsAppMessageStatusParams) (WhatsappMessage, error)
