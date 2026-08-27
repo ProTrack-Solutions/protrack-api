@@ -300,12 +300,10 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 	}
 
 	userId, err := s.userService.CreateUserTx(ctx, tx, companyId, userDomain.CreateUserParams{
-		Name:         req.User.Name,
-		Email:        req.User.Email,
-		Username:     req.User.Username,
-		PasswordHash: req.User.Password,
-		Role:         "ADMIN",
-		Status:       "ACTIVE",
+		Name:     req.User.Name,
+		Email:    req.User.Email,
+		Username: req.User.Username,
+		Password: req.User.Password,
 	})
 	if err != nil {
 		log.Debug().Err(err).Msg("Erro user")

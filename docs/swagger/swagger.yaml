@@ -1965,14 +1965,10 @@ definitions:
         type: string
       role:
         type: string
+      status: {}
       updated_by:
         type: string
       username:
-        type: string
-    type: object
-  github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest:
-    properties:
-      status:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse:
@@ -5882,27 +5878,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza a senha do usuário autenticado
-      tags:
-      - users
-  /user/status:
-    put:
-      consumes:
-      - application/json
-      parameters:
-      - description: Novo status do usuário
-        in: body
-        name: status
-        required: true
-        schema:
-          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-      security:
-      - BearerAuth: []
-      summary: Atualiza o status de um usuário
       tags:
       - users
   /vendors:

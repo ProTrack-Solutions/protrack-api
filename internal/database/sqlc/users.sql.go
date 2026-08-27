@@ -243,6 +243,47 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 	return items, nil
 }
 
+const listUsersByCompany = `-- name: ListUsersByCompany :many
+SELECT id, name, email, username, password_hash, role, status, company_id, department_id, last_login_at, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at FROM users WHERE company_id = $1
+`
+
+func (q *Queries) ListUsersByCompany(ctx context.Context, companyID pgtype.UUID) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsersByCompany, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []User{}
+	for rows.Next() {
+		var i User
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Username,
+			&i.PasswordHash,
+			&i.Role,
+			&i.Status,
+			&i.CompanyID,
+			&i.DepartmentID,
+			&i.LastLoginAt,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.DeletedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateLastLogin = `-- name: UpdateLastLogin :exec
 UPDATE users
 SET last_login_at = CURRENT_TIMESTAMP
@@ -373,5 +414,25 @@ type UpdateUserCompanyAndRoleParams struct {
 
 func (q *Queries) UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error {
 	_, err := q.db.Exec(ctx, updateUserCompanyAndRole, arg.ID, arg.CompanyID, arg.Role)
+	return err
+}
+
+const updateUserStatus = `-- name: UpdateUserStatus :exec
+UPDATE users
+SET status = $2,
+    updated_by = $3,
+    updated_at = NOW()
+WHERE id = $1
+    AND deleted_at IS NULL
+`
+
+type UpdateUserStatusParams struct {
+	ID        pgtype.UUID `json:"id"`
+	Status    interface{} `json:"status"`
+	UpdatedBy pgtype.UUID `json:"updated_by"`
+}
+
+func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
+	_, err := q.db.Exec(ctx, updateUserStatus, arg.ID, arg.Status, arg.UpdatedBy)
 	return err
 }

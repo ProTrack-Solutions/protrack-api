@@ -5898,41 +5898,6 @@
                 }
             }
         },
-        "/user/status": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Atualiza o status de um usuário",
-                "parameters": [
-                    {
-                        "description": "Novo status do usuário",
-                        "name": "status",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
         "/user/{id}": {
             "get": {
                 "security": [
@@ -9174,18 +9139,11 @@
                 "role": {
                     "type": "string"
                 },
+                "status": {},
                 "updated_by": {
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest": {
-            "type": "object",
-            "properties": {
-                "status": {
                     "type": "string"
                 }
             }

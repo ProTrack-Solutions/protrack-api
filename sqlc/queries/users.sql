@@ -77,3 +77,12 @@ WHERE id = $1
     AND deleted_at IS NULL;
 -- name: CountUser :one
 SELECT COUNT(*) FROM users;
+-- name: ListUsersByCompany :many
+SELECT * FROM users WHERE company_id = $1;
+-- name: UpdateUserStatus :exec
+UPDATE users
+SET status = $2,
+    updated_by = $3,
+    updated_at = NOW()
+WHERE id = $1
+    AND deleted_at IS NULL;
