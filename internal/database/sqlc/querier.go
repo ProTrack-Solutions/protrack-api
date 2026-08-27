@@ -184,6 +184,7 @@ type Querier interface {
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	ListUsersByCompany(ctx context.Context, companyID pgtype.UUID) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error
@@ -226,6 +227,7 @@ type Querier interface {
 	UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
+	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
 	// Chamado pelo handler de webhook quando chega um status novo (sent/delivered/failed).
 	UpdateWhatsAppMessageStatus(ctx context.Context, arg UpdateWhatsAppMessageStatusParams) (WhatsappMessage, error)

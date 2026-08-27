@@ -5841,6 +5841,33 @@ const docTemplate = `{
                 }
             }
         },
+        "/user/list-company": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Lista os usuários da empresa do usuário autenticado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UserResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/user/password": {
             "put": {
                 "security": [
@@ -5873,6 +5900,41 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/user/status": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Atualiza o status de um usuário",
+                "parameters": [
+                    {
+                        "description": "Novo status do usuário",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     }
                 }
             }
@@ -7561,6 +7623,12 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse"
+                    }
+                },
                 "name": {
                     "type": "string"
                 }
@@ -7590,6 +7658,12 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse"
+                    }
+                },
                 "name": {
                     "type": "string"
                 },
@@ -7617,6 +7691,12 @@ const docTemplate = `{
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_department_modules_domain.ModuleResponse"
+                    }
                 },
                 "name": {
                     "type": "string"
@@ -9100,11 +9180,18 @@ const docTemplate = `{
                 "role": {
                     "type": "string"
                 },
-                "status": {},
                 "updated_by": {
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_users_domain.UpdateUserStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
                     "type": "string"
                 }
             }
@@ -9141,6 +9228,13 @@ const docTemplate = `{
                 },
                 "last_login_at": {
                     "type": "string"
+                },
+                "modules": {
+                    "description": "Modules lista os códigos dos módulos liberados para o departamento do\nusuário (mesma fonte usada pelo middleware RequireModule). ADMIN sempre\ntem acesso a tudo independente do que estiver aqui — o front deve tratar\nrole == \"ADMIN\" como bypass, igual ao backend.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "name": {
                     "type": "string"

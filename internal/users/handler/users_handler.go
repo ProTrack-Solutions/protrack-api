@@ -5,6 +5,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	extractorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extractorContext"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/gin-gonic/gin"
@@ -263,4 +264,67 @@ func (h *Handler) CountUsers(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"users": users})
+}
+
+// ListUsersByCompany godoc
+// @Summary      Lista os usuários da empresa do usuário autenticado
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.UserResponse
+// @Router       /user/list-company [get]
+func (h *Handler) ListUsersByCompany(c *gin.Context) {
+	companyId, err := extractorcontext.ExtratorCompanyID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	users, err := h.service.ListUsersByCOmpany(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+// UpdateUserStatus godoc
+// @Summary      Atualiza o status de um usuário
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status body domain.UpdateUserStatusRequest true "Novo status do usuário"
+// @Success      200
+// @Router       /user/status [put]
+func (h *Handler) UpdateUserStatus(c *gin.Context){
+	idStr := c.Param("id")
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+
+	userID, err := extractorcontext.ExtratorUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req domain.UpdateUserStatusRequest
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+
+	if err := h.service.UpdateUserStatus(c.Request.Context(), id,userID, req); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 }
