@@ -147,12 +147,16 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		subTotal += float64(item.Quantity) * product.SalePrice
 	}
 
-	totalAmount = subTotal * (1 - (req.DiscountAmount / 100))
+	if req.DiscountAmount > subTotal {
+		return uuid.Nil, fmt.Errorf("discount amount cannot exceed subtotal")
+	}
+
+	totalAmount = subTotal - req.DiscountAmount
 
 	// 1. Definição do Status e Atualização de Saldo Devedor
 	if req.PaymentMethod == "installments" {
 		if err := s.customerService.UpdateCustomerBalanceAddTx(ctx, tx, req.CustomerID, customerDomain.UpdateBalanceDueCustomerRequest{
-			BalanceDue: subTotal,
+			BalanceDue: totalAmount,
 			Prohibited: req.Prohibited,
 			UpdatedBy:  userId,
 		}); err != nil {
@@ -244,9 +248,11 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 
 		saleID := pgconv.PgUUIDToUUID(id)
 
-		percentageItem := (product.SalePrice / totalAmount) * 100
 
-		discount = req.DiscountAmount * (percentageItem / 100)
+
+		itemTotal := float64(itemReq.Quantity) * product.SalePrice
+		proportion := itemTotal / subTotal
+		discount = req.DiscountAmount * proportion
 
 		if err := s.saleItemsService.CreateSaleItemInTx(ctx, tx, saleItemDomain.CreateSaleItemRequest{
 			SaleID:    saleID,
