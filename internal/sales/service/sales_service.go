@@ -527,7 +527,7 @@ func (s *Service) GetTotalAmountIsOverdue(ctx context.Context, req domain.GetTot
 func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesResult, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return domain.OverdueSalesResult{}, err
+		return domain.OverdueSalesResult{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
 	defer tx.Rollback(ctx)
@@ -536,7 +536,7 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 	response, err := repoTx.UpdateOverdueSalesAndAccounts(ctx)
 	if err != nil {
-		return domain.OverdueSalesResult{}, err
+		return domain.OverdueSalesResult{}, fmt.Errorf("failed to update overdue sales and accounts: %w", err)
 	}
 
 	var whatsAppEvents []events.WhatsApp
@@ -549,7 +549,7 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 		customer, err := s.customerService.GetCustomerByIdTx(ctx, tx, pgconv.PgUUIDToUUID(data.CustomerID))
 		if err != nil {
-			return domain.OverdueSalesResult{}, err
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve customer %s: %w", pgconv.PgUUIDToUUID(data.CustomerID), err)
 		}
 
 		sale, err := repoTx.GetSaleByIdJust(ctx, data.SaleID)
@@ -560,19 +560,19 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 		company, err := s.companiesService.GetCompanyByIDTx(ctx, tx, pgconv.PgUUIDToUUID(data.CompanyID))
 		if err != nil {
-			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve company: %w", err)
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve company %s: %w", pgconv.PgUUIDToUUID(data.CompanyID), err)
 		}
 
 		companyID := pgconv.PgUUIDToUUID(data.CompanyID)
 
 		settingTemplate, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.SaleOverdueTemplate)
 		if err != nil {
-			return domain.OverdueSalesResult{}, err
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.SaleOverdueTemplate, companyID, err)
 		}
 
 		settingLanguage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.LanguageSaleOverdueTemplate)
 		if err != nil {
-			return domain.OverdueSalesResult{}, err
+			return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.LanguageSaleOverdueTemplate, companyID, err)
 		}
 
 		isWhatsappPlan, cached := whatsAppEligibility[companyID]
@@ -580,19 +580,19 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 		if !cached {
 			sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
 			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve subscription: %w", err)
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve subscription for company %s: %w", companyID, err)
 			}
 
 			plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
 			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve plan: %w", err)
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve plan %s for company %s: %w", sub.PlanID, companyID, err)
 			}
 
 			periodStart := calculatePeriodStart(sub.CurrentPeriodEnd, plan.BillingCycle)
 
 			countMessages, err := s.metaWhatsAppService.CountMessagesInPeriod(ctx, companyID, periodStart, sub.CurrentPeriodEnd)
 			if err != nil {
-				return domain.OverdueSalesResult{}, err
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to count whatsapp messages for company %s: %w", companyID, err)
 			}
 			if countMessages == nil {
 				return domain.OverdueSalesResult{}, fmt.Errorf("contagem de mensagens indisponível para empresa %s", companyID)
@@ -600,12 +600,12 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 
 			isExcessUsage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsExcessUsage)
 			if err != nil {
-				return domain.OverdueSalesResult{}, err
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.IsExcessUsage, companyID, err)
 			}
 
 			isWhatsAppActive, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsWhatsappActive)
 			if err != nil {
-				return domain.OverdueSalesResult{}, err
+				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.IsWhatsappActive, companyID, err)
 			}
 
 			for _, ft := range plan.Features {
