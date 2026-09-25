@@ -12,6 +12,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
@@ -22,15 +23,17 @@ type Handler struct {
 	blacklist   *cache.TokenBlacklist
 	cfg         *config.Config
 	rateLimiter *cache.RateLimiter
+	discordLog  *discord.DiscordLogger
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, cfg *config.Config, rateLimiter *cache.RateLimiter) *Handler {
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, cfg *config.Config, rateLimiter *cache.RateLimiter, discordLog *discord.DiscordLogger) *Handler {
 	return &Handler{
 		service:     service,
 		jwtManager:  jwtManager,
 		blacklist:   blacklist,
 		cfg:         cfg,
 		rateLimiter: rateLimiter,
+		discordLog:  discordLog,
 	}
 }
 
@@ -41,28 +44,40 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 // @Produce      json
 // @Param        credentials body domain.LoginRequest true "Credenciais"
 // @Success      200 {object} domain.LoginResponse
+// @Failure      400 {object} map[string]string "Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)"
+// @Failure      401 {object} map[string]string "E-mail ou senha inválidos (code: INVALID_CREDENTIALS)"
+// @Failure      403 {object} map[string]string "Assinatura bloqueando o acesso (code: SUBSCRIPTION_*)"
+// @Failure      429 {object} map[string]string "Muitas tentativas (code: TOO_MANY_ATTEMPTS)"
+// @Failure      500 {object} map[string]string "Erro interno (code: INTERNAL_ERROR)"
 // @Router       /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
 	var req domain.LoginRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": loginBindErrorMessage(err), "code": "INVALID_REQUEST"})
 		return
 	}
 
 	allowed, err := h.rateLimiter.Allow(c.Request.Context(), "platform_login:"+req.Email, 10, time.Minute*15)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
+		_ = c.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno ao processar o login, tente novamente", "code": "INTERNAL_ERROR"})
 		return
 	}
 	if !allowed {
-		c.JSON(http.StatusTooManyRequests, gin.H{"error": "too many attempts, try again later"})
+		h.logLoginAttempt(c, req, nil, errLoginRateLimited)
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": errLoginRateLimited.Error(), "code": "TOO_MANY_ATTEMPTS"})
 		return
 	}
 
-	response, err := h.service.Login(c.Request.Context(), req)
+	response, user, err := h.service.Login(c.Request.Context(), req)
+	h.logLoginAttempt(c, req, user, err)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		status, code, msg := loginErrorResponse(err)
+		if status >= http.StatusInternalServerError {
+			_ = c.Error(err)
+		}
+		c.JSON(status, gin.H{"error": msg, "code": code})
 		return
 	}
 

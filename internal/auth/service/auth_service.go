@@ -26,6 +26,7 @@ import (
 	userDomain "github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
 	userService "github.com/ProTrack-Solutions/protrack-api/internal/users/service"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rabbitmq/amqp091-go"
 	"github.com/rs/zerolog/log"
@@ -38,6 +39,13 @@ var (
 	// ErrInvalidResetToken é retornado quando o token de reset é inválido,
 	// já foi usado ou expirou.
 	ErrInvalidResetToken = errors.New("link inválido ou expirado")
+
+	// Erros de login. Credenciais inválidas vêm de userService.ErrInvalidCredentials.
+	ErrInvalidAud           = errors.New("aplicação de origem (aud) inválida")
+	ErrSubscriptionNotFound = errors.New("nenhuma assinatura encontrada para a empresa")
+	ErrSubscriptionCanceled = errors.New("a assinatura da empresa foi cancelada")
+	ErrSubscriptionPaused   = errors.New("a assinatura da empresa está pausada")
+	ErrSubscriptionExpired  = errors.New("a assinatura da empresa expirou")
 )
 
 type Service struct {
@@ -94,31 +102,37 @@ func NewService(stripeService *stripeService.Service,
 	}
 }
 
-func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.LoginResponse, error) {
+// Login valida as credenciais e a assinatura da empresa. O usuário é retornado
+// sempre que as credenciais forem válidas (mesmo se a assinatura bloquear o
+// acesso), para que o handler consiga registrar quem tentou entrar.
+func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.LoginResponse, *userDomain.UserResponse, error) {
 	if req.Aud == "" {
-		return &domain.LoginResponse{}, errors.New("invalid aud")
+		return nil, nil, ErrInvalidAud
 	}
 
 	user, err := s.userService.ValidatePassword(ctx, req.Email, req.Password)
 	if err != nil {
-		return &domain.LoginResponse{}, err
+		return nil, nil, err
 	}
 
 	subscription, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, user.CompanyID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &user, ErrSubscriptionNotFound
+		}
 		log.Error().Err(err).Msg("Failed to get subscription")
-		return nil, err
+		return nil, &user, fmt.Errorf("buscando assinatura: %w", err)
 	}
 
 	switch subscription.Status {
 	case "canceled":
-		return nil, fmt.Errorf("subscription canceled")
+		return nil, &user, ErrSubscriptionCanceled
 	case "paused":
-		return nil, fmt.Errorf("subscription paused")
+		return nil, &user, ErrSubscriptionPaused
 	}
 
 	if subscription.CurrentPeriodEnd.Before(time.Now()) {
-		return nil, fmt.Errorf("subscription expired")
+		return nil, &user, ErrSubscriptionExpired
 	}
 
 	var hasCompany bool
@@ -132,7 +146,7 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, req.Aud)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens")
-		return nil, err
+		return nil, &user, fmt.Errorf("gerando tokens: %w", err)
 	}
 
 	return &domain.LoginResponse{
@@ -141,7 +155,7 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		HasCompany:   hasCompany,
 		ExpiresIn:    tokenPair.ExpireIn,
 		TokenType:    "Bearer",
-	}, nil
+	}, &user, nil
 }
 
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID uuid.UUID) (*domain.LoginResponse, error) {

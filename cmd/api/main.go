@@ -335,7 +335,7 @@ func main() {
 	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
 	productsCategoriesHandler := productsCategoriesHandler.NewHandler(productsCategoriesService, jwtManager, blacklist, departmentModulesService)
 	productsHandler := productsHandler.NewHandler(productsService, jwtManager, blacklist, departmentModulesService)
-	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist, cfg, rateLimiter)
+	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist, cfg, rateLimiter, discordLogger)
 	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist, departmentModulesService)
 	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist, departmentModulesService)
 	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist, departmentModulesService)
