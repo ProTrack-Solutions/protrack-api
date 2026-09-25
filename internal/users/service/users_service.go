@@ -24,6 +24,11 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/repository"
 )
 
+// ErrInvalidCredentials é retornado quando o e-mail não existe ou a senha não
+// confere. A mensagem é a mesma nos dois casos para não revelar quais e-mails
+// estão cadastrados.
+var ErrInvalidCredentials = errors.New("e-mail ou senha inválidos")
+
 type RepositoryInterface interface {
 	CreateUsers(ctx context.Context, arg db.CreateUserParams) (db.User, error)
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
@@ -323,7 +328,10 @@ func (s *Service) ValidatePassword(ctx context.Context, email string, password s
 
 	user, err := txRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return domain.UserResponse{}, errors.New("invalid credentials")
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.UserResponse{}, ErrInvalidCredentials
+		}
+		return domain.UserResponse{}, fmt.Errorf("buscando usuário por e-mail: %w", err)
 	}
 
 	/* err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
@@ -336,10 +344,10 @@ func (s *Service) ValidatePassword(ctx context.Context, email string, password s
 
 	match, err := argon2id.ComparePasswordAndHash(passwordPepper, user.PasswordHash)
 	if err != nil {
-		return domain.UserResponse{}, errors.New("invalid credentials")
+		return domain.UserResponse{}, ErrInvalidCredentials
 	}
 	if !match {
-		return domain.UserResponse{}, errors.New("invalid credentials")
+		return domain.UserResponse{}, ErrInvalidCredentials
 	}
 
 	if err := txRepo.UpdateLastLogin(ctx, user.ID); err != nil {
@@ -352,6 +360,8 @@ func (s *Service) ValidatePassword(ctx context.Context, email string, password s
 
 	return domain.UserResponse{
 		ID:           pgconv.PgUUIDToUUID(user.ID),
+		Name:         user.Name,
+		Email:        user.Email,
 		CompanyID:    pgconv.PgUUIDToUUID(user.CompanyID),
 		DepartmentID: pgconv.PgUUIDToUUID(user.DepartmentID),
 		Role:         user.Role,
