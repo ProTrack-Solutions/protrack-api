@@ -33,6 +33,8 @@ func loginErrorResponse(err error) (int, string, string) {
 		return http.StatusForbidden, "SUBSCRIPTION_PAUSED", err.Error()
 	case errors.Is(err, service.ErrSubscriptionExpired):
 		return http.StatusForbidden, "SUBSCRIPTION_EXPIRED", err.Error()
+	case errors.Is(err, service.ErrSubscriptionIncomplete):
+		return http.StatusForbidden, "SUBSCRIPTION_INCOMPLETE", err.Error()
 	default:
 		return http.StatusInternalServerError, "INTERNAL_ERROR", "erro interno ao processar o login, tente novamente"
 	}

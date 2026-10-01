@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
@@ -72,13 +74,20 @@ type RegisterRequest struct {
 
 type RegisterResponse struct {
 	CompanyID uuid.UUID `json:"company_id"`
-	// Status da assinatura no Stripe logo após a criação (ex: "incomplete").
+	// Status da assinatura no Stripe logo após a criação (ex: "incomplete",
+	// ou "trialing" quando o plano tem teste grátis).
 	SubscriptionStatus string `json:"subscription_status"`
-	// ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA
-	// chamar stripe.confirmCardPayment(client_secret) com esse valor para
-	// concluir a autenticação do cartão (incluindo 3D Secure); sem essa
-	// confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
-	ClientSecret string `json:"client_secret,omitempty"`
+	// ClientSecret para o frontend concluir a autenticação do cartão
+	// (incluindo 3D Secure). O método do Stripe.js depende de ClientSecretType:
+	//   - "payment_intent": stripe.confirmCardPayment(client_secret). Sem essa
+	//     confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
+	//   - "setup_intent" (plano com trial, primeira invoice de R$0):
+	//     stripe.confirmCardSetup(client_secret), para o cartão poder ser
+	//     cobrado no fim do teste.
+	ClientSecret     string `json:"client_secret,omitempty"`
+	ClientSecretType string `json:"client_secret_type,omitempty"`
+	// TrialEnd é o fim do teste grátis; nil quando o plano não tem trial.
+	TrialEnd *time.Time `json:"trial_end,omitempty"`
 	// RequiresAction indica que o frontend deve chamar confirmCardPayment
 	// antes de considerar o cadastro concluído.
 	RequiresAction bool `json:"requires_action"`

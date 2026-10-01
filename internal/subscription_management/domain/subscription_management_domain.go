@@ -22,17 +22,19 @@ type SubscriptionDetailsResponse struct {
 }
 
 type PlanDetailsResponse struct {
-	ID              string `json:"id"`
-	ExternalID      string `json:"external_id"`
-	ExternalPriceID string `json:"external_price_id"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	PriceCents      int32  `json:"price_cents"`
-	Currency        string `json:"currency"`
-	BillingCycle    string `json:"billing_cycle"`
-	Active          bool   `json:"active"`
-	Highlight       bool   `json:"highlight"`
-	Icon            string `json:"icon"`
+	ID                 string `json:"id"`
+	ExternalID         string `json:"external_id"`
+	ExternalPriceID    string `json:"external_price_id"`
+	Name               string `json:"name"`
+	Description        string `json:"description"`
+	PriceCents         int32  `json:"price_cents"`
+	Currency           string `json:"currency"`
+	BillingCycle       string `json:"billing_cycle"`
+	Active             bool   `json:"active"`
+	Highlight          bool   `json:"highlight"`
+	Icon               string `json:"icon"`
+	OriginalPriceCents *int32 `json:"original_price_cents"`
+	TrialDays          int32  `json:"trial_days"`
 }
 
 type PaymentMethodDetails struct {

@@ -47,6 +47,9 @@ var (
 	ErrSubscriptionCanceled = errors.New("a assinatura da empresa foi cancelada")
 	ErrSubscriptionPaused   = errors.New("a assinatura da empresa está pausada")
 	ErrSubscriptionExpired  = errors.New("a assinatura da empresa expirou")
+	// ErrSubscriptionIncomplete cobre assinaturas cujo primeiro pagamento
+	// (ou a validação do cartão no trial) nunca foi confirmado.
+	ErrSubscriptionIncomplete = errors.New("o pagamento da assinatura ainda não foi confirmado")
 
 	// ErrDemoUnavailable é retornado quando a empresa demo ainda não foi
 	// criada (cmd/seed-demo) ou está inconsistente.
@@ -129,15 +132,8 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		return nil, &user, fmt.Errorf("buscando assinatura: %w", err)
 	}
 
-	switch subscription.Status {
-	case "canceled":
-		return nil, &user, ErrSubscriptionCanceled
-	case "paused":
-		return nil, &user, ErrSubscriptionPaused
-	}
-
-	if subscription.CurrentPeriodEnd.Before(time.Now()) {
-		return nil, &user, ErrSubscriptionExpired
+	if err := checkSubscriptionAccess(subscription); err != nil {
+		return nil, &user, err
 	}
 
 	var hasCompany bool
@@ -197,6 +193,26 @@ func (s *Service) DemoLogin(ctx context.Context, aud string) (*domain.LoginRespo
 	}, nil
 }
 
+// checkSubscriptionAccess decide se a empresa pode acessar o sistema a partir
+// do status da assinatura. "trialing" (teste grátis) é liberado normalmente;
+// o fim do trial fica em current_period_end.
+func checkSubscriptionAccess(subscription subscriptionDomain.SubscriptionResponse) error {
+	switch subscription.Status {
+	case "canceled":
+		return ErrSubscriptionCanceled
+	case "paused", "unpaid":
+		return ErrSubscriptionPaused
+	case "incomplete", "incomplete_expired":
+		return ErrSubscriptionIncomplete
+	}
+
+	if subscription.CurrentPeriodEnd.Before(time.Now()) {
+		return ErrSubscriptionExpired
+	}
+
+	return nil
+}
+
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID uuid.UUID) (*domain.LoginResponse, error) {
 	user, err := s.userService.GetUserByID(ctx, userID)
 	if err != nil {
@@ -209,15 +225,8 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID 
 		return nil, err
 	}
 
-	switch subscription.Status {
-	case "canceled":
-		return nil, fmt.Errorf("subscription canceled")
-	case "paused":
-		return nil, fmt.Errorf("subscription paused")
-	}
-
-	if subscription.CurrentPeriodEnd.Before(time.Now()) {
-		return nil, fmt.Errorf("subscription expired")
+	if err := checkSubscriptionAccess(subscription); err != nil {
+		return nil, err
 	}
 
 	tokenPair, err := s.jwtManager.RefreshToken(refreshToken)
@@ -309,11 +318,18 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		return nil, fmt.Errorf("ciclo de cobrança inválido: %s", plan.BillingCycle)
 	}
 
+	// Durante o teste grátis o período vigente é o próprio trial; a primeira
+	// cobrança acontece no fim dele e o webhook atualiza o current_period_end.
+	if plan.TrialDays > 0 {
+		periodEnd = periodStart.AddDate(0, 0, int(plan.TrialDays))
+	}
+
 	stripe, err := s.stripeService.CreateSubscription(stripeDomain.CreateSubscriptionInput{
 		Email:          req.Company.Email,
 		Name:           req.Company.TradeName,
 		CardToken:      req.Payment.CardToken,
 		PriceID:        plan.ExternalPriceId,
+		TrialDays:      plan.TrialDays,
 		IdempotencyKey: req.IdempotencyKey,
 	})
 	if err != nil {
@@ -403,7 +419,9 @@ func (s *Service) Register(ctx context.Context, req domain.RegisterRequest) (*do
 		CompanyID:          companyId,
 		SubscriptionStatus: stripe.Status,
 		ClientSecret:       stripe.ClientSecret,
+		ClientSecretType:   stripe.ClientSecretType,
 		RequiresAction:     stripe.ClientSecret != "",
+		TrialEnd:           stripe.TrialEnd,
 	}, nil
 }
 
