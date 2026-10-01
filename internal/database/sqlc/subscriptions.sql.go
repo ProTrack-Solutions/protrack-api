@@ -14,7 +14,7 @@ import (
 const cancelSubscription = `-- name: CancelSubscription :exec
 UPDATE subscriptions
 SET
-    status = 'cancelled',
+    status = 'canceled',
     canceled_at = NOW(),
     updated_at = NOW()
 WHERE id = $1

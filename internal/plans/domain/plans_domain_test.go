@@ -174,3 +174,97 @@ func TestPlanResponse_FieldAssignment(t *testing.T) {
 		t.Errorf("Active deveria ser true")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// Preço original (desconto) e trial
+// ---------------------------------------------------------------------------
+
+func TestApplyUpdatePlanParams_NilPointersKeepCurrentValues(t *testing.T) {
+	arg := buildOriginalDbUpdatePlanParams(uuid.New())
+	arg.Highlight = true
+	arg.Icon = "star"
+	arg.OriginalPriceCents = pgconv.IntToPgInt4(5990)
+	arg.TrialDays = 7
+
+	domain.ApplyUpdatePlanParams(domain.UpdatePlanParams{Name: "Novo"}, &arg)
+
+	if !arg.Highlight {
+		t.Error("Highlight não deveria ser alterado quando não enviado")
+	}
+	if arg.Icon != "star" {
+		t.Errorf("Icon não deveria ser alterado, obteve %q", arg.Icon)
+	}
+	if !arg.OriginalPriceCents.Valid || arg.OriginalPriceCents.Int32 != 5990 {
+		t.Errorf("OriginalPriceCents não deveria ser alterado, obteve %+v", arg.OriginalPriceCents)
+	}
+	if arg.TrialDays != 7 {
+		t.Errorf("TrialDays não deveria ser alterado, obteve %d", arg.TrialDays)
+	}
+}
+
+func TestApplyUpdatePlanParams_SetsNewFields(t *testing.T) {
+	arg := buildOriginalDbUpdatePlanParams(uuid.New())
+	arg.Highlight = true
+
+	highlight := false
+	icon := "rocket"
+	original := 59.90
+	trial := int32(7)
+
+	domain.ApplyUpdatePlanParams(domain.UpdatePlanParams{
+		Highlight:           &highlight,
+		Icon:                &icon,
+		OriginalValueAmount: &original,
+		TrialDays:           &trial,
+	}, &arg)
+
+	if arg.Highlight {
+		t.Error("Highlight deveria ser false")
+	}
+	if arg.Icon != "rocket" {
+		t.Errorf("Icon incorreto: %q", arg.Icon)
+	}
+	if !arg.OriginalPriceCents.Valid || arg.OriginalPriceCents.Int32 != 5990 {
+		t.Errorf("OriginalPriceCents incorreto: %+v", arg.OriginalPriceCents)
+	}
+	if arg.TrialDays != 7 {
+		t.Errorf("TrialDays incorreto: %d", arg.TrialDays)
+	}
+}
+
+func TestApplyUpdatePlanParams_ZeroOriginalValueRemovesDiscount(t *testing.T) {
+	arg := buildOriginalDbUpdatePlanParams(uuid.New())
+	arg.OriginalPriceCents = pgconv.IntToPgInt4(5990)
+
+	zero := 0.0
+	domain.ApplyUpdatePlanParams(domain.UpdatePlanParams{OriginalValueAmount: &zero}, &arg)
+
+	if arg.OriginalPriceCents.Valid {
+		t.Errorf("OriginalPriceCents deveria ser NULL, obteve %+v", arg.OriginalPriceCents)
+	}
+}
+
+func TestValidatePricing(t *testing.T) {
+	tests := []struct {
+		name     string
+		price    int32
+		original int
+		trial    int32
+		wantErr  error
+	}{
+		{"sem desconto e sem trial", 2990, 0, 0, nil},
+		{"desconto válido com trial", 2990, 5990, 7, nil},
+		{"preço original igual ao preço", 2990, 2990, 0, domain.ErrOriginalPriceNotGreater},
+		{"preço original menor que o preço", 2990, 1990, 0, domain.ErrOriginalPriceNotGreater},
+		{"trial negativo", 2990, 0, -1, domain.ErrInvalidTrialDays},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := domain.ValidatePricing(tt.price, pgconv.OptionalIntToPgInt4(tt.original), tt.trial)
+			if err != tt.wantErr {
+				t.Errorf("esperava %v, obteve %v", tt.wantErr, err)
+			}
+		})
+	}
+}

@@ -476,3 +476,118 @@ func TestTogglePlanActiveStatus_RepositoryError(t *testing.T) {
 		t.Fatal("esperava erro do repositório")
 	}
 }
+
+func TestUpdatePlan_PreservesHighlightIconDiscountAndTrial(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	planID := uuid.New()
+	currentDbPlan := buildDbPlan(planID, "Plano Pro", true)
+	currentDbPlan.Highlight = true
+	currentDbPlan.Icon = "star"
+	currentDbPlan.OriginalPriceCents = pgconv.IntToPgInt4(5990)
+	currentDbPlan.TrialDays = 7
+
+	repo.EXPECT().
+		GetPlanByID(gomock.Any(), pgconv.ParseUUIDToPgType(planID)).
+		Return(currentDbPlan, nil)
+
+	repo.EXPECT().
+		UpdatePlan(gomock.Any(), gomock.Any()).
+		DoAndReturn(func(ctx context.Context, arg db.UpdatePlanParams) error {
+			if !arg.Highlight || arg.Icon != "star" {
+				t.Errorf("highlight/icon foram perdidos: highlight=%v icon=%q", arg.Highlight, arg.Icon)
+			}
+			if !arg.OriginalPriceCents.Valid || arg.OriginalPriceCents.Int32 != 5990 {
+				t.Errorf("OriginalPriceCents foi perdido: %+v", arg.OriginalPriceCents)
+			}
+			if arg.TrialDays != 7 {
+				t.Errorf("TrialDays foi perdido: %d", arg.TrialDays)
+			}
+			return nil
+		})
+
+	err := svc.UpdatePlan(context.Background(), planID, domain.UpdatePlanParams{Name: "Plano Pro 2"})
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+}
+
+func TestUpdatePlan_PriceAboveOriginal_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	planID := uuid.New()
+	currentDbPlan := buildDbPlan(planID, "Plano Pro", true)
+	currentDbPlan.OriginalPriceCents = pgconv.IntToPgInt4(5990)
+
+	repo.EXPECT().
+		GetPlanByID(gomock.Any(), pgconv.ParseUUIDToPgType(planID)).
+		Return(currentDbPlan, nil)
+	repo.EXPECT().UpdatePlan(gomock.Any(), gomock.Any()).Times(0)
+
+	err := svc.UpdatePlan(context.Background(), planID, domain.UpdatePlanParams{ValueAmount: 69.90})
+	if !errors.Is(err, domain.ErrOriginalPriceNotGreater) {
+		t.Fatalf("esperava ErrOriginalPriceNotGreater, obteve: %v", err)
+	}
+}
+
+func TestCreatePlans_InvalidOriginalPrice_ReturnsError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	repo.EXPECT().CreatePlans(gomock.Any(), gomock.Any()).Times(0)
+
+	err := svc.CreatePlans(context.Background(), domain.CreatePlanRequest{
+		Name:                "Plano",
+		ValueAmount:         49.90,
+		OriginalValueAmount: 39.90,
+		Currency:            "BRL",
+		BillingCycle:        "monthly",
+	})
+	if !errors.Is(err, domain.ErrOriginalPriceNotGreater) {
+		t.Fatalf("esperava ErrOriginalPriceNotGreater, obteve: %v", err)
+	}
+}
+
+func TestGetPlanByID_ReturnsDiscountAndTrial(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	planID := uuid.New()
+	dbPlan := buildDbPlan(planID, "Plano Pro", true)
+	dbPlan.Highlight = true
+	dbPlan.Icon = "star"
+	dbPlan.OriginalPriceCents = pgconv.IntToPgInt4(5990)
+	dbPlan.TrialDays = 7
+
+	repo.EXPECT().
+		GetPlanByID(gomock.Any(), pgconv.ParseUUIDToPgType(planID)).
+		Return(dbPlan, nil)
+
+	resp, err := svc.GetPlanByID(context.Background(), planID)
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+	if !resp.Highlight || resp.Icon != "star" {
+		t.Errorf("highlight/icon ausentes: %+v", resp)
+	}
+	if resp.OriginalPriceCents == nil || *resp.OriginalPriceCents != 5990 {
+		t.Errorf("OriginalPriceCents incorreto: %v", resp.OriginalPriceCents)
+	}
+	if resp.TrialDays != 7 {
+		t.Errorf("TrialDays incorreto: %d", resp.TrialDays)
+	}
+}

@@ -491,19 +491,21 @@ type PaymentMethod struct {
 }
 
 type Plan struct {
-	ID              pgtype.UUID        `json:"id"`
-	ExternalID      string             `json:"external_id"`
-	Name            string             `json:"name"`
-	Description     pgtype.Text        `json:"description"`
-	PriceCents      int32              `json:"price_cents"`
-	Currency        pgtype.Text        `json:"currency"`
-	BillingCycle    string             `json:"billing_cycle"`
-	Active          pgtype.Bool        `json:"active"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Highlight       bool               `json:"highlight"`
-	Icon            string             `json:"icon"`
-	ExternalPriceID string             `json:"external_price_id"`
+	ID                 pgtype.UUID        `json:"id"`
+	ExternalID         string             `json:"external_id"`
+	Name               string             `json:"name"`
+	Description        pgtype.Text        `json:"description"`
+	PriceCents         int32              `json:"price_cents"`
+	Currency           pgtype.Text        `json:"currency"`
+	BillingCycle       string             `json:"billing_cycle"`
+	Active             pgtype.Bool        `json:"active"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	Highlight          bool               `json:"highlight"`
+	Icon               string             `json:"icon"`
+	ExternalPriceID    string             `json:"external_price_id"`
+	OriginalPriceCents pgtype.Int4        `json:"original_price_cents"`
+	TrialDays          int32              `json:"trial_days"`
 }
 
 type PlanFeature struct {

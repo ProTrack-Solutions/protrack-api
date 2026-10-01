@@ -34,6 +34,8 @@ SELECT
     p.active AS plan_active,
     p.highlight AS plan_highlight,
     p.icon AS plan_icon,
+    p.original_price_cents AS plan_original_price_cents,
+    p.trial_days AS plan_trial_days,
 
     pm.id AS payment_method_id,
     pm.type AS payment_method_type,
@@ -85,6 +87,8 @@ type GetSubscriptionDetailsByCompanyIDRow struct {
 	PlanActive                pgtype.Bool        `json:"plan_active"`
 	PlanHighlight             bool               `json:"plan_highlight"`
 	PlanIcon                  string             `json:"plan_icon"`
+	PlanOriginalPriceCents    pgtype.Int4        `json:"plan_original_price_cents"`
+	PlanTrialDays             int32              `json:"plan_trial_days"`
 	PaymentMethodID           pgtype.UUID        `json:"payment_method_id"`
 	PaymentMethodType         pgtype.Text        `json:"payment_method_type"`
 	PaymentMethodCardBrand    pgtype.Text        `json:"payment_method_card_brand"`
@@ -119,6 +123,8 @@ func (q *Queries) GetSubscriptionDetailsByCompanyID(ctx context.Context, company
 		&i.PlanActive,
 		&i.PlanHighlight,
 		&i.PlanIcon,
+		&i.PlanOriginalPriceCents,
+		&i.PlanTrialDays,
 		&i.PaymentMethodID,
 		&i.PaymentMethodType,
 		&i.PaymentMethodCardBrand,
