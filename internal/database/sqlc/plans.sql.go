@@ -130,7 +130,7 @@ func (q *Queries) ListPlans(ctx context.Context) ([]Plan, error) {
 const listPlansByActiveStatus = `-- name: ListPlansByActiveStatus :many
 SELECT id, external_id, name, description, price_cents, currency, billing_cycle, active, created_at, updated_at, highlight, icon, external_price_id
 FROM plans
-WHERE active = $1
+WHERE active = $1 ORDER BY price_cents ASC
 `
 
 func (q *Queries) ListPlansByActiveStatus(ctx context.Context, active pgtype.Bool) ([]Plan, error) {
