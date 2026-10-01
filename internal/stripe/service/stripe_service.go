@@ -75,7 +75,21 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 		PaymentBehavior: stripe.String("default_incomplete"),
 	}
 
+	if input.TrialDays > 0 {
+		subParams.TrialPeriodDays = stripe.Int64(int64(input.TrialDays))
+		// Se o cartão for removido durante o teste, cancela em vez de gerar
+		// uma fatura que não tem como ser paga.
+		subParams.TrialSettings = &stripe.SubscriptionTrialSettingsParams{
+			EndBehavior: &stripe.SubscriptionTrialSettingsEndBehaviorParams{
+				MissingPaymentMethod: stripe.String("cancel"),
+			},
+		}
+	}
+
 	subParams.AddExpand("latest_invoice.confirmation_secret")
+	// Com trial a primeira invoice é de R$0 (sem PaymentIntent); a validação
+	// do cartão (3D Secure) passa a ser feita por esse SetupIntent.
+	subParams.AddExpand("pending_setup_intent")
 
 	subParams.SetIdempotencyKey(input.IdempotencyKey + "-subscription")
 	sub, err := subscription.New(subParams)
@@ -93,6 +107,15 @@ func (s *Service) CreateSubscription(input domain.CreateSubscriptionInput) (*dom
 
 	if sub.LatestInvoice != nil && sub.LatestInvoice.ConfirmationSecret != nil {
 		output.ClientSecret = sub.LatestInvoice.ConfirmationSecret.ClientSecret
+		output.ClientSecretType = "payment_intent"
+	} else if sub.PendingSetupIntent != nil {
+		output.ClientSecret = sub.PendingSetupIntent.ClientSecret
+		output.ClientSecretType = "setup_intent"
+	}
+
+	if sub.TrialEnd > 0 {
+		trialEnd := time.Unix(sub.TrialEnd, 0)
+		output.TrialEnd = &trialEnd
 	}
 
 	return output, nil
@@ -109,6 +132,12 @@ func (s *Service) SyncSubscriptionWebhook(ctx context.Context, event stripe.Even
 
 		if invoice.Parent == nil || invoice.Parent.Type != stripe.InvoiceParentTypeSubscriptionDetails ||
 			invoice.Parent.SubscriptionDetails == nil || invoice.Parent.SubscriptionDetails.Subscription == nil {
+			return nil
+		}
+
+		// Invoice de R$0 é a abertura do teste grátis: não há pagamento a
+		// registrar e o status "trialing" já foi gravado no cadastro.
+		if invoice.AmountPaid == 0 {
 			return nil
 		}
 

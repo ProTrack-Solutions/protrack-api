@@ -10,9 +10,11 @@ INSERT INTO plans (
     active,
     highlight,
     icon,
+    original_price_cents,
+    trial_days,
     created_at
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW()
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW()
 )
 RETURNING id;
 
@@ -31,7 +33,7 @@ FROM plans
 WHERE active = $1 ORDER BY price_cents ASC;
 
 -- name: UpdatePlan :exec
-UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8, external_price_id=$9, updated_at = NOW()
+UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8, external_price_id=$9, original_price_cents=$10, trial_days=$11, updated_at = NOW()
 WHERE id = $1;
 
 -- name: TogglePlanActiveStatus :exec

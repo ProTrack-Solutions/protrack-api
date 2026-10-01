@@ -53,6 +53,11 @@ func NewService(client *stripe.Client, repo *repository.Repository, plansFeature
 
 func (s *Service) CreatePlans(ctx context.Context, req domain.CreatePlanRequest) error {
 	priceCents := math.Round(req.ValueAmount * 100)
+	originalPriceCents := pgconv.OptionalIntToPgInt4(int(domain.ToPriceCents(req.OriginalValueAmount)))
+
+	if err := domain.ValidatePricing(int32(priceCents), originalPriceCents, req.TrialDays); err != nil {
+		return err
+	}
 
 	var intervalStripe string
 	switch strings.ToLower(req.BillingCycle) {
@@ -102,16 +107,18 @@ func (s *Service) CreatePlans(ctx context.Context, req domain.CreatePlanRequest)
 		txRepo := s.repo.WithTx(tx)
 
 		id, err := txRepo.CreatePlans(ctx, db.CreatePlanParams{
-			Name:            req.Name,
-			Description:     pgconv.ParseStringToPgText(req.Description),
-			Currency:        pgconv.ParseStringToPgText(req.Currency),
-			BillingCycle:    req.BillingCycle,
-			Active:          pgconv.BoolToPgBool(true),
-			ExternalID:      productID,
-			ExternalPriceID: defaultPriceID,
-			Highlight:       req.Highlight,
-			Icon:            req.Icon,
-			PriceCents:      int32(priceCents),
+			Name:               req.Name,
+			Description:        pgconv.ParseStringToPgText(req.Description),
+			Currency:           pgconv.ParseStringToPgText(req.Currency),
+			BillingCycle:       req.BillingCycle,
+			Active:             pgconv.BoolToPgBool(true),
+			ExternalID:         productID,
+			ExternalPriceID:    defaultPriceID,
+			Highlight:          req.Highlight,
+			Icon:               req.Icon,
+			PriceCents:         int32(priceCents),
+			OriginalPriceCents: originalPriceCents,
+			TrialDays:          req.TrialDays,
 		})
 		if err != nil {
 			if s.client != nil && productID != "" {
@@ -130,16 +137,18 @@ func (s *Service) CreatePlans(ctx context.Context, req domain.CreatePlanRequest)
 	}
 
 	id, err := s.repo.CreatePlans(ctx, db.CreatePlanParams{
-		Name:            req.Name,
-		Description:     pgconv.ParseStringToPgText(req.Description),
-		Currency:        pgconv.ParseStringToPgText(req.Currency),
-		BillingCycle:    req.BillingCycle,
-		Active:          pgconv.BoolToPgBool(true),
-		ExternalID:      productID,
-		ExternalPriceID: defaultPriceID,
-		Highlight:       req.Highlight,
-		Icon:            req.Icon,
-		PriceCents:      int32(priceCents),
+		Name:               req.Name,
+		Description:        pgconv.ParseStringToPgText(req.Description),
+		Currency:           pgconv.ParseStringToPgText(req.Currency),
+		BillingCycle:       req.BillingCycle,
+		Active:             pgconv.BoolToPgBool(true),
+		ExternalID:         productID,
+		ExternalPriceID:    defaultPriceID,
+		Highlight:          req.Highlight,
+		Icon:               req.Icon,
+		PriceCents:         int32(priceCents),
+		OriginalPriceCents: originalPriceCents,
+		TrialDays:          req.TrialDays,
 	})
 	if err != nil {
 		return err
@@ -169,18 +178,22 @@ func (s *Service) GetPlanByID(ctx context.Context, planId uuid.UUID) (domain.Pla
 	}
 
 	return domain.PlanResponse{
-		ID:              pgconv.PgUUIDToUUID(plan.ID),
-		Name:            plan.Name,
-		Description:     pgconv.ParsePgTextToString(plan.Description),
-		PriceCents:      plan.PriceCents,
-		Currency:        pgconv.ParsePgTextToString(plan.Currency),
-		BillingCycle:    plan.BillingCycle,
-		Active:          pgconv.PgBoolToBool(plan.Active),
-		CreatedAt:       pgconv.PgTimestamptzToTime(plan.CreatedAt),
-		UpdatedAt:       pgconv.PgTimestamptzToTime(plan.UpdatedAt),
-		ExternalId:      plan.ExternalID,
-		ExternalPriceId: plan.ExternalPriceID,
-		Features:        features,
+		ID:                 pgconv.PgUUIDToUUID(plan.ID),
+		Name:               plan.Name,
+		Description:        pgconv.ParsePgTextToString(plan.Description),
+		PriceCents:         plan.PriceCents,
+		Currency:           pgconv.ParsePgTextToString(plan.Currency),
+		BillingCycle:       plan.BillingCycle,
+		Active:             pgconv.PgBoolToBool(plan.Active),
+		CreatedAt:          pgconv.PgTimestamptzToTime(plan.CreatedAt),
+		UpdatedAt:          pgconv.PgTimestamptzToTime(plan.UpdatedAt),
+		ExternalId:         plan.ExternalID,
+		ExternalPriceId:    plan.ExternalPriceID,
+		Highlight:          plan.Highlight,
+		Icon:               plan.Icon,
+		OriginalPriceCents: pgconv.PgInt4ToIntPtr(plan.OriginalPriceCents),
+		TrialDays:          plan.TrialDays,
+		Features:           features,
 	}, nil
 }
 
@@ -203,16 +216,20 @@ func (s *Service) ListPlans(ctx context.Context) ([]domain.PlanResponse, error) 
 		}
 
 		planResponses = append(planResponses, domain.PlanResponse{
-			ID:           planId,
-			Name:         plan.Name,
-			Description:  pgconv.ParsePgTextToString(plan.Description),
-			PriceCents:   plan.PriceCents,
-			Currency:     pgconv.ParsePgTextToString(plan.Currency),
-			BillingCycle: plan.BillingCycle,
-			Active:       pgconv.PgBoolToBool(plan.Active),
-			CreatedAt:    pgconv.PgTimestamptzToTime(plan.CreatedAt),
-			UpdatedAt:    pgconv.PgTimestamptzToTime(plan.UpdatedAt),
-			Features:     features,
+			ID:                 planId,
+			Name:               plan.Name,
+			Description:        pgconv.ParsePgTextToString(plan.Description),
+			PriceCents:         plan.PriceCents,
+			Currency:           pgconv.ParsePgTextToString(plan.Currency),
+			BillingCycle:       plan.BillingCycle,
+			Active:             pgconv.PgBoolToBool(plan.Active),
+			CreatedAt:          pgconv.PgTimestamptzToTime(plan.CreatedAt),
+			UpdatedAt:          pgconv.PgTimestamptzToTime(plan.UpdatedAt),
+			Highlight:          plan.Highlight,
+			Icon:               plan.Icon,
+			OriginalPriceCents: pgconv.PgInt4ToIntPtr(plan.OriginalPriceCents),
+			TrialDays:          plan.TrialDays,
+			Features:           features,
 		})
 	}
 
@@ -238,19 +255,21 @@ func (s *Service) ListPlansByActiveStatus(ctx context.Context, active bool) ([]d
 		}
 
 		planResponses = append(planResponses, domain.PlanResponse{
-			ID:           planId,
-			Name:         plan.Name,
-			Description:  pgconv.ParsePgTextToString(plan.Description),
-			PriceCents:   plan.PriceCents,
-			Currency:     pgconv.ParsePgTextToString(plan.Currency),
-			BillingCycle: plan.BillingCycle,
-			Active:       pgconv.PgBoolToBool(plan.Active),
-			CreatedAt:    pgconv.PgTimestamptzToTime(plan.CreatedAt),
-			UpdatedAt:    pgconv.PgTimestamptzToTime(plan.UpdatedAt),
-			ExternalId:   plan.ExternalID,
-			Highlight:    plan.Highlight,
-			Icon:         plan.Icon,
-			Features:     features,
+			ID:                 planId,
+			Name:               plan.Name,
+			Description:        pgconv.ParsePgTextToString(plan.Description),
+			PriceCents:         plan.PriceCents,
+			Currency:           pgconv.ParsePgTextToString(plan.Currency),
+			BillingCycle:       plan.BillingCycle,
+			Active:             pgconv.PgBoolToBool(plan.Active),
+			CreatedAt:          pgconv.PgTimestamptzToTime(plan.CreatedAt),
+			UpdatedAt:          pgconv.PgTimestamptzToTime(plan.UpdatedAt),
+			ExternalId:         plan.ExternalID,
+			Highlight:          plan.Highlight,
+			Icon:               plan.Icon,
+			OriginalPriceCents: pgconv.PgInt4ToIntPtr(plan.OriginalPriceCents),
+			TrialDays:          plan.TrialDays,
+			Features:           features,
 		})
 	}
 
@@ -264,14 +283,22 @@ func (s *Service) UpdatePlan(ctx context.Context, planId uuid.UUID, req domain.U
 	}
 
 	arg := db.UpdatePlanParams{
-		ID:           currentPlan.ID,
-		Name:         currentPlan.Name,
-		Description:  currentPlan.Description,
-		Currency:     currentPlan.Currency,
-		BillingCycle: currentPlan.BillingCycle,
-		PriceCents:   currentPlan.PriceCents,
+		ID:                 currentPlan.ID,
+		Name:               currentPlan.Name,
+		Description:        currentPlan.Description,
+		Currency:           currentPlan.Currency,
+		BillingCycle:       currentPlan.BillingCycle,
+		PriceCents:         currentPlan.PriceCents,
+		Highlight:          currentPlan.Highlight,
+		Icon:               currentPlan.Icon,
+		OriginalPriceCents: currentPlan.OriginalPriceCents,
+		TrialDays:          currentPlan.TrialDays,
 	}
 	domain.ApplyUpdatePlanParams(req, &arg)
+
+	if err := domain.ValidatePricing(arg.PriceCents, arg.OriginalPriceCents, arg.TrialDays); err != nil {
+		return err
+	}
 
 	priceChanged := req.ValueAmount != 0 && int32(math.Round(req.ValueAmount*100)) != currentPlan.PriceCents
 	cycleChanged := req.BillingCycle != "" && req.BillingCycle != currentPlan.BillingCycle
@@ -355,13 +382,17 @@ func (s *Service) UpdatePlan(ctx context.Context, planId uuid.UUID, req domain.U
 	}
 
 	return s.repo.UpdatePlan(ctx, db.UpdatePlanParams{
-		ID:              pgconv.ParseUUIDToPgType(planId),
-		Name:            arg.Name,
-		Description:     arg.Description,
-		PriceCents:      arg.PriceCents,
-		Currency:        arg.Currency,
-		BillingCycle:    arg.BillingCycle,
-		ExternalPriceID: newPriceID,
+		ID:                 pgconv.ParseUUIDToPgType(planId),
+		Name:               arg.Name,
+		Description:        arg.Description,
+		PriceCents:         arg.PriceCents,
+		Currency:           arg.Currency,
+		BillingCycle:       arg.BillingCycle,
+		Highlight:          arg.Highlight,
+		Icon:               arg.Icon,
+		ExternalPriceID:    newPriceID,
+		OriginalPriceCents: arg.OriginalPriceCents,
+		TrialDays:          arg.TrialDays,
 	})
 }
 

@@ -21,6 +21,8 @@ SELECT
     p.active AS plan_active,
     p.highlight AS plan_highlight,
     p.icon AS plan_icon,
+    p.original_price_cents AS plan_original_price_cents,
+    p.trial_days AS plan_trial_days,
 
     pm.id AS payment_method_id,
     pm.type AS payment_method_type,
