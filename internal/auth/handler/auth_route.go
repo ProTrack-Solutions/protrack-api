@@ -17,6 +17,7 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 	{
 		auth.POST("/register", h.Register)
 		auth.POST("/login", h.Login)
+		auth.POST("/demo", h.DemoLogin)
 		auth.POST("/refresh", h.RefreshToken)
 		auth.POST("/forgot-password", h.ForgotPassword)
 		auth.POST("/reset-password", h.ResetPassword)

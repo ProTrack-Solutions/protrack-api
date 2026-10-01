@@ -10,6 +10,10 @@ type LoginRequest struct {
 	Aud      string `json:"aud" binding:"required"`
 }
 
+type DemoLoginRequest struct {
+	Aud string `json:"aud" binding:"required"`
+}
+
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`  // Token de acesso
 	RefreshToken string `json:"refresh_token"` // Token de renovação
