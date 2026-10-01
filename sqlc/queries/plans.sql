@@ -28,7 +28,7 @@ FROM plans WHERE active = true;
 -- name: ListPlansByActiveStatus :many
 SELECT *
 FROM plans
-WHERE active = $1;
+WHERE active = $1 ORDER BY price_cents ASC;
 
 -- name: UpdatePlan :exec
 UPDATE plans SET name = $2, description = $3, price_cents = $4, currency = $5, billing_cycle = $6, highlight=$7, icon=$8, external_price_id=$9, updated_at = NOW()
