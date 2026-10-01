@@ -23,7 +23,7 @@ WHERE id = $1;
 
 -- name: ListPlans :many
 SELECT *
-FROM plans WHERE active = true;
+FROM plans WHERE active = true ORDER BY price_cents ASC;
 
 -- name: ListPlansByActiveStatus :many
 SELECT *
