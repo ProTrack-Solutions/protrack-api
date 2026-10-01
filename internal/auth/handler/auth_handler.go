@@ -81,6 +81,60 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
+	h.setAuthCookies(c, response)
+	c.JSON(http.StatusOK, response)
+}
+
+// DemoLogin godoc
+// @Summary      Entra na empresa de demonstração
+// @Description  Gera tokens do usuário demo, sem senha. Usado pelo botão "Ver demonstração" da landing page.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body domain.DemoLoginRequest true "Aplicação de origem"
+// @Success      200 {object} domain.LoginResponse
+// @Failure      400 {object} map[string]string "Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)"
+// @Failure      429 {object} map[string]string "Muitas tentativas (code: TOO_MANY_ATTEMPTS)"
+// @Failure      503 {object} map[string]string "Demo não configurada (code: DEMO_UNAVAILABLE)"
+// @Router       /auth/demo [post]
+func (h *Handler) DemoLogin(c *gin.Context) {
+	var req domain.DemoLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "corpo da requisição inválido, envie um JSON com aud", "code": "INVALID_REQUEST"})
+		return
+	}
+
+	allowed, err := h.rateLimiter.Allow(c.Request.Context(), "demo_login:"+c.ClientIP(), 10, time.Minute*15)
+	if err != nil {
+		_ = c.Error(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno ao abrir a demonstração, tente novamente", "code": "INTERNAL_ERROR"})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusTooManyRequests, gin.H{"error": "muitas tentativas, aguarde alguns minutos e tente novamente", "code": "TOO_MANY_ATTEMPTS"})
+		return
+	}
+
+	response, err := h.service.DemoLogin(c.Request.Context(), req.Aud)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidAud):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "INVALID_AUD"})
+		case errors.Is(err, service.ErrDemoUnavailable):
+			_ = c.Error(err)
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": err.Error(), "code": "DEMO_UNAVAILABLE"})
+		default:
+			_ = c.Error(err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno ao abrir a demonstração, tente novamente", "code": "INTERNAL_ERROR"})
+		}
+		return
+	}
+
+	h.setAuthCookies(c, response)
+	c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) setAuthCookies(c *gin.Context, response *domain.LoginResponse) {
 	c.SetSameSite(http.SameSiteLaxMode)
 
 	c.SetCookie(
@@ -102,8 +156,6 @@ func (h *Handler) Login(c *gin.Context) {
 		h.cfg.IsProduction, // alterar para true para produção
 		true,
 	)
-
-	c.JSON(http.StatusOK, response)
 }
 
 // RefreshToken godoc

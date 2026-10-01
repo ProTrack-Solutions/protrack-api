@@ -14,6 +14,7 @@ import (
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	companySettingsDomain "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
+	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
@@ -46,6 +47,10 @@ var (
 	ErrSubscriptionCanceled = errors.New("a assinatura da empresa foi cancelada")
 	ErrSubscriptionPaused   = errors.New("a assinatura da empresa está pausada")
 	ErrSubscriptionExpired  = errors.New("a assinatura da empresa expirou")
+
+	// ErrDemoUnavailable é retornado quando a empresa demo ainda não foi
+	// criada (cmd/seed-demo) ou está inconsistente.
+	ErrDemoUnavailable = errors.New("demonstração indisponível no momento")
 )
 
 type Service struct {
@@ -156,6 +161,40 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		ExpiresIn:    tokenPair.ExpireIn,
 		TokenType:    "Bearer",
 	}, &user, nil
+}
+
+// DemoLogin gera tokens para o usuário da empresa de demonstração, sem senha.
+// A empresa precisa ter sido criada antes pelo cmd/seed-demo.
+func (s *Service) DemoLogin(ctx context.Context, aud string) (*domain.LoginResponse, error) {
+	if aud == "" {
+		return nil, ErrInvalidAud
+	}
+
+	user, err := s.userService.GetUserByID(ctx, demo.UserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrDemoUnavailable
+		}
+		return nil, fmt.Errorf("buscando usuário demo: %w", err)
+	}
+
+	if !demo.IsDemoCompany(user.CompanyID) {
+		log.Error().Str("company_id", user.CompanyID.String()).Msg("Usuário demo vinculado a outra empresa")
+		return nil, ErrDemoUnavailable
+	}
+
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, aud)
+	if err != nil {
+		return nil, fmt.Errorf("gerando tokens: %w", err)
+	}
+
+	return &domain.LoginResponse{
+		AccessToken:  tokenPair.AccessToken,
+		RefreshToken: tokenPair.RefreshToken,
+		HasCompany:   true,
+		ExpiresIn:    tokenPair.ExpireIn,
+		TokenType:    "Bearer",
+	}, nil
 }
 
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID uuid.UUID) (*domain.LoginResponse, error) {

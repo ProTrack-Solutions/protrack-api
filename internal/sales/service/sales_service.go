@@ -18,6 +18,7 @@ import (
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	metaWhatsAppService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
@@ -624,7 +625,8 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 			whatsAppEligibility[companyID] = isWhatsappPlan
 		}
 
-		if isWhatsappPlan {
+		// Os clientes da empresa demo são fictícios: nunca envia WhatsApp.
+		if isWhatsappPlan && !demo.IsDemoCompany(companyID) {
 			whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
 				IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
 				CompanyID:    companyID,

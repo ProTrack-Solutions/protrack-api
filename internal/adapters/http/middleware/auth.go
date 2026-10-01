@@ -7,6 +7,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
 )
@@ -51,6 +52,15 @@ func AuthMiddleware(jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist)
 
 		if isBlacklisted {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token has been revoked"})
+			c.Abort()
+			return
+		}
+
+		if demo.IsDemoCompany(claims.CompanyId) && demo.IsBlockedAction(c.Request.Method, c.FullPath()) {
+			c.JSON(http.StatusForbidden, gin.H{
+				"error": "ação indisponível no modo demonstração",
+				"code":  "DEMO_READONLY",
+			})
 			c.Abort()
 			return
 		}
