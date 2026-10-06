@@ -246,7 +246,7 @@ type SaleResponsePaginate struct {
 }
 
 // UpdateSaleParams altera as condições de pagamento de uma venda.
-// DiscountAmount é a porcentagem de desconto (0–100), igual ao CreateSaleRequest.
+// DiscountAmount é o valor do desconto em R$, igual ao CreateSaleRequest.
 // Campos nil/zero mantêm o valor atual da venda.
 type UpdateSaleParams struct {
 	DiscountAmount    *float64            `json:"discount_amount"`
@@ -307,8 +307,8 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 		}
 	}
 
-	if req.DiscountAmount < 0 || req.DiscountAmount > 100 {
-		return invalid("o desconto deve estar entre 0%% e 100%%")
+	if req.DiscountAmount < 0 {
+		return invalid("o desconto não pode ser negativo")
 	}
 
 	if len(req.Items) == 0 {

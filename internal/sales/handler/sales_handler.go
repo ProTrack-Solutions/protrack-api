@@ -652,7 +652,7 @@ func (h *Handler) MarginDistribution(c *gin.Context) {
 
 // UpdateSale godoc
 // @Summary      Atualizar dados da venda
-// @Description  Altera desconto (%), entrada, parcelas e vencimento de uma venda a prazo. Permitido até 2h após a venda e sem parcelas pagas.
+// @Description  Altera desconto (R$), entrada, parcelas e vencimento de uma venda a prazo. Permitido até 2h após a venda e sem parcelas pagas.
 // @Tags         sales
 // @Produce      json
 // @Security     BearerAuth

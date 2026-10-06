@@ -44,7 +44,7 @@ func TestValidateCreateSaleRequest(t *testing.T) {
 		{name: "a prazo com dia de vencimento 32", base: validInstallmentSale, mutate: func(r *CreateSaleRequest) { r.DueDays = 32 }, wantErr: true},
 		{name: "entrada negativa", base: validInstallmentSale, mutate: func(r *CreateSaleRequest) { r.Prohibited = -1 }, wantErr: true},
 		{name: "desconto negativo", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.DiscountAmount = -5 }, wantErr: true},
-		{name: "desconto acima de 100%", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.DiscountAmount = 101 }, wantErr: true},
+		{name: "desconto em reais acima de 100", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.DiscountAmount = 150.50 }, wantErr: false},
 		{name: "sem itens", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.Items = nil }, wantErr: true},
 		{name: "item sem produto", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.Items[0].ProductID = uuid.Nil }, wantErr: true},
 		{name: "item com quantidade zero", base: validCashSale, mutate: func(r *CreateSaleRequest) { r.Items[0].Quantity = 0 }, wantErr: true},
