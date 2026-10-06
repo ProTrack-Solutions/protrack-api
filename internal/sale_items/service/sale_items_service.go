@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -11,6 +12,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/sale_items/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sale_items/repository"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -46,18 +48,21 @@ func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain
 	txProductRepo := s.productRepo.WithTx(tx)
 
 	product, err := txProductRepo.GetProductById(ctx, pgconv.ParseUUIDToPgType(req.ProductID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrProductNotFound
+	}
 	if err != nil {
 		return err
 	}
 
-	// Garante que o produto pertence à company da venda
+	// Garante que o produto pertence à company da venda (para outra empresa, ele "não existe")
 	if pgconv.PgUUIDToUUID(product.CompanyID) != companyID {
-		return errors.New("The product does not belong to the company selling it.")
+		return domain.ErrProductNotFound
 	}
 
 	if !product.SellInBulk {
 		if int32(pgconv.PgInt4ToInt(product.Quantity)) < req.Quantity {
-			return errors.New("insufficient quantity")
+			return fmt.Errorf("%w para o produto %s", domain.ErrInsufficientStock, product.Name)
 		}
 		if err := txProductRepo.DecrementStock(ctx, db.DecrementStockParams{
 			ID:       pgconv.ParseUUIDToPgType(req.ProductID),
@@ -75,7 +80,7 @@ func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain
 		quantityBefore := int32(pgconv.PgInt4ToInt(product.Quantity))
 
 		if productAfter.Quantity != pgconv.IntToPgInt4(int(quantityBefore-req.Quantity)) {
-			return errors.New("insufficient quantity")
+			return fmt.Errorf("%w para o produto %s", domain.ErrInsufficientStock, product.Name)
 		}
 	}
 

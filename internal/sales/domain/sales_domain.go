@@ -47,7 +47,15 @@ var (
 	ErrSaleUpdateExpired   = errors.New("a venda só pode ser alterada até 2 horas depois de ser realizada")
 	ErrSaleHasPayments     = errors.New("não é possível alterar uma venda que já possui parcelas pagas")
 	ErrInvalidSaleUpdate   = errors.New("dados inválidos para atualizar a venda")
+
+	ErrInvalidSale          = errors.New("dados inválidos para a venda")
+	ErrSaleCustomerNotFound = errors.New("cliente não encontrado")
+	ErrSaleProductNotFound  = errors.New("produto não encontrado")
+	ErrInsufficientStock    = errors.New("estoque insuficiente")
 )
+
+// MaxInstallments é o limite de parcelas de uma venda a prazo (o mesmo oferecido na tela).
+const MaxInstallments = 24
 
 // SaleUpdateWindow é o tempo, a partir da criação, em que a venda ainda pode ser alterada.
 const SaleUpdateWindow = 2 * time.Hour
@@ -268,32 +276,58 @@ type OverdueSalesResult struct {
 }
 
 func ValidateCreateSaleRequest(req CreateSaleRequest) error {
+	invalid := func(format string, args ...any) error {
+		return fmt.Errorf("%w: %s", ErrInvalidSale, fmt.Sprintf(format, args...))
+	}
+
+	if !req.PaymentMethod.IsValid() {
+		return invalid("forma de pagamento inválida")
+	}
+
 	// Venda a prazo (parcelada) exige cliente cadastrado, pois gera saldo devedor
 	// e contas a receber vinculados a ele. Venda avulsa (paga na hora) não exige.
-	if req.PaymentMethod == enums.PaymentMethodInstallments && req.CustomerID == uuid.Nil {
-		return errors.New("customer_id is required for installment sales")
+	if req.PaymentMethod == enums.PaymentMethodInstallments {
+		if req.CustomerID == uuid.Nil {
+			return invalid("venda a prazo exige um cliente")
+		}
+		if req.InstallmentsCount < 1 || req.InstallmentsCount > MaxInstallments {
+			return invalid("a quantidade de parcelas deve estar entre 1 e %d", MaxInstallments)
+		}
+		if req.DueDays < 1 || req.DueDays > 31 {
+			return invalid("informe um dia de vencimento entre 1 e 31")
+		}
+		if req.Prohibited < 0 {
+			return invalid("a entrada não pode ser negativa")
+		}
 	}
+
 	if req.BuyerDocument != "" {
 		if _, err := validate.ValidateDocument(req.BuyerDocument); err != nil {
-			return fmt.Errorf("buyer_document: %w", err)
+			return invalid("documento do comprador inválido: %v", err)
 		}
 	}
+
 	if req.DiscountAmount < 0 || req.DiscountAmount > 100 {
-		return errors.New("discount_amount must be a percentage between 0 and 100")
-	}
-	if len(req.Items) == 0 {
-		return errors.New("the sale must have at least one item")
+		return invalid("o desconto deve estar entre 0%% e 100%%")
 	}
 
+	if len(req.Items) == 0 {
+		return invalid("adicione pelo menos um produto")
+	}
+
+	seen := make(map[uuid.UUID]bool, len(req.Items))
 	for i, item := range req.Items {
 		if item.ProductID == uuid.Nil {
-			return fmt.Errorf("item[%d]: product_id is required", i)
+			return invalid("selecione o produto do item %d", i+1)
 		}
 		if item.Quantity <= 0 {
-			return fmt.Errorf("item[%d]: quantity must be greater than zero", i)
+			return invalid("a quantidade do item %d deve ser maior que zero", i+1)
 		}
-
+		if seen[item.ProductID] {
+			return invalid("o mesmo produto foi adicionado mais de uma vez (item %d)", i+1)
+		}
+		seen[item.ProductID] = true
 	}
+
 	return nil
 }
-

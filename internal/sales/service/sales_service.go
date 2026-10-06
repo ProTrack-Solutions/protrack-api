@@ -132,26 +132,61 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	defer tx.Rollback(ctx)
 
 	txRepo := s.repo.WithTx(tx)
-
-	log.Info().Interface("request", req).Msg("Teste request")
+	q := db.New(tx)
 
 	var status string
 	var subTotal float64
 	var totalAmount float64
 	var discount float64
 
-	for _, item := range req.Items {
-		product, err := s.productService.GetProductByIdTx(ctx, tx, item.ProductID)
+	// Cliente informado precisa existir e ser da mesma empresa
+	if req.CustomerID != uuid.Nil {
+		customer, err := q.GetCustomerById(ctx, pgconv.ParseUUIDToPgType(req.CustomerID))
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && pgconv.PgUUIDToUUID(customer.CompanyID) != companyId) {
+			return uuid.Nil, domain.ErrSaleCustomerNotFound
+		}
+		if err != nil {
+			return uuid.Nil, err
+		}
+	}
+
+	// Confere produtos e estoque antes de gravar qualquer coisa, para devolver um erro claro
+	for i, item := range req.Items {
+		product, err := q.GetProductById(ctx, pgconv.ParseUUIDToPgType(item.ProductID))
+		if errors.Is(err, pgx.ErrNoRows) || (err == nil && pgconv.PgUUIDToUUID(product.CompanyID) != companyId) {
+			return uuid.Nil, fmt.Errorf("%w (item %d)", domain.ErrSaleProductNotFound, i+1)
+		}
 		if err != nil {
 			return uuid.Nil, err
 		}
 
-		subTotal += float64(item.Quantity) * product.SalePrice
+		if !product.SellInBulk {
+			available := int32(pgconv.PgInt4ToInt(product.Quantity))
+			if available < item.Quantity {
+				return uuid.Nil, fmt.Errorf("%w para o produto %s: disponível %d, solicitado %d",
+					domain.ErrInsufficientStock, product.Name, available, item.Quantity)
+			}
+		}
+
+		subTotal += float64(item.Quantity) * pgconv.PgNumericToFloat64(product.SalePrice)
+	}
+
+	if subTotal <= 0 {
+		return uuid.Nil, fmt.Errorf("%w: o valor total dos produtos deve ser maior que zero", domain.ErrInvalidSale)
 	}
 
 	// O desconto chega em % e é gravado em R$ (na venda e rateado entre os itens)
 	discountValue := discountFromPercentage(subTotal, req.DiscountAmount)
 	totalAmount = subTotal - discountValue
+
+	if req.PaymentMethod == enums.PaymentMethodInstallments && req.Prohibited >= totalAmount {
+		return uuid.Nil, fmt.Errorf("%w: a entrada deve ser menor que o total da venda (R$ %.2f)", domain.ErrInvalidSale, totalAmount)
+	}
+
+	// Entrada, parcelas e vencimento só fazem sentido na venda a prazo
+	if req.PaymentMethod != enums.PaymentMethodInstallments {
+		req.Prohibited = 0
+	}
 
 	// 1. Definição do Status e Atualização de Saldo Devedor
 	if req.PaymentMethod == "installments" {
@@ -224,6 +259,14 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 			UnitPrice: product.SalePrice,
 			Discount:  discount,
 		}, companyId); err != nil {
+			// Estoque pode ter mudado entre a conferência e a baixa (venda concorrente)
+			switch {
+			case errors.Is(err, saleItemDomain.ErrInsufficientStock):
+				detail := strings.TrimPrefix(err.Error(), saleItemDomain.ErrInsufficientStock.Error())
+				return uuid.Nil, fmt.Errorf("%w%s", domain.ErrInsufficientStock, detail)
+			case errors.Is(err, saleItemDomain.ErrProductNotFound):
+				return uuid.Nil, domain.ErrSaleProductNotFound
+			}
 			return uuid.Nil, err
 		}
 	}
