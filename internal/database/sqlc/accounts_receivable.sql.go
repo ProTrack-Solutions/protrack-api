@@ -11,6 +11,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelAccountsReceivableBySaleId = `-- name: CancelAccountsReceivableBySaleId :exec
+UPDATE accounts_receivable
+SET status = 'canceled',
+    deleted_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $3
+WHERE sale_id = $1
+    AND company_id = $2
+    AND status NOT IN ('paid', 'canceled')
+    AND deleted_at IS NULL
+`
+
+type CancelAccountsReceivableBySaleIdParams struct {
+	SaleID    pgtype.UUID `json:"sale_id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+	UpdatedBy pgtype.UUID `json:"updated_by"`
+}
+
+func (q *Queries) CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error {
+	_, err := q.db.Exec(ctx, cancelAccountsReceivableBySaleId, arg.SaleID, arg.CompanyID, arg.UpdatedBy)
+	return err
+}
+
 const countAccountsReceivableByCompany = `-- name: CountAccountsReceivableByCompany :one
 SELECT COUNT(*) FROM accounts_receivable
 WHERE company_id = $1
@@ -106,6 +129,27 @@ func (q *Queries) GetCustomerDebtSummary(ctx context.Context, customerID pgtype.
 	var i GetCustomerDebtSummaryRow
 	err := row.Scan(&i.TotalCount, &i.TotalBalance, &i.OldestDueDate)
 	return i, err
+}
+
+const getOpenBalanceBySale = `-- name: GetOpenBalanceBySale :one
+SELECT COALESCE(SUM(balance), 0)::NUMERIC(10, 2) AS open_balance
+FROM accounts_receivable
+WHERE sale_id = $1
+    AND company_id = $2
+    AND status NOT IN ('paid', 'canceled')
+    AND deleted_at IS NULL
+`
+
+type GetOpenBalanceBySaleParams struct {
+	SaleID    pgtype.UUID `json:"sale_id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetOpenBalanceBySale(ctx context.Context, arg GetOpenBalanceBySaleParams) (pgtype.Numeric, error) {
+	row := q.db.QueryRow(ctx, getOpenBalanceBySale, arg.SaleID, arg.CompanyID)
+	var open_balance pgtype.Numeric
+	err := row.Scan(&open_balance)
+	return open_balance, err
 }
 
 const getPendingReceivablesByCustomer = `-- name: GetPendingReceivablesByCustomer :many

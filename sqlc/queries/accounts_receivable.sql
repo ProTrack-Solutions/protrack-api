@@ -79,6 +79,23 @@ GROUP BY company_id;
 DELETE FROM accounts_receivable 
 WHERE sale_id = $1 
     AND company_id = $2;
+-- name: GetOpenBalanceBySale :one
+SELECT COALESCE(SUM(balance), 0)::NUMERIC(10, 2) AS open_balance
+FROM accounts_receivable
+WHERE sale_id = $1
+    AND company_id = $2
+    AND status NOT IN ('paid', 'canceled')
+    AND deleted_at IS NULL;
+-- name: CancelAccountsReceivableBySaleId :exec
+UPDATE accounts_receivable
+SET status = 'canceled',
+    deleted_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $3
+WHERE sale_id = $1
+    AND company_id = $2
+    AND status NOT IN ('paid', 'canceled')
+    AND deleted_at IS NULL;
 -- name: ListAccountsReceivables :many
 SELECT
     ar.*,
