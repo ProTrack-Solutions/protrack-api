@@ -11,3 +11,12 @@ const (
 	PaymentMethodInstallments PaymentMethod = "installments"
 	PaymentMethodOther        PaymentMethod = "other"
 )
+
+func (p PaymentMethod) IsValid() bool {
+	switch p {
+	case PaymentMethodCash, PaymentMethodCreditCard, PaymentMethodDebitCard, PaymentMethodPix,
+		PaymentMethodBankTransfer, PaymentMethodInstallments, PaymentMethodOther:
+		return true
+	}
+	return false
+}
