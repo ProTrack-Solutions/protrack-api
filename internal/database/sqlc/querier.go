@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	AddModuleToDepartment(ctx context.Context, arg AddModuleToDepartmentParams) error
+	CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -104,6 +105,7 @@ type Querier interface {
 	GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error)
 	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
 	GetModule(ctx context.Context, code string) (Module, error)
+	GetOpenBalanceBySale(ctx context.Context, arg GetOpenBalanceBySaleParams) (pgtype.Numeric, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -121,6 +123,7 @@ type Querier interface {
 	GetReceivablesBySale(ctx context.Context, saleID pgtype.UUID) ([]AccountsReceivable, error)
 	GetReceivablesSummary(ctx context.Context, companyID pgtype.UUID) (GetReceivablesSummaryRow, error)
 	GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSaleByIdRow, error)
+	GetSaleByIdForUpdate(ctx context.Context, arg GetSaleByIdForUpdateParams) (Sale, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
@@ -143,6 +146,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
+	IncrementStock(ctx context.Context, arg IncrementStockParams) error
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
 	ListApprovedTemplates(ctx context.Context) ([]WhatsappTemplate, error)
@@ -161,6 +165,7 @@ type Querier interface {
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
+	ListItemsBySaleForRestock(ctx context.Context, saleID pgtype.UUID) ([]ListItemsBySaleForRestockRow, error)
 	ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UUID) ([]ListItemsFromPendingSaleRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
 	ListModulesByDepartment(ctx context.Context, departmentID pgtype.UUID) ([]Module, error)
@@ -220,6 +225,8 @@ type Querier interface {
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateSale(ctx context.Context, arg UpdateSaleParams) error
+	// Rateia o desconto da venda (em R$) entre os itens, proporcional ao valor de cada um
+	UpdateSaleItemsDiscount(ctx context.Context, arg UpdateSaleItemsDiscountParams) error
 	UpdateSaleStatus(ctx context.Context, arg UpdateSaleStatusParams) error
 	UpdateSubscriptionMethod(ctx context.Context, arg UpdateSubscriptionMethodParams) error
 	UpdateSubscriptionPaymentMethod(ctx context.Context, arg UpdateSubscriptionPaymentMethodParams) error

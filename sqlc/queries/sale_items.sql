@@ -13,6 +13,21 @@ WHERE id = $1;
 -- name: DeleteItemsBySale :exec
 DELETE FROM sale_items
 WHERE sale_id = $1;
+-- name: UpdateSaleItemsDiscount :exec
+-- Rateia o desconto da venda (em R$) entre os itens, proporcional ao valor de cada um
+UPDATE sale_items
+SET discount = ROUND(
+        sqlc.arg(discount_amount)::NUMERIC * quantity * unit_price / NULLIF(sqlc.arg(subtotal)::NUMERIC, 0),
+        2
+    )
+WHERE sale_id = sqlc.arg(sale_id);
+-- name: ListItemsBySaleForRestock :many
+SELECT si.product_id,
+    si.quantity,
+    p.sell_in_bulk
+FROM sale_items si
+    INNER JOIN products p ON si.product_id = p.id
+WHERE si.sale_id = $1;
 ;
 -- name: ListItemsFromPendingSale :many
 SELECT si.id,

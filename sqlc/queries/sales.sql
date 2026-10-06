@@ -49,10 +49,20 @@ WHERE s.id = $1
     AND s.company_id = $2;
 -- name: DeleteSale :exec
 UPDATE sales
-SET deleted_at = CURRENT_TIMESTAMP,
-    deleted_by = $1
+SET status = 'canceled',
+    deleted_at = CURRENT_TIMESTAMP,
+    deleted_by = $1,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $1
 WHERE id = $2
-    AND company_id = $3;
+    AND company_id = $3
+    AND deleted_at IS NULL;
+-- name: GetSaleByIdForUpdate :one
+SELECT *
+FROM sales
+WHERE id = $1
+    AND company_id = $2
+FOR UPDATE;
 -- name: UpdateSaleStatus :exec
 UPDATE sales
 SET status = $1,

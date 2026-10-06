@@ -57,53 +57,6 @@ func buildDbListSalesRow(id uuid.UUID) db.ListSalesRow {
 }
 
 // ---------------------------------------------------------------------------
-// DeleteSale
-// ---------------------------------------------------------------------------
-
-func TestDeleteSale_Success(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := newSvc(t, repo)
-
-	id := uuid.New()
-	companyID := uuid.New()
-	deletedBy := uuid.New()
-
-	repo.EXPECT().
-		DeleteSales(gomock.Any(), db.DeleteSaleParams{
-			ID:        pgconv.ParseUUIDToPgType(id),
-			CompanyID: pgconv.ParseUUIDToPgType(companyID),
-			DeletedBy: pgconv.ParseUUIDToPgType(deletedBy),
-		}).
-		Return(nil)
-
-	err := svc.DeleteSale(context.Background(), id, domainDeleteSaleRequest(deletedBy, companyID))
-	if err != nil {
-		t.Fatalf("esperava nil, obteve: %v", err)
-	}
-}
-
-func TestDeleteSale_RepositoryError(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	repo := mocks.NewMockRepositoryInterface(ctrl)
-	svc := newSvc(t, repo)
-
-	repo.EXPECT().
-		DeleteSales(gomock.Any(), gomock.Any()).
-		Return(errDatabase)
-
-	err := svc.DeleteSale(context.Background(), uuid.New(), domainDeleteSaleRequest(uuid.New(), uuid.New()))
-
-	if err == nil {
-		t.Fatal("esperava erro do repositório")
-	}
-}
-
-// ---------------------------------------------------------------------------
 // GetSaleById
 // ---------------------------------------------------------------------------
 

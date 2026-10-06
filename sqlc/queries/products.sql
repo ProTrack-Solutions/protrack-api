@@ -77,6 +77,10 @@ UPDATE products
 SET quantity = quantity - $1
 WHERE id = $2
     AND quantity >= $1;
+-- name: IncrementStock :exec
+UPDATE products
+SET quantity = quantity + $1
+WHERE id = $2;
 -- name: CountProducts :one
 SELECT SUM(quantity)
 FROM products

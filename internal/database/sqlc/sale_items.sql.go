@@ -171,6 +171,41 @@ func (q *Queries) ListItemsByDate(ctx context.Context, arg ListItemsByDateParams
 	return items, nil
 }
 
+const listItemsBySaleForRestock = `-- name: ListItemsBySaleForRestock :many
+SELECT si.product_id,
+    si.quantity,
+    p.sell_in_bulk
+FROM sale_items si
+    INNER JOIN products p ON si.product_id = p.id
+WHERE si.sale_id = $1
+`
+
+type ListItemsBySaleForRestockRow struct {
+	ProductID  pgtype.UUID `json:"product_id"`
+	Quantity   int32       `json:"quantity"`
+	SellInBulk bool        `json:"sell_in_bulk"`
+}
+
+func (q *Queries) ListItemsBySaleForRestock(ctx context.Context, saleID pgtype.UUID) ([]ListItemsBySaleForRestockRow, error) {
+	rows, err := q.db.Query(ctx, listItemsBySaleForRestock, saleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListItemsBySaleForRestockRow{}
+	for rows.Next() {
+		var i ListItemsBySaleForRestockRow
+		if err := rows.Scan(&i.ProductID, &i.Quantity, &i.SellInBulk); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listItemsFromPendingSale = `-- name: ListItemsFromPendingSale :many
 SELECT si.id,
     si.sale_id,
@@ -222,4 +257,25 @@ func (q *Queries) ListItemsFromPendingSale(ctx context.Context, saleID pgtype.UU
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSaleItemsDiscount = `-- name: UpdateSaleItemsDiscount :exec
+UPDATE sale_items
+SET discount = ROUND(
+        $1::NUMERIC * quantity * unit_price / NULLIF($2::NUMERIC, 0),
+        2
+    )
+WHERE sale_id = $3
+`
+
+type UpdateSaleItemsDiscountParams struct {
+	DiscountAmount pgtype.Numeric `json:"discount_amount"`
+	Subtotal       pgtype.Numeric `json:"subtotal"`
+	SaleID         pgtype.UUID    `json:"sale_id"`
+}
+
+// Rateia o desconto da venda (em R$) entre os itens, proporcional ao valor de cada um
+func (q *Queries) UpdateSaleItemsDiscount(ctx context.Context, arg UpdateSaleItemsDiscountParams) error {
+	_, err := q.db.Exec(ctx, updateSaleItemsDiscount, arg.DiscountAmount, arg.Subtotal, arg.SaleID)
+	return err
 }
