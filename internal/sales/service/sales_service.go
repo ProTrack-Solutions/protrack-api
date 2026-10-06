@@ -175,8 +175,11 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		return uuid.Nil, fmt.Errorf("%w: o valor total dos produtos deve ser maior que zero", domain.ErrInvalidSale)
 	}
 
-	// O desconto chega em % e é gravado em R$ (na venda e rateado entre os itens)
-	discountValue := discountFromPercentage(subTotal, req.DiscountAmount)
+	// O desconto chega em R$ e é gravado na venda e rateado entre os itens
+	discountValue := roundMoney(req.DiscountAmount)
+	if discountValue > subTotal {
+		return uuid.Nil, fmt.Errorf("%w: o desconto não pode ser maior que o valor dos produtos (R$ %.2f)", domain.ErrInvalidSale, subTotal)
+	}
 	totalAmount = subTotal - discountValue
 
 	if req.PaymentMethod == enums.PaymentMethodInstallments && req.Prohibited >= totalAmount {
@@ -274,12 +277,9 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	return pgconv.PgUUIDToUUID(id), tx.Commit(ctx)
 }
 
-// DeleteSale cancela a venda desfazendo, na mesma transação, tudo o que o CreateSale fez:
-// devolve o estoque, cancela as parcelas em aberto e abate do saldo devedor do cliente
-// o valor que ainda não foi pago. Parcelas já pagas e o histórico de pagamentos são mantidos.
-// discountFromPercentage converte o desconto informado em % para o valor em R$.
-func discountFromPercentage(subtotal, percentage float64) float64 {
-	return math.Round(subtotal*percentage) / 100
+// roundMoney arredonda um valor em R$ para centavos.
+func roundMoney(value float64) float64 {
+	return math.Round(value*100) / 100
 }
 
 // createInstallmentsTx gera as parcelas (contas a receber) de uma venda a prazo.
@@ -318,6 +318,9 @@ func (s *Service) createInstallmentsTx(ctx context.Context, tx db.DBTX, userId, 
 	return nil
 }
 
+// DeleteSale cancela a venda desfazendo, na mesma transação, tudo o que o CreateSale fez:
+// devolve o estoque, cancela as parcelas em aberto e abate do saldo devedor do cliente
+// o valor que ainda não foi pago. Parcelas já pagas e o histórico de pagamentos são mantidos.
 func (s *Service) DeleteSale(ctx context.Context, id uuid.UUID, req domain.DeleteSaleRequest) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -1437,10 +1440,13 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 
 	discountValue := pgconv.PgNumericToFloat64(sale.DiscountAmount)
 	if req.DiscountAmount != nil {
-		if *req.DiscountAmount < 0 || *req.DiscountAmount > 100 {
-			return fmt.Errorf("%w: o desconto deve estar entre 0%% e 100%%", domain.ErrInvalidSaleUpdate)
+		discountValue = roundMoney(*req.DiscountAmount)
+		if discountValue < 0 {
+			return fmt.Errorf("%w: o desconto não pode ser negativo", domain.ErrInvalidSaleUpdate)
 		}
-		discountValue = discountFromPercentage(subtotal, *req.DiscountAmount)
+		if discountValue > subtotal {
+			return fmt.Errorf("%w: o desconto não pode ser maior que o valor dos produtos (R$ %.2f)", domain.ErrInvalidSaleUpdate, subtotal)
+		}
 	}
 	totalAmount := subtotal - discountValue
 
