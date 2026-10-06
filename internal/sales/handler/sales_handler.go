@@ -11,6 +11,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
 )
 
 type Handler struct {
@@ -37,11 +38,15 @@ func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist 
 // @Security     BearerAuth
 // @Param        sale body domain.CreateSaleRequest true "Venda"
 // @Success      201 {object} map[string]string
+// @Failure      400 {object} map[string]string "Dados inválidos"
+// @Failure      404 {object} map[string]string "Cliente ou produto não encontrado"
+// @Failure      409 {object} map[string]string "Estoque insuficiente"
 // @Router       /sales [post]
 func (h *Handler) CreateSale(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
 	}
 
 	companyId := companyIdAny.(uuid.UUID)
@@ -49,6 +54,7 @@ func (h *Handler) CreateSale(c *gin.Context) {
 	userIdAny, exists := c.Get("sub")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "sub is null"})
+		return
 	}
 
 	userIdStr := userIdAny.(string)
@@ -56,22 +62,45 @@ func (h *Handler) CreateSale(c *gin.Context) {
 	userId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id is null"})
+		return
 	}
 
 	var req domain.CreateSaleRequest
 
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "dados da venda em formato inválido"})
 		return
 	}
 
 	id, err := h.service.CreateSale(c.Request.Context(), userId, companyId, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondSaleError(c, err)
 		return
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"id": id})
+}
+
+// respondSaleError converte os erros de negócio de venda no status HTTP correspondente.
+// Erros inesperados (banco, rede...) são registrados no log e não vazam detalhes para o cliente.
+func respondSaleError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrInvalidSale),
+		errors.Is(err, domain.ErrInvalidSaleUpdate):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case errors.Is(err, domain.ErrSaleNotFound),
+		errors.Is(err, domain.ErrSaleCustomerNotFound),
+		errors.Is(err, domain.ErrSaleProductNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, domain.ErrInsufficientStock),
+		errors.Is(err, domain.ErrSaleAlreadyCanceled),
+		errors.Is(err, domain.ErrSaleUpdateExpired),
+		errors.Is(err, domain.ErrSaleHasPayments):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	default:
+		log.Error().Err(err).Str("path", c.FullPath()).Msg("erro inesperado em vendas")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno ao processar a venda, tente novamente"})
+	}
 }
 
 // DeleteSale godoc
@@ -123,14 +152,7 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	req.DeletedBy = userId
 
 	if err := h.service.DeleteSale(c.Request.Context(), id, req); err != nil {
-		switch {
-		case errors.Is(err, domain.ErrSaleNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case errors.Is(err, domain.ErrSaleAlreadyCanceled):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		respondSaleError(c, err)
 		return
 	}
 
@@ -677,18 +699,7 @@ func (h *Handler) UpdateSale(c *gin.Context) {
 
 	err = h.service.UpdateSale(c.Request.Context(), userId, companyId, saleId, req)
 	if err != nil {
-		switch {
-		case errors.Is(err, domain.ErrSaleNotFound):
-			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
-		case errors.Is(err, domain.ErrInvalidSaleUpdate):
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		case errors.Is(err, domain.ErrSaleAlreadyCanceled),
-			errors.Is(err, domain.ErrSaleUpdateExpired),
-			errors.Is(err, domain.ErrSaleHasPayments):
-			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
+		respondSaleError(c, err)
 		return
 	}
 

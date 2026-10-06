@@ -1,7 +1,14 @@
 package domain
 
 import (
+	"errors"
+
 	"github.com/google/uuid"
+)
+
+var (
+	ErrProductNotFound   = errors.New("produto não encontrado")
+	ErrInsufficientStock = errors.New("estoque insuficiente")
 )
 
 type CreateSaleItemRequest struct {
