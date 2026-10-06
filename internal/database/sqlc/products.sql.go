@@ -436,6 +436,22 @@ func (q *Queries) GetTop5BestSellingProducts(ctx context.Context, companyID pgty
 	return items, nil
 }
 
+const incrementStock = `-- name: IncrementStock :exec
+UPDATE products
+SET quantity = quantity + $1
+WHERE id = $2
+`
+
+type IncrementStockParams struct {
+	Quantity pgtype.Int4 `json:"quantity"`
+	ID       pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) IncrementStock(ctx context.Context, arg IncrementStockParams) error {
+	_, err := q.db.Exec(ctx, incrementStock, arg.Quantity, arg.ID)
+	return err
+}
+
 const listProductsByCategoryAndDate = `-- name: ListProductsByCategoryAndDate :many
 SELECT p.id,
     p.name,

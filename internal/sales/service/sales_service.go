@@ -32,6 +32,7 @@ import (
 	subscriptionService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
@@ -148,11 +149,9 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		subTotal += float64(item.Quantity) * product.SalePrice
 	}
 
-	if req.DiscountAmount > subTotal {
-		return uuid.Nil, fmt.Errorf("discount amount cannot exceed subtotal")
-	}
-
-	totalAmount = subTotal - req.DiscountAmount
+	// O desconto chega em % e é gravado em R$ (na venda e rateado entre os itens)
+	discountValue := discountFromPercentage(subTotal, req.DiscountAmount)
+	totalAmount = subTotal - discountValue
 
 	// 1. Definição do Status e Atualização de Saldo Devedor
 	if req.PaymentMethod == "installments" {
@@ -181,7 +180,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	id, err := txRepo.CreateSales(ctx, db.CreateSaleParams{
 		CustomerID:        pgconv.OptionalUUIDToPgType(req.CustomerID),
 		CompanyID:         pgconv.ParseUUIDToPgType(companyId),
-		DiscountAmount:    pgconv.Float64ToPgNumeric(req.DiscountAmount),
+		DiscountAmount:    pgconv.Float64ToPgNumeric(discountValue),
 		Subtotal:          pgconv.Float64ToPgNumeric(subTotal),
 		TotalAmount:       pgconv.Float64ToPgNumeric(totalAmount),
 		DueDays:           pgconv.OptionalIntToPgInt4(dueDaysVal),
@@ -197,46 +196,9 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 
 	if req.PaymentMethod == "installments" {
-
-		amountToParcel := totalAmount - req.Prohibited
-		installmentValue := amountToParcel / float64(req.InstallmentsCount)
-		dataBase := time.Now()
-
-		for i := 0; i < int(req.InstallmentsCount); i++ {
-			var maturity time.Time
-
-			if dataBase.Day() >= int(req.DueDays) {
-				maturity = time.Date(
-					dataBase.Year(),
-					dataBase.Month()+time.Month(i+1),
-					int(req.DueDays),
-					0, 0, 0, 0,
-					dataBase.Location(),
-				)
-			} else {
-				maturity = time.Date(
-					dataBase.Year(),
-					dataBase.Month()+time.Month(i),
-					int(req.DueDays),
-					0, 0, 0, 0,
-					dataBase.Location(),
-				)
-			}
-
-			var reqAR accountsReceivableDomain.CreateAccountReceivableRequest
-			reqAR.CustomerID = req.CustomerID
-			reqAR.SaleID = pgconv.PgUUIDToUUID(id)
-
-			reqAR.Balance = installmentValue
-			reqAR.TotalAmount = installmentValue
-
-			reqAR.InstallmentNumber = int64(i + 1)
-			reqAR.TotalInstallments = int64(req.InstallmentsCount)
-			reqAR.DueDate = maturity.Format("2006-01-02")
-
-			if err := s.accountsReceivableService.CreateAccountReceivableInTx(ctx, tx, userId, companyId, reqAR); err != nil {
-				return uuid.Nil, err
-			}
+		if err := s.createInstallmentsTx(ctx, tx, userId, companyId, req.CustomerID, pgconv.PgUUIDToUUID(id),
+			totalAmount-req.Prohibited, req.InstallmentsCount, req.DueDays); err != nil {
+			return uuid.Nil, err
 		}
 	}
 
@@ -253,7 +215,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 
 		itemTotal := float64(itemReq.Quantity) * product.SalePrice
 		proportion := itemTotal / subTotal
-		discount = req.DiscountAmount * proportion
+		discount = discountValue * proportion
 
 		if err := s.saleItemsService.CreateSaleItemInTx(ctx, tx, saleItemDomain.CreateSaleItemRequest{
 			SaleID:    saleID,
@@ -269,16 +231,135 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	return pgconv.PgUUIDToUUID(id), tx.Commit(ctx)
 }
 
+// DeleteSale cancela a venda desfazendo, na mesma transação, tudo o que o CreateSale fez:
+// devolve o estoque, cancela as parcelas em aberto e abate do saldo devedor do cliente
+// o valor que ainda não foi pago. Parcelas já pagas e o histórico de pagamentos são mantidos.
+// discountFromPercentage converte o desconto informado em % para o valor em R$.
+func discountFromPercentage(subtotal, percentage float64) float64 {
+	return math.Round(subtotal*percentage) / 100
+}
+
+// createInstallmentsTx gera as parcelas (contas a receber) de uma venda a prazo.
+// Cada parcela vence no dia dueDays; a primeira cai no mês atual se esse dia ainda não chegou.
+func (s *Service) createInstallmentsTx(ctx context.Context, tx db.DBTX, userId, companyId, customerId, saleId uuid.UUID, amount float64, installmentsCount, dueDays int32) error {
+	installmentValue := amount / float64(installmentsCount)
+	dataBase := time.Now()
+
+	for i := 0; i < int(installmentsCount); i++ {
+		monthOffset := i
+		if dataBase.Day() >= int(dueDays) {
+			monthOffset = i + 1
+		}
+
+		maturity := time.Date(
+			dataBase.Year(),
+			dataBase.Month()+time.Month(monthOffset),
+			int(dueDays),
+			0, 0, 0, 0,
+			dataBase.Location(),
+		)
+
+		if err := s.accountsReceivableService.CreateAccountReceivableInTx(ctx, tx, userId, companyId, accountsReceivableDomain.CreateAccountReceivableRequest{
+			CustomerID:        customerId,
+			SaleID:            saleId,
+			Balance:           installmentValue,
+			TotalAmount:       installmentValue,
+			InstallmentNumber: int64(i + 1),
+			TotalInstallments: int64(installmentsCount),
+			DueDate:           maturity.Format("2006-01-02"),
+		}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Service) DeleteSale(ctx context.Context, id uuid.UUID, req domain.DeleteSaleRequest) error {
-	if err := s.repo.DeleteSales(ctx, db.DeleteSaleParams{
-		DeletedBy: pgconv.ParseUUIDToPgType(req.DeletedBy),
-		ID:        pgconv.ParseUUIDToPgType(id),
-		CompanyID: pgconv.ParseUUIDToPgType(req.CompanyID),
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+
+	q := db.New(tx)
+	saleID := pgconv.ParseUUIDToPgType(id)
+	companyID := pgconv.ParseUUIDToPgType(req.CompanyID)
+	userID := pgconv.ParseUUIDToPgType(req.DeletedBy)
+
+	// FOR UPDATE evita que dois cancelamentos simultâneos devolvam o estoque duas vezes
+	sale, err := q.GetSaleByIdForUpdate(ctx, db.GetSaleByIdForUpdateParams{
+		ID:        saleID,
+		CompanyID: companyID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrSaleNotFound
+	}
+	if err != nil {
+		return err
+	}
+
+	if sale.DeletedAt.Valid {
+		return domain.ErrSaleAlreadyCanceled
+	}
+
+	// 1. Devolve o estoque (inverso do DecrementStock feito no CreateSaleItemInTx)
+	items, err := q.ListItemsBySaleForRestock(ctx, saleID)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		if item.SellInBulk {
+			continue
+		}
+		if err := q.IncrementStock(ctx, db.IncrementStockParams{
+			Quantity: pgconv.IntToPgInt4(int(item.Quantity)),
+			ID:       item.ProductID,
+		}); err != nil {
+			return err
+		}
+	}
+
+	// 2. Cancela as parcelas em aberto e abate do saldo do cliente o que ainda era devido
+	// (vendas à vista não têm parcelas, então o saldo em aberto é zero e nada é alterado)
+	if sale.CustomerID.Valid {
+		openBalance, err := q.GetOpenBalanceBySale(ctx, db.GetOpenBalanceBySaleParams{
+			SaleID:    saleID,
+			CompanyID: companyID,
+		})
+		if err != nil {
+			return err
+		}
+
+		if err := q.CancelAccountsReceivableBySaleId(ctx, db.CancelAccountsReceivableBySaleIdParams{
+			SaleID:    saleID,
+			CompanyID: companyID,
+			UpdatedBy: userID,
+		}); err != nil {
+			return err
+		}
+
+		if remaining := pgconv.PgNumericToFloat64(openBalance); remaining > 0 {
+			if err := s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, pgconv.PgUUIDToUUID(sale.CustomerID), customerDomain.UpdateBalanceDueCustomerRequest{
+				BalanceDue: remaining,
+				UpdatedBy:  req.DeletedBy,
+			}); err != nil {
+				return err
+			}
+		}
+	}
+
+	// 3. Marca a venda como cancelada
+	if err := q.DeleteSale(ctx, db.DeleteSaleParams{
+		DeletedBy: userID,
+		ID:        saleID,
+		CompanyID: companyID,
 	}); err != nil {
 		return err
 	}
 
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (s *Service) GetSaleById(ctx context.Context, req domain.GetSaleByIdRequest) (domain.GetSaleByIdRow, error) {
@@ -1257,127 +1338,157 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 	}, nil
 }
 
+// UpdateSale altera as condições de pagamento (desconto, entrada, parcelas e vencimento)
+// de uma venda a prazo. Só é permitido nas primeiras 2 horas e enquanto nenhuma parcela
+// tiver sido paga. A dívida antiga do cliente e as parcelas são desfeitas e geradas de novo.
 func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uuid.UUID, saleId uuid.UUID, req domain.UpdateSaleParams) error {
+	if req.PaymentMethod != enums.PaymentMethodInstallments {
+		return fmt.Errorf("%w: apenas vendas a prazo podem ser alteradas", domain.ErrInvalidSaleUpdate)
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback(ctx)
 
-	txRepo := s.repo.WithTx(tx)
+	q := db.New(tx)
+	saleID := pgconv.ParseUUIDToPgType(saleId)
+	companyID := pgconv.ParseUUIDToPgType(companyId)
 
-	if req.PaymentMethod != enums.PaymentMethodInstallments {
-		return errors.New("Não é possivel atualiar esse venda")
+	sale, err := q.GetSaleByIdForUpdate(ctx, db.GetSaleByIdForUpdateParams{
+		ID:        saleID,
+		CompanyID: companyID,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrSaleNotFound
+	}
+	if err != nil {
+		return err
 	}
 
-	currentSale, err := s.repo.GetSaleById(ctx, db.GetSaleByIdParams{
-		ID:        pgconv.ParseUUIDToPgType(saleId),
-		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	if sale.DeletedAt.Valid {
+		return domain.ErrSaleAlreadyCanceled
+	}
+
+	if sale.CreatedAt.Valid && time.Since(sale.CreatedAt.Time) > domain.SaleUpdateWindow {
+		return domain.ErrSaleUpdateExpired
+	}
+
+	if !sale.CustomerID.Valid {
+		return fmt.Errorf("%w: venda a prazo exige um cliente", domain.ErrInvalidSaleUpdate)
+	}
+
+	receivables, err := s.accountsReceivableService.GetReceivablesBySaleTx(ctx, tx, saleId)
+	if err != nil {
+		return err
+	}
+	for _, receivable := range receivables {
+		if receivable.Balance < receivable.TotalAmount {
+			return domain.ErrSaleHasPayments
+		}
+	}
+
+	// Campos não informados mantêm o valor atual da venda
+	subtotal := pgconv.PgNumericToFloat64(sale.Subtotal)
+
+	discountValue := pgconv.PgNumericToFloat64(sale.DiscountAmount)
+	if req.DiscountAmount != nil {
+		if *req.DiscountAmount < 0 || *req.DiscountAmount > 100 {
+			return fmt.Errorf("%w: o desconto deve estar entre 0%% e 100%%", domain.ErrInvalidSaleUpdate)
+		}
+		discountValue = discountFromPercentage(subtotal, *req.DiscountAmount)
+	}
+	totalAmount := subtotal - discountValue
+
+	downPayment := pgconv.PgNumericToFloat64(sale.DownPayment)
+	if req.Prohibited != nil {
+		downPayment = *req.Prohibited
+	}
+	if downPayment < 0 || downPayment >= totalAmount {
+		return fmt.Errorf("%w: a entrada deve ser menor que o total da venda", domain.ErrInvalidSaleUpdate)
+	}
+
+	installmentsCount := sale.InstallmentsCount
+	if req.InstallmentsCount > 0 {
+		installmentsCount = req.InstallmentsCount
+	}
+	if installmentsCount <= 0 {
+		return fmt.Errorf("%w: informe a quantidade de parcelas", domain.ErrInvalidSaleUpdate)
+	}
+
+	dueDays := int32(pgconv.PgInt4ToInt(sale.DueDays))
+	if req.DueDays > 0 {
+		dueDays = req.DueDays
+	}
+	if dueDays <= 0 || dueDays > 31 {
+		return fmt.Errorf("%w: informe um dia de vencimento entre 1 e 31", domain.ErrInvalidSaleUpdate)
+	}
+
+	// 1. Tira do saldo do cliente o que a venda ainda devia (zero se ela era à vista)
+	openBalance, err := q.GetOpenBalanceBySale(ctx, db.GetOpenBalanceBySaleParams{
+		SaleID:    saleID,
+		CompanyID: companyID,
 	})
 	if err != nil {
 		return err
 	}
 
-	targetTime := time.Now().Add(2 * time.Hour)
+	customerId := pgconv.PgUUIDToUUID(sale.CustomerID)
 
-	if currentSale.CreatedAt.Valid && !currentSale.CreatedAt.Time.Before(targetTime) {
-		return errors.New("A venda so pode ser atualizada até 2 horas depois de ser realizada")
-	}
-
-	arg := db.UpdateSaleParams{
-		DiscountAmount:    currentSale.DiscountAmount,
-		InstallmentsCount: currentSale.InstallmentsCount,
-		DownPayment:       currentSale.DownPayment,
-		DueDays:           currentSale.DueDays,
-		PaymentMethod:     currentSale.PaymentMethod,
-	}
-
-	domain.ApplyUpdateSaleParams(req, &arg)
-
-	totalAmount := pgconv.PgNumericToFloat64(currentSale.Subtotal) * (1 - (pgconv.PgNumericToFloat64(arg.DiscountAmount) / 100))
-	var status string
-
-	if arg.PaymentMethod == enums.PaymentMethodInstallments {
-
-		if currentSale.InstallmentsCount < arg.InstallmentsCount || currentSale.InstallmentsCount > arg.InstallmentsCount {
-			err = s.accountsReceivableService.DeleteAccountReceivableBySaleIDTx(ctx, tx, saleId, companyId)
-			if err != nil {
-				return err
-			}
+	if previousDebt := pgconv.PgNumericToFloat64(openBalance); previousDebt > 0 {
+		if err := s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, customerId, customerDomain.UpdateBalanceDueCustomerRequest{
+			BalanceDue: previousDebt,
+			UpdatedBy:  userId,
+		}); err != nil {
+			return err
 		}
-		installmentValue := (totalAmount - pgconv.PgNumericToFloat64(arg.DownPayment)) / float64(arg.InstallmentsCount)
-		status = "pending"
-
-		dataBase := time.Now()
-		for i := 1; i < int(arg.InstallmentsCount); i++ {
-			var maturity time.Time
-
-			if dataBase.Day() >= int(req.DueDays) {
-				maturity = time.Date(
-					dataBase.Year(),
-					dataBase.Month()+time.Month(i+1),
-					int(req.DueDays),
-					0, 0, 0, 0,
-					dataBase.Location(),
-				)
-			} else {
-				maturity = time.Date(
-					dataBase.Year(),
-					dataBase.Month()+time.Month(i),
-					int(req.DueDays),
-					0, 0, 0, 0,
-					dataBase.Location(),
-				)
-			}
-
-			err = s.accountsReceivableService.CreateAccountReceivable(ctx, tx, userId, companyId, accountsReceivableDomain.CreateAccountReceivableRequest{
-				CustomerID:        pgconv.PgUUIDToUUID(currentSale.CustomerID),
-				SaleID:            saleId,
-				TotalAmount:       installmentValue,
-				Balance:           installmentValue,
-				DueDate:           maturity.Format("2006-01-02"),
-				InstallmentNumber: int64(i),
-				TotalInstallments: int64(arg.InstallmentsCount),
-			})
-			if err != nil {
-				return err
-			}
-
-		}
-
 	}
 
-	err = s.customerService.UpdateCustomerBalanceSubTx(ctx, tx, pgconv.PgUUIDToUUID(currentSale.CustomerID), customerDomain.UpdateBalanceDueCustomerRequest{
-		BalanceDue: totalAmount,
-		Prohibited: pgconv.PgNumericToFloat64(arg.DownPayment),
+	// 2. Lança a nova dívida e gera as parcelas de novo
+	newDebt := totalAmount - downPayment
+
+	if err := s.customerService.UpdateCustomerBalanceAddTx(ctx, tx, customerId, customerDomain.UpdateBalanceDueCustomerRequest{
+		BalanceDue: newDebt,
 		UpdatedBy:  userId,
-	})
-	if err != nil {
+	}); err != nil {
 		return err
 	}
 
-	err = txRepo.UpdateSale(ctx, db.UpdateSaleParams{
-		DiscountAmount:    arg.DiscountAmount,
-		Subtotal:          currentSale.Subtotal,
+	if err := s.accountsReceivableService.DeleteAccountReceivableBySaleIDTx(ctx, tx, saleId, companyId); err != nil {
+		return err
+	}
+
+	if err := s.createInstallmentsTx(ctx, tx, userId, companyId, customerId, saleId, newDebt, installmentsCount, dueDays); err != nil {
+		return err
+	}
+
+	// 3. Rateia o novo desconto entre os itens e atualiza a venda
+	if err := q.UpdateSaleItemsDiscount(ctx, db.UpdateSaleItemsDiscountParams{
+		DiscountAmount: pgconv.Float64ToPgNumeric(discountValue),
+		Subtotal:       sale.Subtotal,
+		SaleID:         saleID,
+	}); err != nil {
+		return err
+	}
+
+	if err := q.UpdateSale(ctx, db.UpdateSaleParams{
+		DiscountAmount:    pgconv.Float64ToPgNumeric(discountValue),
+		Subtotal:          sale.Subtotal,
 		TotalAmount:       pgconv.Float64ToPgNumeric(totalAmount),
-		InstallmentsCount: arg.InstallmentsCount,
-		DownPayment:       arg.DownPayment,
-		DueDays:           arg.DueDays,
-		PaymentMethod:     arg.PaymentMethod,
+		InstallmentsCount: installmentsCount,
+		DownPayment:       pgconv.Float64ToPgNumeric(downPayment),
+		DueDays:           pgconv.IntToPgInt4(int(dueDays)),
+		PaymentMethod:     string(enums.PaymentMethodInstallments),
 		UpdatedBy:         pgconv.ParseUUIDToPgType(userId),
-		Status:            status,
-		ID:                pgconv.ParseUUIDToPgType(saleId),
-		CompanyID:         pgconv.ParseUUIDToPgType(companyId),
-	})
-	if err != nil {
+		Status:            "pending",
+		ID:                saleID,
+		CompanyID:         companyID,
+	}); err != nil {
 		return err
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
-		return err
-	}
-	return nil
+	return tx.Commit(ctx)
 }
 
 func (s *Service) GetInventoryTurnover(ctx context.Context, companyID uuid.UUID) (domain.GetInventoryTurnoverResponse, error) {

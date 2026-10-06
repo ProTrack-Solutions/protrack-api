@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -74,17 +75,21 @@ func (h *Handler) CreateSale(c *gin.Context) {
 }
 
 // DeleteSale godoc
-// @Summary      Remove uma venda
+// @Summary      Cancela uma venda
+// @Description  Desfaz a venda: devolve o estoque, cancela as parcelas em aberto e abate o saldo devedor do cliente
 // @Tags         sales
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id path string true "ID da venda"
 // @Success      204
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
 // @Router       /sales/{id} [delete]
 func (h *Handler) DeleteSale(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
 	}
 
 	companyId := companyIdAny.(uuid.UUID)
@@ -92,6 +97,7 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	userIdAny, exists := c.Get("sub")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "sub is null"})
+		return
 	}
 
 	userIdStr := userIdAny.(string)
@@ -99,6 +105,7 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	userId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id is null"})
+		return
 	}
 
 	idStr := c.Param("id")
@@ -116,7 +123,14 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	req.DeletedBy = userId
 
 	if err := h.service.DeleteSale(c.Request.Context(), id, req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrSaleNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrSaleAlreadyCanceled):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -614,8 +628,9 @@ func (h *Handler) MarginDistribution(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"margin_distribution": distribution})
 }
 
-// MarginDistribution godoc
+// UpdateSale godoc
 // @Summary      Atualizar dados da venda
+// @Description  Altera desconto (%), entrada, parcelas e vencimento de uma venda a prazo. Permitido até 2h após a venda e sem parcelas pagas.
 // @Tags         sales
 // @Produce      json
 // @Security     BearerAuth
@@ -662,7 +677,18 @@ func (h *Handler) UpdateSale(c *gin.Context) {
 
 	err = h.service.UpdateSale(c.Request.Context(), userId, companyId, saleId, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrSaleNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrInvalidSaleUpdate):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrSaleAlreadyCanceled),
+			errors.Is(err, domain.ErrSaleUpdateExpired),
+			errors.Is(err, domain.ErrSaleHasPayments):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 

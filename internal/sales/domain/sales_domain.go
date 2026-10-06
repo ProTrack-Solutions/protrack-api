@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/validate"
-	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
 	"github.com/ProTrack-Solutions/protrack-api/internal/shared/events"
@@ -42,6 +40,17 @@ type CreateSaleItemRequest struct {
 	ProductID uuid.UUID `json:"product_id"`
 	Quantity  int32     `json:"quantity"`
 }
+
+var (
+	ErrSaleNotFound        = errors.New("venda não encontrada")
+	ErrSaleAlreadyCanceled = errors.New("venda já foi cancelada")
+	ErrSaleUpdateExpired   = errors.New("a venda só pode ser alterada até 2 horas depois de ser realizada")
+	ErrSaleHasPayments     = errors.New("não é possível alterar uma venda que já possui parcelas pagas")
+	ErrInvalidSaleUpdate   = errors.New("dados inválidos para atualizar a venda")
+)
+
+// SaleUpdateWindow é o tempo, a partir da criação, em que a venda ainda pode ser alterada.
+const SaleUpdateWindow = 2 * time.Hour
 
 type DeleteSaleRequest struct {
 	DeletedBy uuid.UUID `json:"deleted_by"`
@@ -228,12 +237,15 @@ type SaleResponsePaginate struct {
 	SalesCanceled int64   `json:"sales_canceled"`
 }
 
+// UpdateSaleParams altera as condições de pagamento de uma venda.
+// DiscountAmount é a porcentagem de desconto (0–100), igual ao CreateSaleRequest.
+// Campos nil/zero mantêm o valor atual da venda.
 type UpdateSaleParams struct {
-	DiscountAmount    float64             `json:"discount_amount"`
+	DiscountAmount    *float64            `json:"discount_amount"`
 	DueDays           int32               `json:"due_days"`
 	PaymentMethod     enums.PaymentMethod `json:"payment_method"`
 	InstallmentsCount int32               `json:"installments_count"`
-	Prohibited        float64             `json:"prohibited"`
+	Prohibited        *float64            `json:"prohibited"`
 }
 
 type GetInventoryTurnoverResponse struct {
@@ -266,6 +278,9 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 			return fmt.Errorf("buyer_document: %w", err)
 		}
 	}
+	if req.DiscountAmount < 0 || req.DiscountAmount > 100 {
+		return errors.New("discount_amount must be a percentage between 0 and 100")
+	}
 	if len(req.Items) == 0 {
 		return errors.New("the sale must have at least one item")
 	}
@@ -282,27 +297,3 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 	return nil
 }
 
-func ApplyUpdateSaleParams(
-	req UpdateSaleParams,
-	arg *db.UpdateSaleParams,
-) {
-	if req.PaymentMethod != "" {
-		arg.PaymentMethod = req.PaymentMethod
-	}
-
-	if req.DiscountAmount != 0 {
-		arg.DiscountAmount = pgconv.Float64ToPgNumeric(req.DiscountAmount)
-	}
-
-	if req.DueDays != 0 {
-		arg.DueDays = pgconv.IntToPgInt4(int(req.DueDays))
-	}
-
-	if req.InstallmentsCount != 0 {
-		arg.InstallmentsCount = req.InstallmentsCount
-	}
-
-	if req.Prohibited != 0 {
-		arg.DownPayment = pgconv.Float64ToPgNumeric(req.Prohibited)
-	}
-}

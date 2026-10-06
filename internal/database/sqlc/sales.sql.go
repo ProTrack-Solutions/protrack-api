@@ -137,10 +137,14 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.
 
 const deleteSale = `-- name: DeleteSale :exec
 UPDATE sales
-SET deleted_at = CURRENT_TIMESTAMP,
-    deleted_by = $1
+SET status = 'canceled',
+    deleted_at = CURRENT_TIMESTAMP,
+    deleted_by = $1,
+    updated_at = CURRENT_TIMESTAMP,
+    updated_by = $1
 WHERE id = $2
     AND company_id = $3
+    AND deleted_at IS NULL
 `
 
 type DeleteSaleParams struct {
@@ -330,6 +334,46 @@ func (q *Queries) GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSa
 		&i.DeletedBy,
 		&i.BuyerDocument,
 		&i.CustomerName,
+	)
+	return i, err
+}
+
+const getSaleByIdForUpdate = `-- name: GetSaleByIdForUpdate :one
+SELECT id, customer_id, company_id, sale_at, discount_amount, subtotal, total_amount, down_payment, installments_count, due_days, payment_method, status, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by, buyer_document
+FROM sales
+WHERE id = $1
+    AND company_id = $2
+FOR UPDATE
+`
+
+type GetSaleByIdForUpdateParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetSaleByIdForUpdate(ctx context.Context, arg GetSaleByIdForUpdateParams) (Sale, error) {
+	row := q.db.QueryRow(ctx, getSaleByIdForUpdate, arg.ID, arg.CompanyID)
+	var i Sale
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.CompanyID,
+		&i.SaleAt,
+		&i.DiscountAmount,
+		&i.Subtotal,
+		&i.TotalAmount,
+		&i.DownPayment,
+		&i.InstallmentsCount,
+		&i.DueDays,
+		&i.PaymentMethod,
+		&i.Status,
+		&i.CreatedAt,
+		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.UpdatedBy,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.BuyerDocument,
 	)
 	return i, err
 }
