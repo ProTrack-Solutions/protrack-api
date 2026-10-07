@@ -982,7 +982,7 @@ func (s *Service) GetRealProfitItem(ctx context.Context, companyId uuid.UUID) (f
 			return 0, err
 		}
 
-		totalNetSales += (pi.UnitPrice - pi.Discount) * float64(pi.Quantity)
+		totalNetSales += pi.UnitPrice*float64(pi.Quantity) - pi.Discount
 
 		totalCost += product.CostPrice * float64(pi.Quantity)
 	}
@@ -1011,23 +1011,23 @@ func (s *Service) GetTop5RealProfitItem(ctx context.Context, companyId uuid.UUID
 
 	for _, product := range products {
 		var totalCost float64
-		var totalNetSales float32
+		var totalNetSales float64
 		found := false
 
 		for _, item := range productItems {
 			if item.ProductID == product.ID {
-				totalNetSales += (float32(item.UnitPrice) - float32(item.Discount))
+				totalNetSales += item.UnitPrice*float64(item.Quantity) - item.Discount
 				totalCost += product.CostPrice * float64(item.Quantity)
 				found = true
 			}
 		}
 
 		if found && totalNetSales > 0 {
-			margin := ((totalNetSales - float32(totalCost)) / totalNetSales) * 100
+			margin := ((totalNetSales - totalCost) / totalNetSales) * 100
 			response = append(response, domain.GetTop5RealProfitItemResponse{
 				ProductsName:      product.Name,
-				ProductRealProfit: float64(margin),
-				TotalSale:         float64(totalNetSales),
+				ProductRealProfit: roundMoney(margin),
+				TotalSale:         roundMoney(totalNetSales),
 			})
 		}
 	}
@@ -1067,7 +1067,7 @@ func (s *Service) GetPerformanceMonth(ctx context.Context, companyId uuid.UUID) 
 				return []domain.GetPerformanceMonthResponse{}, err
 			}
 
-			totalNetSales += (pi.UnitPrice - pi.Discount) * float64(pi.Quantity)
+			totalNetSales += pi.UnitPrice*float64(pi.Quantity) - pi.Discount
 
 			totalCost += product.CostPrice * float64(pi.Quantity)
 		}
@@ -1163,19 +1163,19 @@ func (s *Service) MarginDistribution(ctx context.Context, companyId uuid.UUID) (
 
 	for _, product := range products {
 		var totalCost float64
-		var totalNetSales float32
+		var totalNetSales float64
 		found := false
 
 		for _, item := range productItems {
 			if item.ProductID == product.ID {
-				totalNetSales += (float32(item.UnitPrice) - float32(item.Discount))
+				totalNetSales += item.UnitPrice*float64(item.Quantity) - item.Discount
 				totalCost += product.CostPrice * float64(item.Quantity)
 				found = true
 			}
 		}
 
 		if found && totalNetSales > 0 {
-			margin := ((totalNetSales - float32(totalCost)) / totalNetSales) * 100
+			margin := ((totalNetSales - totalCost) / totalNetSales) * 100
 			if margin < 10 {
 				countBaixa++
 			} else if margin >= 10 && margin <= 20 {

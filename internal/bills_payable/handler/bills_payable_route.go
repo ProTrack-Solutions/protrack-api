@@ -20,6 +20,7 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		billsPayable.PUT("/schedule/:id", h.ScheduleBill)
 		billsPayable.PUT("/:id", h.UpdateBillPayable)
 		billsPayable.GET("/summary", h.GetBillsPayableSummary)
+		billsPayable.GET("/dashboard", h.GetBillsPayableDashboard)
 		billsPayable.GET("/total-payable", h.SumBillsPayableByCompany)
 	}
 }

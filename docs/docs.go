@@ -485,6 +485,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/announcements/today": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retorna até 4 avisos vigentes agora, ordenados por importância (maintenance \u003e warning \u003e info \u003e success) e, no empate, pelo mais recente",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "announcements"
+                ],
+                "summary": "Lista os 4 avisos mais importantes do dia",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.TopAnnouncementsOfDayResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/announcements/{id}": {
             "delete": {
                 "security": [
@@ -530,6 +576,67 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/demo": {
+            "post": {
+                "description": "Gera tokens do usuário demo, sem senha. Usado pelo botão \"Ver demonstração\" da landing page.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Entra na empresa de demonstração",
+                "parameters": [
+                    {
+                        "description": "Aplicação de origem",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.DemoLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Muitas tentativas (code: TOO_MANY_ATTEMPTS)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Demo não configurada (code: DEMO_UNAVAILABLE)",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -613,6 +720,51 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "E-mail ou senha inválidos (code: INVALID_CREDENTIALS)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Assinatura bloqueando o acesso (code: SUBSCRIPTION_*)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Muitas tentativas (code: TOO_MANY_ATTEMPTS)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno (code: INTERNAL_ERROR)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -968,6 +1120,49 @@ const docTemplate = `{
                 "responses": {
                     "201": {
                         "description": "Created"
+                    }
+                }
+            }
+        },
+        "/bills-payable/dashboard": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Valor em aberto total, vencido, que vence hoje e que vence nos próximos 7 dias (sem contar hoje)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bills-payable"
+                ],
+                "summary": "Card de contas a pagar",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableDashboardResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -4683,6 +4878,33 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Dados inválidos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Cliente ou produto não encontrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Estoque insuficiente",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -5236,13 +5458,14 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Desfaz a venda: devolve o estoque, cancela as parcelas em aberto e abate o saldo devedor do cliente",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "sales"
                 ],
-                "summary": "Remove uma venda",
+                "summary": "Cancela uma venda",
                 "parameters": [
                     {
                         "type": "string",
@@ -5255,6 +5478,24 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     }
                 }
             }
@@ -5308,6 +5549,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "Altera desconto (R$), entrada, parcelas e vencimento de uma venda a prazo. Permitido até 2h após a venda e sem parcelas pagas.",
                 "produces": [
                     "application/json"
                 ],
@@ -6492,6 +6734,50 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.TopAnnouncementsOfDayResponse": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "starts_at": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "info",
+                        "warning",
+                        "success",
+                        "maintenance"
+                    ],
+                    "example": "warning"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.DemoLoginRequest": {
+            "type": "object",
+            "required": [
+                "aud"
+            ],
+            "properties": {
+                "aud": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ForgotPasswordRequest": {
             "type": "object",
             "required": [
@@ -6683,7 +6969,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "client_secret": {
-                    "description": "ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA\nchamar stripe.confirmCardPayment(client_secret) com esse valor para\nconcluir a autenticação do cartão (incluindo 3D Secure); sem essa\nconfirmação a assinatura fica \"incomplete\" e expira em ~23h no Stripe.",
+                    "description": "ClientSecret para o frontend concluir a autenticação do cartão\n(incluindo 3D Secure). O método do Stripe.js depende de ClientSecretType:\n  - \"payment_intent\": stripe.confirmCardPayment(client_secret). Sem essa\n    confirmação a assinatura fica \"incomplete\" e expira em ~23h no Stripe.\n  - \"setup_intent\" (plano com trial, primeira invoice de R$0):\n    stripe.confirmCardSetup(client_secret), para o cartão poder ser\n    cobrado no fim do teste.",
+                    "type": "string"
+                },
+                "client_secret_type": {
                     "type": "string"
                 },
                 "company_id": {
@@ -6694,7 +6983,11 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "subscription_status": {
-                    "description": "Status da assinatura no Stripe logo após a criação (ex: \"incomplete\").",
+                    "description": "Status da assinatura no Stripe logo após a criação (ex: \"incomplete\",\nou \"trialing\" quando o plano tem teste grátis).",
+                    "type": "string"
+                },
+                "trial_end": {
+                    "description": "TrialEnd é o fim do teste grátis; nil quando o plano não tem trial.",
                     "type": "string"
                 }
             }
@@ -6842,6 +7135,23 @@ const docTemplate = `{
                 },
                 "vendor_id": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableDashboardResponse": {
+            "type": "object",
+            "properties": {
+                "total_due_today": {
+                    "type": "number"
+                },
+                "total_next_7_days": {
+                    "type": "number"
+                },
+                "total_overdue": {
+                    "type": "number"
+                },
+                "total_pending": {
+                    "type": "number"
                 }
             }
         },
@@ -8259,6 +8569,14 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "original_value_amount": {
+                    "description": "Preço \"de\" exibido riscado no front (opcional, maior que value_amount)",
+                    "type": "number"
+                },
+                "trial_days": {
+                    "type": "integer",
+                    "minimum": 0
+                },
                 "value_amount": {
                     "type": "number"
                 }
@@ -8306,7 +8624,14 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "original_price_cents": {
+                    "description": "Preço \"de\" (riscado); null quando não há desconto",
+                    "type": "integer"
+                },
                 "price_cents": {
+                    "type": "integer"
+                },
+                "trial_days": {
                     "type": "integer"
                 },
                 "updated_at": {
@@ -8333,8 +8658,23 @@ const docTemplate = `{
                 "description": {
                     "type": "string"
                 },
+                "highlight": {
+                    "description": "Ponteiros diferenciam \"não enviado\" (mantém o valor atual) de um valor explícito (ex: highlight=false)",
+                    "type": "boolean"
+                },
+                "icon": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
+                },
+                "original_value_amount": {
+                    "description": "Enviar 0 remove o preço \"de\" do plano",
+                    "type": "number"
+                },
+                "trial_days": {
+                    "type": "integer",
+                    "minimum": 0
                 },
                 "value_amount": {
                     "type": "number"
@@ -9026,7 +9366,13 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
+                "original_price_cents": {
+                    "type": "integer"
+                },
                 "price_cents": {
+                    "type": "integer"
+                },
+                "trial_days": {
                     "type": "integer"
                 }
             }

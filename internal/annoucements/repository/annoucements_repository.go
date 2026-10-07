@@ -36,3 +36,7 @@ func (r *Repository) DeleteAnnoucements(ctx context.Context, arg db.DeleteAnnouc
 func (r *Repository) CountAnnoucementsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error) {
 	return r.queries().CountAnnoucementsByCompany(ctx, companyId)
 }
+
+func (r *Repository) ListTopAnnouncementsOfDay(ctx context.Context, companyId pgtype.UUID) ([]db.ListTopAnnouncementsOfDayRow, error) {
+	return r.queries().ListTopAnnouncementsOfDay(ctx, companyId)
+}

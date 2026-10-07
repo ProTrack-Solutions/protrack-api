@@ -55,6 +55,7 @@ type ListBillsPayableRow struct {
 	VendorName        string    `json:"vendor_name"`
 	CategoryName      string    `json:"category_name"`
 	PaymentMethodName string    `json:"payment_method_name"`
+	DaysOverdue       int32     `json:"days_overdue"`
 }
 
 type ListBillsPayableResponse struct {
@@ -120,6 +121,13 @@ type GetBillsPayableSummaryResponse struct {
 	TotalOverdue   float64 `json:"total_overdue"`
 	TotalScheduled float64 `json:"total_scheduled"`
 	GeneralStatus  string  `json:"general_status"`
+}
+
+type GetBillsPayableDashboardResponse struct {
+	TotalPending   float64 `json:"total_pending"`
+	TotalOverdue   float64 `json:"total_overdue"`
+	TotalDueToday  float64 `json:"total_due_today"`
+	TotalNext7Days float64 `json:"total_next_7_days"`
 }
 
 func ApplyUpdateBillPayableParams(req UpdateBillPayableRequest, arg *db.UpdateBillPayableParams) {

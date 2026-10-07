@@ -57,6 +57,10 @@ func (r *Repository) GetBillsPayableSummary(ctx context.Context, companyId pgtyp
 	return r.queries().GetBillsPayableSummary(ctx, companyId)
 }
 
+func (r *Repository) GetBillsPayableDashboard(ctx context.Context, companyId pgtype.UUID) (db.GetBillsPayableDashboardRow, error) {
+	return r.queries().GetBillsPayableDashboard(ctx, companyId)
+}
+
 func (r *Repository) UpdateOverdueBillsPayable(ctx context.Context) error {
 	return r.queries().UpdateOverdueBillsPayable(ctx)
 }
