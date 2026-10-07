@@ -39,6 +39,12 @@ SELECT
     v.name AS vendor_name,
     c.name AS category_name,
     pm.name AS payment_method_name,
+    -- dias em atraso: só para contas em aberto com vencimento já passado
+    (CASE
+        WHEN b.status NOT IN ('paid', 'canceled') AND b.due_date < CURRENT_DATE
+            THEN CURRENT_DATE - b.due_date
+        ELSE 0
+    END)::INT AS days_overdue,
     count(*) OVER() AS total_count
 FROM bills_payable b
     LEFT JOIN vendors v ON b.vendor_id = v.id
@@ -142,4 +148,29 @@ WHERE company_id = $1 AND status = 'overdue';
 -- name: SumBillsPayableSchedule :one
 SELECT COALESCE(SUM(amount), 0.0)::DOUBLE PRECISION AS total_scheduled
 FROM bills_payable 
-WHERE company_id = $1 AND status = 'scheduled'; 
+WHERE company_id = $1 AND status = 'scheduled';
+-- name: GetBillsPayableDashboard :one
+-- Valor em aberto (descontando o que já foi pago) agrupado por vencimento
+SELECT COALESCE(SUM(amount - COALESCE(amount_paid, 0)), 0)::NUMERIC(12, 2) AS total_pending,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date < CURRENT_DATE
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_overdue,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date = CURRENT_DATE
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_due_today,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date > CURRENT_DATE
+                AND due_date <= CURRENT_DATE + 7
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_next_7_days
+FROM bills_payable
+WHERE company_id = $1
+    AND status NOT IN ('paid', 'canceled');

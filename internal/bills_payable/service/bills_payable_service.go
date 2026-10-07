@@ -24,6 +24,7 @@ type RepositoryInterface interface {
 	GetBillsById(ctx context.Context, arg db.GetBillsByIdParams) (db.BillsPayable, error)
 	ScheduleBill(ctx context.Context, arg db.ScheduleBillParams) error
 	GetBillsPayableSummary(ctx context.Context, companyId pgtype.UUID) (db.GetBillsPayableSummaryRow, error)
+	GetBillsPayableDashboard(ctx context.Context, companyId pgtype.UUID) (db.GetBillsPayableDashboardRow, error)
 	UpdateOverdueBillsPayable(ctx context.Context) error
 	CountBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	SumBillsPayableByCompany(ctx context.Context, companyId pgtype.UUID) (float64, error)
@@ -224,6 +225,7 @@ func (s *Service) ListBillsPayable(ctx context.Context, companyId uuid.UUID, pag
 			VendorName:        pgconv.ParsePgTextToString(billPayable.VendorName),
 			CategoryName:      pgconv.ParsePgTextToString(billPayable.CategoryName),
 			PaymentMethodName: pgconv.ParsePgTextToString(billPayable.PaymentMethodName),
+			DaysOverdue:       billPayable.DaysOverdue,
 		})
 	}
 
@@ -340,6 +342,20 @@ func (s *Service) GetBillsPayableSummary(ctx context.Context, companyId uuid.UUI
 		TotalOverdue:   pgconv.PgNumericToFloat64(billsSummary.TotalOverdue),
 		TotalScheduled: pgconv.PgNumericToFloat64(billsSummary.TotalScheduled),
 		GeneralStatus:  status,
+	}, nil
+}
+
+func (s *Service) GetBillsPayableDashboard(ctx context.Context, companyId uuid.UUID) (domain.GetBillsPayableDashboardResponse, error) {
+	dashboard, err := s.repo.GetBillsPayableDashboard(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.GetBillsPayableDashboardResponse{}, err
+	}
+
+	return domain.GetBillsPayableDashboardResponse{
+		TotalPending:   pgconv.PgNumericToFloat64(dashboard.TotalPending),
+		TotalOverdue:   pgconv.PgNumericToFloat64(dashboard.TotalOverdue),
+		TotalDueToday:  pgconv.PgNumericToFloat64(dashboard.TotalDueToday),
+		TotalNext7Days: pgconv.PgNumericToFloat64(dashboard.TotalNext7Days),
 	}, nil
 }
 

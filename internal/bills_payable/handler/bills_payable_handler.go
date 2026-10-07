@@ -359,6 +359,34 @@ func (h *Handler) GetBillsPayableSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"bills_summary": billsSummary})
 }
 
+// GetBillsPayableDashboard godoc
+// @Summary      Card de contas a pagar
+// @Description  Valor em aberto total, vencido, que vence hoje e que vence nos próximos 7 dias (sem contar hoje)
+// @Tags         bills-payable
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} domain.GetBillsPayableDashboardResponse
+// @Failure      401 {object} map[string]string "Não autorizado"
+// @Failure      500 {object} map[string]string "Erro interno no servidor"
+// @Router       /bills-payable/dashboard [get]
+func (h *Handler) GetBillsPayableDashboard(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	dashboard, err := h.service.GetBillsPayableDashboard(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, dashboard)
+}
+
 func (h *Handler) SumBillsPayableByCompany(c *gin.Context) {
 	companyIdAny, exists := c.Get("company_id")
 	if !exists {

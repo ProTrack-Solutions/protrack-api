@@ -142,3 +142,68 @@ func (q *Queries) ListAnnoucements(ctx context.Context, arg ListAnnoucementsPara
 	}
 	return items, nil
 }
+
+const listTopAnnouncementsOfDay = `-- name: ListTopAnnouncementsOfDay :many
+SELECT 
+    id, 
+    title, 
+    content,
+    type, 
+    starts_at, 
+    expires_at,
+    created_at
+FROM announcements
+WHERE company_id = $1
+    AND is_active = TRUE
+    AND deleted_at IS NULL
+    AND starts_at <= NOW()
+    AND (expires_at IS NULL OR expires_at > NOW())
+ORDER BY 
+    CASE type
+        WHEN 'maintenance' THEN 1
+        WHEN 'warning' THEN 2
+        WHEN 'info' THEN 3
+        WHEN 'success' THEN 4
+    END,
+    starts_at DESC
+LIMIT 4
+`
+
+type ListTopAnnouncementsOfDayRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Title     string             `json:"title"`
+	Content   string             `json:"content"`
+	Type      AnnouncementType   `json:"type"`
+	StartsAt  pgtype.Timestamptz `json:"starts_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+// Avisos vigentes agora, do mais importante (manutenção) ao menos importante (sucesso)
+func (q *Queries) ListTopAnnouncementsOfDay(ctx context.Context, companyID pgtype.UUID) ([]ListTopAnnouncementsOfDayRow, error) {
+	rows, err := q.db.Query(ctx, listTopAnnouncementsOfDay, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListTopAnnouncementsOfDayRow{}
+	for rows.Next() {
+		var i ListTopAnnouncementsOfDayRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Content,
+			&i.Type,
+			&i.StartsAt,
+			&i.ExpiresAt,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

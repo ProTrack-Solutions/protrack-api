@@ -150,6 +150,52 @@ func (q *Queries) GetBillsByStatus(ctx context.Context, arg GetBillsByStatusPara
 	return items, nil
 }
 
+const getBillsPayableDashboard = `-- name: GetBillsPayableDashboard :one
+SELECT COALESCE(SUM(amount - COALESCE(amount_paid, 0)), 0)::NUMERIC(12, 2) AS total_pending,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date < CURRENT_DATE
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_overdue,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date = CURRENT_DATE
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_due_today,
+    COALESCE(
+        SUM(amount - COALESCE(amount_paid, 0)) FILTER (
+            WHERE due_date > CURRENT_DATE
+                AND due_date <= CURRENT_DATE + 7
+        ),
+        0
+    )::NUMERIC(12, 2) AS total_next_7_days
+FROM bills_payable
+WHERE company_id = $1
+    AND status NOT IN ('paid', 'canceled')
+`
+
+type GetBillsPayableDashboardRow struct {
+	TotalPending   pgtype.Numeric `json:"total_pending"`
+	TotalOverdue   pgtype.Numeric `json:"total_overdue"`
+	TotalDueToday  pgtype.Numeric `json:"total_due_today"`
+	TotalNext7Days pgtype.Numeric `json:"total_next_7_days"`
+}
+
+// Valor em aberto (descontando o que já foi pago) agrupado por vencimento
+func (q *Queries) GetBillsPayableDashboard(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableDashboardRow, error) {
+	row := q.db.QueryRow(ctx, getBillsPayableDashboard, companyID)
+	var i GetBillsPayableDashboardRow
+	err := row.Scan(
+		&i.TotalPending,
+		&i.TotalOverdue,
+		&i.TotalDueToday,
+		&i.TotalNext7Days,
+	)
+	return i, err
+}
+
 const getBillsPayableSummary = `-- name: GetBillsPayableSummary :one
 SELECT COUNT(*)::INT as total_quantity,
     COALESCE(
@@ -246,6 +292,12 @@ SELECT
     v.name AS vendor_name,
     c.name AS category_name,
     pm.name AS payment_method_name,
+    -- dias em atraso: só para contas em aberto com vencimento já passado
+    (CASE
+        WHEN b.status NOT IN ('paid', 'canceled') AND b.due_date < CURRENT_DATE
+            THEN CURRENT_DATE - b.due_date
+        ELSE 0
+    END)::INT AS days_overdue,
     count(*) OVER() AS total_count
 FROM bills_payable b
     LEFT JOIN vendors v ON b.vendor_id = v.id
@@ -319,6 +371,7 @@ type ListBillsPayableRow struct {
 	VendorName        pgtype.Text        `json:"vendor_name"`
 	CategoryName      pgtype.Text        `json:"category_name"`
 	PaymentMethodName pgtype.Text        `json:"payment_method_name"`
+	DaysOverdue       int32              `json:"days_overdue"`
 	TotalCount        int64              `json:"total_count"`
 }
 
@@ -366,6 +419,7 @@ func (q *Queries) ListBillsPayable(ctx context.Context, arg ListBillsPayablePara
 			&i.VendorName,
 			&i.CategoryName,
 			&i.PaymentMethodName,
+			&i.DaysOverdue,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err

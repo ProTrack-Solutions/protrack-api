@@ -11,6 +11,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		// leitura: ADMIN e USER podem ver os avisos da empresa
 		announcements.GET("", h.ListAnnoucements)
+		announcements.GET("/today", h.ListTopAnnouncementsOfDay)
 
 		// criar/remover aviso afeta a empresa toda -> só ADMIN
 		admin := announcements.Group("")
