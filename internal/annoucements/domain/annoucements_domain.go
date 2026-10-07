@@ -34,6 +34,16 @@ type ListAnnoucementsResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type TopAnnouncementsOfDayResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Title     string    `json:"title"`
+	Content   string    `json:"content"`
+	Type      string    `json:"type" enums:"info,warning,success,maintenance" example:"warning"`
+	StartsAt  time.Time `json:"starts_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type ListAnnoucementsPaginateResponse struct {
 	globalDomain.PaginatedResponse[ListAnnoucementsResponse]
 }

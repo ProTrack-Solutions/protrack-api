@@ -113,6 +113,34 @@ func (h *Handler) ListAnnoucements(c *gin.Context) {
 	c.JSON(http.StatusOK, annoucements)
 }
 
+// ListTopAnnouncementsOfDay godoc
+// @Summary      Lista os 4 avisos mais importantes do dia
+// @Description  Retorna até 4 avisos vigentes agora, ordenados por importância (maintenance > warning > info > success) e, no empate, pelo mais recente
+// @Tags         announcements
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.TopAnnouncementsOfDayResponse
+// @Failure      401 {object} map[string]string "Não autorizado"
+// @Failure      500 {object} map[string]string "Erro interno no servidor"
+// @Router       /announcements/today [get]
+func (h *Handler) ListTopAnnouncementsOfDay(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	announcements, err := h.service.ListTopAnnouncementsOfDay(c.Request.Context(), companyId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, announcements)
+}
+
 // DeleteAnnoucements godoc
 // @Summary      Remove um aviso (Soft Delete)
 // @Description  Desativa um aviso específico utilizando o ID enviado como parâmetro de rota

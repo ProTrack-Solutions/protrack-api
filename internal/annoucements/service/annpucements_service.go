@@ -18,6 +18,7 @@ type RepositoryInterface interface {
 	ListAnnoucements(ctx context.Context, arg db.ListAnnoucementsParams) ([]db.ListAnnoucementsRow, error)
 	DeleteAnnoucements(ctx context.Context, arg db.DeleteAnnoucementsParams) error
 	CountAnnoucementsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
+	ListTopAnnouncementsOfDay(ctx context.Context, companyId pgtype.UUID) ([]db.ListTopAnnouncementsOfDayRow, error)
 }
 
 type Service struct {
@@ -94,4 +95,29 @@ func (s *Service) DeleteAnnoucements(ctx context.Context, Id uuid.UUID, companyI
 		ID:        pgconv.ParseUUIDToPgType(Id),
 		CompanyID: pgconv.ParseUUIDToPgType(companyId),
 	})
+}
+
+// ListTopAnnouncementsOfDay retorna os 4 avisos vigentes mais importantes
+// (manutenção > alerta > informação > sucesso; empate pelo mais recente).
+func (s *Service) ListTopAnnouncementsOfDay(ctx context.Context, companyId uuid.UUID) ([]domain.TopAnnouncementsOfDayResponse, error) {
+	announcements, err := s.repo.ListTopAnnouncementsOfDay(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return []domain.TopAnnouncementsOfDayResponse{}, err
+	}
+
+	response := []domain.TopAnnouncementsOfDayResponse{}
+
+	for _, announcement := range announcements {
+		response = append(response, domain.TopAnnouncementsOfDayResponse{
+			ID:        pgconv.PgUUIDToUUID(announcement.ID),
+			Title:     announcement.Title,
+			Content:   announcement.Content,
+			Type:      string(announcement.Type),
+			StartsAt:  pgconv.PgTimestamptzToTime(announcement.StartsAt),
+			ExpiresAt: pgconv.PgTimestamptzToTime(announcement.ExpiresAt),
+			CreatedAt: pgconv.PgTimestamptzToTime(announcement.CreatedAt),
+		})
+	}
+
+	return response, nil
 }

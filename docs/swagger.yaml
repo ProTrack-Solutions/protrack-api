@@ -165,6 +165,36 @@ definitions:
         example: info
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.TopAnnouncementsOfDayResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      starts_at:
+        type: string
+      title:
+        type: string
+      type:
+        enum:
+        - info
+        - warning
+        - success
+        - maintenance
+        example: warning
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.DemoLoginRequest:
+    properties:
+      aud:
+        type: string
+    required:
+    - aud
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ForgotPasswordRequest:
     properties:
       email:
@@ -299,10 +329,15 @@ definitions:
     properties:
       client_secret:
         description: |-
-          ClientSecret do PaymentIntent da primeira invoice. O frontend PRECISA
-          chamar stripe.confirmCardPayment(client_secret) com esse valor para
-          concluir a autenticação do cartão (incluindo 3D Secure); sem essa
-          confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
+          ClientSecret para o frontend concluir a autenticação do cartão
+          (incluindo 3D Secure). O método do Stripe.js depende de ClientSecretType:
+            - "payment_intent": stripe.confirmCardPayment(client_secret). Sem essa
+              confirmação a assinatura fica "incomplete" e expira em ~23h no Stripe.
+            - "setup_intent" (plano com trial, primeira invoice de R$0):
+              stripe.confirmCardSetup(client_secret), para o cartão poder ser
+              cobrado no fim do teste.
+        type: string
+      client_secret_type:
         type: string
       company_id:
         type: string
@@ -312,7 +347,13 @@ definitions:
           antes de considerar o cadastro concluído.
         type: boolean
       subscription_status:
-        description: 'Status da assinatura no Stripe logo após a criação (ex: "incomplete").'
+        description: |-
+          Status da assinatura no Stripe logo após a criação (ex: "incomplete",
+          ou "trialing" quando o plano tem teste grátis).
+        type: string
+      trial_end:
+        description: TrialEnd é o fim do teste grátis; nil quando o plano não tem
+          trial.
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.ResetPasswordRequest:
@@ -410,6 +451,17 @@ definitions:
         type: string
       vendor_id:
         type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableDashboardResponse:
+    properties:
+      total_due_today:
+        type: number
+      total_next_7_days:
+        type: number
+      total_overdue:
+        type: number
+      total_pending:
+        type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableSummaryResponse:
     properties:
@@ -1352,6 +1404,12 @@ definitions:
         type: string
       name:
         type: string
+      original_value_amount:
+        description: Preço "de" exibido riscado no front (opcional, maior que value_amount)
+        type: number
+      trial_days:
+        minimum: 0
+        type: integer
       value_amount:
         type: number
     required:
@@ -1392,7 +1450,12 @@ definitions:
         type: string
       name:
         type: string
+      original_price_cents:
+        description: Preço "de" (riscado); null quando não há desconto
+        type: integer
       price_cents:
+        type: integer
+      trial_days:
         type: integer
       updated_at:
         type: string
@@ -1405,8 +1468,20 @@ definitions:
         type: string
       description:
         type: string
+      highlight:
+        description: 'Ponteiros diferenciam "não enviado" (mantém o valor atual) de
+          um valor explícito (ex: highlight=false)'
+        type: boolean
+      icon:
+        type: string
       name:
         type: string
+      original_value_amount:
+        description: Enviar 0 remove o preço "de" do plano
+        type: number
+      trial_days:
+        minimum: 0
+        type: integer
       value_amount:
         type: number
     required:
@@ -1865,7 +1940,11 @@ definitions:
         type: string
       name:
         type: string
+      original_price_cents:
+        type: integer
       price_cents:
+        type: integer
+      trial_days:
         type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_subscription_management_domain.PlanFeatureResponse:
@@ -2459,6 +2538,77 @@ paths:
       summary: Remove um aviso (Soft Delete)
       tags:
       - announcements
+  /announcements/today:
+    get:
+      description: Retorna até 4 avisos vigentes agora, ordenados por importância
+        (maintenance > warning > info > success) e, no empate, pelo mais recente
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.TopAnnouncementsOfDayResponse'
+            type: array
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno no servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Lista os 4 avisos mais importantes do dia
+      tags:
+      - announcements
+  /auth/demo:
+    post:
+      consumes:
+      - application/json
+      description: Gera tokens do usuário demo, sem senha. Usado pelo botão "Ver demonstração"
+        da landing page.
+      parameters:
+      - description: Aplicação de origem
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.DemoLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse'
+        "400":
+          description: 'Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: 'Muitas tentativas (code: TOO_MANY_ATTEMPTS)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: 'Demo não configurada (code: DEMO_UNAVAILABLE)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Entra na empresa de demonstração
+      tags:
+      - auth
   /auth/forgot-password:
     post:
       consumes:
@@ -2506,6 +2656,36 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_auth_domain.LoginResponse'
+        "400":
+          description: 'Requisição inválida (code: INVALID_REQUEST, INVALID_AUD)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: 'E-mail ou senha inválidos (code: INVALID_CREDENTIALS)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'Assinatura bloqueando o acesso (code: SUBSCRIPTION_*)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: 'Muitas tentativas (code: TOO_MANY_ATTEMPTS)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: 'Erro interno (code: INTERNAL_ERROR)'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       summary: Autentica um usuário
       tags:
       - auth
@@ -2771,6 +2951,34 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza uma conta a pagar
+      tags:
+      - bills-payable
+  /bills-payable/dashboard:
+    get:
+      description: Valor em aberto total, vencido, que vence hoje e que vence nos
+        próximos 7 dias (sem contar hoje)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_bills_payable_domain.GetBillsPayableDashboardResponse'
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno no servidor
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Card de contas a pagar
       tags:
       - bills-payable
   /bills-payable/list:
@@ -5056,6 +5264,24 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "400":
+          description: Dados inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Cliente ou produto não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Estoque insuficiente
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
       summary: Cria uma venda
@@ -5063,6 +5289,8 @@ paths:
       - sales
   /sales/{id}:
     delete:
+      description: 'Desfaz a venda: devolve o estoque, cancela as parcelas em aberto
+        e abate o saldo devedor do cliente'
       parameters:
       - description: ID da venda
         in: path
@@ -5074,9 +5302,21 @@ paths:
       responses:
         "204":
           description: No Content
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
       security:
       - BearerAuth: []
-      summary: Remove uma venda
+      summary: Cancela uma venda
       tags:
       - sales
     get:
@@ -5126,6 +5366,8 @@ paths:
       - sales
   /sales/{saleId}:
     put:
+      description: Altera desconto (R$), entrada, parcelas e vencimento de uma venda
+        a prazo. Permitido até 2h após a venda e sem parcelas pagas.
       parameters:
       - description: ID da venda
         in: path

@@ -79,6 +79,8 @@ type Querier interface {
 	GetBillCategoriesById(ctx context.Context, id pgtype.UUID) (BillCategory, error)
 	GetBillsById(ctx context.Context, arg GetBillsByIdParams) (BillsPayable, error)
 	GetBillsByStatus(ctx context.Context, arg GetBillsByStatusParams) ([]BillsPayable, error)
+	// Valor em aberto (descontando o que já foi pago) agrupado por vencimento
+	GetBillsPayableDashboard(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableDashboardRow, error)
 	GetBillsPayableSummary(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableSummaryRow, error)
 	GetCashInFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashInFlowByCategoryRow, error)
 	GetCashInFlowCategoryByPeriod(ctx context.Context, arg GetCashInFlowCategoryByPeriodParams) ([]GetCashInFlowCategoryByPeriodRow, error)
@@ -188,6 +190,8 @@ type Querier interface {
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
+	// Avisos vigentes agora, do mais importante (manutenção) ao menos importante (sucesso)
+	ListTopAnnouncementsOfDay(ctx context.Context, companyID pgtype.UUID) ([]ListTopAnnouncementsOfDayRow, error)
 	ListUsers(ctx context.Context) ([]User, error)
 	ListUsersByCompany(ctx context.Context, companyID pgtype.UUID) ([]User, error)
 	ListVendors(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
