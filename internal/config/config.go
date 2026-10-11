@@ -39,7 +39,8 @@ type Config struct {
 	StripeSecretKey     string
 	StripeWebhookSecret string
 
-	WebhookURLDiscord string
+	WebhookURLDiscord       string
+	StripeWebhookURLDiscord string
 
 	SMTPHost     string
 	SMTPPort     string
@@ -83,6 +84,7 @@ func LoadConfig() (*Config, error) {
 		StripeSecretKey:              getEnv("STRIPE_SECRET_KEY"),
 		StripeWebhookSecret:          getEnv("STRIPE_WEBHOOK_SECRET"),
 		WebhookURLDiscord:            getEnv("WEBHOOK_URL_DISCORD"),
+		StripeWebhookURLDiscord:      getEnv("STRIPE_WEBHOOK_DISCORD_URL"),
 		DBSimpleProtocol:             getEnvBool("DB_SIMPLE_PROTOCOL"),
 		SMTPHost:                     getEnv("SMTP_HOST"),
 		SMTPPort:                     getEnv("SMTP_PORT"),

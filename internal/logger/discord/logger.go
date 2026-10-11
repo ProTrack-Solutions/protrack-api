@@ -24,8 +24,14 @@ type DiscordLogger struct {
 }
 
 func NewDiscordLogger(cfg *config.Config) *DiscordLogger {
+	return NewDiscordLoggerWithURL(cfg.WebhookURLDiscord)
+}
+
+// NewDiscordLoggerWithURL cria um logger que envia para um canal específico
+// do Discord (ex: canal dedicado aos webhooks do Stripe).
+func NewDiscordLoggerWithURL(webhookURL string) *DiscordLogger {
 	return &DiscordLogger{
-		webhookURL: cfg.WebhookURLDiscord,
+		webhookURL: webhookURL,
 		client: &http.Client{
 			Timeout: 5 * time.Second,
 		},
