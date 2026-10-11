@@ -10,6 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// StripeWebhookPath é a rota do webhook do Stripe, cujos logs vão para o canal
+// próprio (STRIPE_WEBHOOK_DISCORD_URL) em vez do canal geral.
+const StripeWebhookPath = "/api/v1/stripe/webhook"
+
 func GinDiscordErrorMiddleware(discordLog *discord.DiscordLogger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
@@ -29,6 +33,12 @@ func GinDiscordErrorMiddleware(discordLog *discord.DiscordLogger) gin.HandlerFun
 
 		// Processa os próximos handlers
 		c.Next()
+
+		// O webhook do Stripe registra os próprios erros em um canal dedicado
+		// do Discord; não duplica no canal geral.
+		if c.FullPath() == StripeWebhookPath {
+			return
+		}
 
 		// Intercepta se o contexto tiver erros acumulados ou status 500+
 		if c.Writer.Status() >= 500 {
