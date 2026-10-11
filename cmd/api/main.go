@@ -185,6 +185,9 @@ func main() {
 		c.Next()
 	})
 
+	// Fica antes do middleware de erro para também registrar requisições que
+	// terminaram em panic (já convertidas em 500).
+	r.Use(middleware.GinDiscordRequestLogMiddleware(discord.NewDiscordLoggerWithURL(cfg.APILogURLDiscord)))
 	r.Use(middleware.GinDiscordErrorMiddleware(discordLogger))
 
 	if cfg.AppEnv != "production" {
