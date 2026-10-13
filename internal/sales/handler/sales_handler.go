@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -196,6 +197,42 @@ func (h *Handler) GetSaleById(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"sale": sale})
+}
+
+// GetSaleReceipt godoc
+// @Summary      Gera o recibo da venda em PDF
+// @Description  Busca a venda com empresa, cliente, vendedor e itens e devolve o recibo pronto para impressão
+// @Tags         sales
+// @Produce      application/pdf
+// @Security     BearerAuth
+// @Param        id path string true "ID da venda"
+// @Success      200 {file} file
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /sales/{id}/receipt [get]
+func (h *Handler) GetSaleReceipt(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id da venda inválido"})
+		return
+	}
+
+	pdfBuffer, err := h.service.GenerateSaleReceiptPDF(c.Request.Context(), id, companyId)
+	if err != nil {
+		respondSaleError(c, err)
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"recibo_venda_%s.pdf\"", id))
+	c.Data(http.StatusOK, "application/pdf", pdfBuffer.Bytes())
 }
 
 // ListSales godoc

@@ -201,6 +201,34 @@ func (mr *MockRepositoryInterfaceMockRecorder) UpdateOverdueSalesAndAccounts(ctx
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateOverdueSalesAndAccounts", reflect.TypeOf((*MockRepositoryInterface)(nil).UpdateOverdueSalesAndAccounts), ctx)
 }
 
+// GetSaleReceipt mocks o método GetSaleReceipt.
+func (m *MockRepositoryInterface) GetSaleReceipt(ctx context.Context, arg db.GetSaleReceiptParams) (db.GetSaleReceiptRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSaleReceipt", ctx, arg)
+	ret0, _ := ret[0].(db.GetSaleReceiptRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetSaleReceipt(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSaleReceipt", reflect.TypeOf((*MockRepositoryInterface)(nil).GetSaleReceipt), ctx, arg)
+}
+
+// ListSaleReceiptItems mocks o método ListSaleReceiptItems.
+func (m *MockRepositoryInterface) ListSaleReceiptItems(ctx context.Context, saleId pgtype.UUID) ([]db.ListSaleReceiptItemsRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSaleReceiptItems", ctx, saleId)
+	ret0, _ := ret[0].([]db.ListSaleReceiptItemsRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) ListSaleReceiptItems(ctx, saleId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSaleReceiptItems", reflect.TypeOf((*MockRepositoryInterface)(nil).ListSaleReceiptItems), ctx, saleId)
+}
+
 // GetSaleByIdJust mocks o método GetSaleByIdJust.
 func (m *MockRepositoryInterface) GetSaleByIdJust(ctx context.Context, saleId pgtype.UUID) (db.GetSaleByIdJustRow, error) {
 	m.ctrl.T.Helper()
