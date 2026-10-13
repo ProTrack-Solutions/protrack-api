@@ -14,6 +14,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		sales.POST("", h.CreateSale)
 		sales.DELETE("/:id", h.DeleteSale)
 		sales.GET("/:id", h.GetSaleById)
+		sales.GET("/:id/receipt", h.GetSaleReceipt)
 		sales.GET("/list/", h.ListSales)
 		sales.GET("/list/company", h.ListSalesByCompanyAndStatus)
 		sales.GET("/count", h.CountSales)
