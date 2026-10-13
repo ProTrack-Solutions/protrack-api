@@ -42,6 +42,16 @@ func (r *Repository) GetSaleById(ctx context.Context, arg db.GetSaleByIdParams) 
 	return q.GetSaleById(ctx, arg)
 }
 
+func (r *Repository) GetSaleReceipt(ctx context.Context, arg db.GetSaleReceiptParams) (db.GetSaleReceiptRow, error) {
+	q := db.New(r.db)
+	return q.GetSaleReceipt(ctx, arg)
+}
+
+func (r *Repository) ListSaleReceiptItems(ctx context.Context, saleId pgtype.UUID) ([]db.ListSaleReceiptItemsRow, error) {
+	q := db.New(r.db)
+	return q.ListSaleReceiptItems(ctx, saleId)
+}
+
 func (r *Repository) ListSales(ctx context.Context, companyId pgtype.UUID) ([]db.ListSalesRow, error) {
 	q := db.New(r.db)
 	return q.ListSales(ctx, companyId)

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -20,6 +21,7 @@ import (
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	metaWhatsAppService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
@@ -42,6 +44,8 @@ type RepositoryInterface interface {
 	CreateSales(ctx context.Context, arg db.CreateSaleParams) (pgtype.UUID, error)
 	DeleteSales(ctx context.Context, arg db.DeleteSaleParams) error
 	GetSaleById(ctx context.Context, arg db.GetSaleByIdParams) (db.GetSaleByIdRow, error)
+	GetSaleReceipt(ctx context.Context, arg db.GetSaleReceiptParams) (db.GetSaleReceiptRow, error)
+	ListSaleReceiptItems(ctx context.Context, saleId pgtype.UUID) ([]db.ListSaleReceiptItemsRow, error)
 	ListSales(ctx context.Context, companyId pgtype.UUID) ([]db.ListSalesRow, error)
 	UpdateSaleStatus(ctx context.Context, arg db.UpdateSaleStatusParams) error
 	ListSalesByCompanyAndStatus(ctx context.Context, arg db.ListSalesByCompanyAndStatusParams) ([]db.ListSalesByCompanyAndStatusRow, error)
@@ -1575,4 +1579,120 @@ func (s *Service) GetInventoryTurnover(ctx context.Context, companyID uuid.UUID)
 	}
 
 	return domain.GetInventoryTurnoverResponse{InventoryTurnover: math.Round(stockTurnover*100) / 100}, nil
+}
+
+// GenerateSaleReceiptPDF busca a venda com empresa, cliente, vendedor e itens e gera o recibo em PDF.
+func (s *Service) GenerateSaleReceiptPDF(ctx context.Context, id, companyId uuid.UUID) (*bytes.Buffer, error) {
+	saleID := pgconv.ParseUUIDToPgType(id)
+
+	sale, err := s.repo.GetSaleReceipt(ctx, db.GetSaleReceiptParams{
+		ID:        saleID,
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrSaleNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	items, err := s.repo.ListSaleReceiptItems(ctx, saleID)
+	if err != nil {
+		return nil, err
+	}
+
+	loc := receiptLocation(pgconv.ParsePgTextToString(sale.CompanyTimezone))
+
+	companyName := pgconv.ParsePgTextToString(sale.CompanyTradeName)
+	if companyName == "" {
+		companyName = sale.CompanyName
+	}
+
+	customerDocument := pgconv.ParsePgTextToString(sale.CustomerCpf)
+	if customerDocument == "" {
+		customerDocument = pgconv.ParsePgTextToString(sale.BuyerDocument)
+	}
+
+	receipt := domain.SaleReceipt{
+		SaleID:         pgconv.PgUUIDToUUID(sale.ID),
+		SaleAt:         pgconv.PgTimestamptzToTime(sale.CreatedAt).In(loc),
+		PrintedAt:      time.Now().In(loc),
+		Subtotal:       pgconv.PgNumericToFloat64(sale.Subtotal),
+		DiscountAmount: pgconv.PgNumericToFloat64(sale.DiscountAmount),
+		TotalAmount:    pgconv.PgNumericToFloat64(sale.TotalAmount),
+		DownPayment:    pgconv.PgNumericToFloat64(sale.DownPayment),
+		Installments:   sale.InstallmentsCount,
+		PaymentMethod:  sale.PaymentMethod,
+		Status:         sale.Status,
+		SellerName:     pgconv.ParsePgTextToString(sale.SellerName),
+		Company: domain.SaleReceiptCompany{
+			Name:     companyName,
+			Document: pgconv.ParsePgTextToString(sale.CompanyDocument),
+			Phone:    pgconv.ParsePgTextToString(sale.CompanyPhone),
+			Address: joinReceiptAddress(
+				streetWithNumber(pgconv.ParsePgTextToString(sale.CompanyAddressStreet), pgconv.ParsePgTextToString(sale.CompanyAddressNumber)),
+				pgconv.ParsePgTextToString(sale.CompanyAddressNeighborhood),
+				strings.TrimSpace(pgconv.ParsePgTextToString(sale.CompanyAddressCity)+" "+pgconv.ParsePgTextToString(sale.CompanyAddressState)),
+			),
+		},
+		Customer: domain.SaleReceiptCustomer{
+			Name:     pgconv.ParsePgTextToString(sale.CustomerName),
+			Document: customerDocument,
+			Rg:       pgconv.ParsePgTextToString(sale.CustomerRg),
+			Address: joinReceiptAddress(
+				streetWithNumber(pgconv.ParsePgTextToString(sale.CustomerAddressStreet), pgconv.ParsePgTextToString(sale.CustomerAddressNumber)),
+				pgconv.ParsePgTextToString(sale.CustomerAddressNeighborhood),
+			),
+			City:  pgconv.ParsePgTextToString(sale.CustomerAddressCity),
+			State: pgconv.ParsePgTextToString(sale.CustomerAddressState),
+		},
+		Items: make([]domain.SaleReceiptItem, 0, len(items)),
+	}
+
+	for _, item := range items {
+		unitPrice := pgconv.PgNumericToFloat64(item.UnitPrice)
+		receipt.Items = append(receipt.Items, domain.SaleReceiptItem{
+			Code:        pgconv.ParsePgTextToString(item.Barcode),
+			Description: item.ProductName,
+			Unit:        item.Unit,
+			Quantity:    item.Quantity,
+			UnitPrice:   unitPrice,
+			Total:       roundMoney(unitPrice * float64(item.Quantity)),
+		})
+	}
+
+	return generator.GenerateSaleReceiptPDF(receipt)
+}
+
+// receiptLocation usa o fuso da empresa; sem fuso válido cai no horário de Brasília.
+func receiptLocation(timezone string) *time.Location {
+	if timezone != "" {
+		if loc, err := time.LoadLocation(timezone); err == nil {
+			return loc
+		}
+	}
+	if loc, err := time.LoadLocation("America/Sao_Paulo"); err == nil {
+		return loc
+	}
+	return time.FixedZone("BRT", -3*60*60)
+}
+
+// joinReceiptAddress junta as partes não vazias do endereço separadas por " - ".
+func joinReceiptAddress(parts ...string) string {
+	filled := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part != "" {
+			filled = append(filled, part)
+		}
+	}
+	return strings.Join(filled, " - ")
+}
+
+// streetWithNumber formata "Rua X, 62", omitindo o número quando não informado.
+func streetWithNumber(street, number string) string {
+	street, number = strings.TrimSpace(street), strings.TrimSpace(number)
+	if street == "" || number == "" {
+		return street
+	}
+	return street + ", " + number
 }

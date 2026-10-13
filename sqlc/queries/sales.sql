@@ -442,3 +442,52 @@ SELECT COALESCE(SUM(balance), 0)::numeric AS total_balance
 FROM accounts_receivable
 WHERE status IN ('pending', 'overdue', 'partial')
   AND company_id = $1;
+-- name: GetSaleReceipt :one
+-- Cabeçalho do recibo de venda: dados da venda, da empresa, do cliente e do vendedor
+SELECT s.id,
+    s.sale_at,
+    s.created_at,
+    s.subtotal,
+    s.discount_amount,
+    s.total_amount,
+    s.down_payment,
+    s.installments_count,
+    s.payment_method::text AS payment_method,
+    s.status::text AS status,
+    s.buyer_document,
+    co.name AS company_name,
+    co.trade_name AS company_trade_name,
+    co.document AS company_document,
+    co.phone AS company_phone,
+    co.address_street AS company_address_street,
+    co.address_number AS company_address_number,
+    co.address_neighborhood AS company_address_neighborhood,
+    co.address_city AS company_address_city,
+    co.address_state AS company_address_state,
+    co.timezone AS company_timezone,
+    c.full_name AS customer_name,
+    c.cpf AS customer_cpf,
+    c.rg AS customer_rg,
+    c.address_street AS customer_address_street,
+    c.address_number AS customer_address_number,
+    c.address_neighborhood AS customer_address_neighborhood,
+    c.address_city AS customer_address_city,
+    c.address_state AS customer_address_state,
+    u.name AS seller_name
+FROM sales s
+    INNER JOIN companies co ON s.company_id = co.id
+    LEFT JOIN customers c ON s.customer_id = c.id
+    LEFT JOIN users u ON s.created_by = u.id
+WHERE s.id = $1
+    AND s.company_id = $2;
+-- name: ListSaleReceiptItems :many
+SELECT p.barcode,
+    p.name AS product_name,
+    p.unit::text AS unit,
+    si.quantity,
+    si.unit_price
+FROM sale_items si
+    INNER JOIN products p ON si.product_id = p.id
+WHERE si.sale_id = $1
+ORDER BY si.created_at,
+    p.name;

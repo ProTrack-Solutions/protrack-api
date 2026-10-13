@@ -331,3 +331,46 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 
 	return nil
 }
+
+// SaleReceipt reúne os dados necessários para imprimir o recibo de uma venda.
+type SaleReceipt struct {
+	SaleID         uuid.UUID
+	SaleAt         time.Time
+	PrintedAt      time.Time
+	Subtotal       float64
+	DiscountAmount float64
+	TotalAmount    float64
+	DownPayment    float64
+	Installments   int32
+	PaymentMethod  string
+	Status         string
+	SellerName     string
+	Company        SaleReceiptCompany
+	Customer       SaleReceiptCustomer
+	Items          []SaleReceiptItem
+}
+
+type SaleReceiptCompany struct {
+	Name     string
+	Document string
+	Phone    string
+	Address  string
+}
+
+type SaleReceiptCustomer struct {
+	Name     string
+	Document string
+	Rg       string
+	Address  string
+	City     string
+	State    string
+}
+
+type SaleReceiptItem struct {
+	Code        string
+	Description string
+	Unit        string
+	Quantity    int32
+	UnitPrice   float64
+	Total       float64
+}
