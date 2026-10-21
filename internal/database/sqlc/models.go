@@ -55,6 +55,50 @@ func (ns NullAnnouncementType) Value() (driver.Value, error) {
 	return string(ns.AnnouncementType), nil
 }
 
+type StockMovementType string
+
+const (
+	StockMovementTypeENTRY      StockMovementType = "ENTRY"
+	StockMovementTypeSALE       StockMovementType = "SALE"
+	StockMovementTypeSALECANCEL StockMovementType = "SALE_CANCEL"
+	StockMovementTypeADJUSTMENT StockMovementType = "ADJUSTMENT"
+)
+
+func (e *StockMovementType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = StockMovementType(s)
+	case string:
+		*e = StockMovementType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for StockMovementType: %T", src)
+	}
+	return nil
+}
+
+type NullStockMovementType struct {
+	StockMovementType StockMovementType `json:"stock_movement_type"`
+	Valid             bool              `json:"valid"` // Valid is true if StockMovementType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullStockMovementType) Scan(value interface{}) error {
+	if value == nil {
+		ns.StockMovementType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.StockMovementType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullStockMovementType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.StockMovementType), nil
+}
+
 type UnitOfMeasure string
 
 const (
@@ -601,6 +645,18 @@ type SaleItem struct {
 	Quantity  int32              `json:"quantity"`
 	UnitPrice pgtype.Numeric     `json:"unit_price"`
 	Discount  pgtype.Numeric     `json:"discount"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type StockMovement struct {
+	ID        pgtype.UUID        `json:"id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	ProductID pgtype.UUID        `json:"product_id"`
+	SaleID    pgtype.UUID        `json:"sale_id"`
+	Type      StockMovementType  `json:"type"`
+	Quantity  int32              `json:"quantity"`
+	Reason    pgtype.Text        `json:"reason"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 

@@ -21,6 +21,7 @@ func (h *Handler) RegisterRoute(r *gin.RouterGroup) {
 		product.GET("/top-products", h.GetTop5BestSellingProducts)
 		product.GET("/:id", h.GetProductById)
 		product.PUT("/:id", h.UpdateProduct)
+		product.POST("/:id/stock-movements", h.CreateStockMovement)
 
 		// custo total do estoque revela custo de compra/margem da empresa -> ADMIN
 		admin := product.Group("")

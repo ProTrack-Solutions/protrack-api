@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -15,6 +16,7 @@ import (
 	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	subscriptionsService "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/service"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -27,6 +29,7 @@ type RepositoryInterface interface {
 	ListProductsByCategoryId(ctx context.Context, arg db.ListProductsByCategoryIdParams) ([]db.Product, error)
 	ListProductsByCompany(ctx context.Context, companyId pgtype.UUID) ([]db.ListProductsByCompanyRow, error)
 	UpdateProduct(ctx context.Context, arg db.UpdateProductParams) (db.Product, error)
+	AdjustStock(ctx context.Context, arg db.AdjustStockParams) (db.AdjustStockRow, error)
 	DecrementStock(ctx context.Context, arg db.DecrementStockParams) error
 	CountProducts(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyId pgtype.UUID) (db.GetProductsPerformanceSummaryRow, error)
@@ -327,25 +330,27 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 
 	for _, product := range products {
 		response = append(response, domain.ListProductsByCompanyRow{
-			ID:           pgconv.PgUUIDToUUID(product.ID),
-			CompanyID:    pgconv.PgUUIDToUUID(product.CompanyID),
-			CategoryID:   pgconv.PgUUIDToUUID(product.CategoryID),
-			Name:         product.Name,
-			Description:  pgconv.ParsePgTextToString(product.Description),
-			Barcode:      pgconv.ParsePgTextToString(product.Barcode),
-			Quantity:     int32(pgconv.PgInt4ToInt(product.Quantity)),
-			Size:         pgconv.ParsePgTextToString(product.Size),
-			CostPrice:    pgconv.PgNumericToFloat64(product.CostPrice),
-			SalePrice:    pgconv.PgNumericToFloat64(product.SalePrice),
-			CreatedBy:    pgconv.PgUUIDToUUID(product.CreatedBy),
-			UpdatedBy:    pgconv.PgUUIDToUUID(product.UpdatedBy),
-			DeletedBy:    pgconv.PgUUIDToUUID(product.DeletedBy),
-			CreatedAt:    pgconv.PgTimestamptzToTime(product.CreatedAt),
-			UpdatedAt:    pgconv.PgTimestamptzToTime(product.UpdatedAt),
-			DeletedAt:    pgconv.PgTimestamptzToTime(product.DeletedAt),
-			CategoryName: product.CategoryName,
-			SellInBulk:   product.SellInBulk,
-			Unit:         string(product.Unit),
+			ID:              pgconv.PgUUIDToUUID(product.ID),
+			CompanyID:       pgconv.PgUUIDToUUID(product.CompanyID),
+			CategoryID:      pgconv.PgUUIDToUUID(product.CategoryID),
+			Name:            product.Name,
+			Description:     pgconv.ParsePgTextToString(product.Description),
+			Barcode:         pgconv.ParsePgTextToString(product.Barcode),
+			Quantity:        int32(pgconv.PgInt4ToInt(product.Quantity)),
+			Size:            pgconv.ParsePgTextToString(product.Size),
+			CostPrice:       pgconv.PgNumericToFloat64(product.CostPrice),
+			SalePrice:       pgconv.PgNumericToFloat64(product.SalePrice),
+			CreatedBy:       pgconv.PgUUIDToUUID(product.CreatedBy),
+			UpdatedBy:       pgconv.PgUUIDToUUID(product.UpdatedBy),
+			DeletedBy:       pgconv.PgUUIDToUUID(product.DeletedBy),
+			CreatedAt:       pgconv.PgTimestamptzToTime(product.CreatedAt),
+			UpdatedAt:       pgconv.PgTimestamptzToTime(product.UpdatedAt),
+			DeletedAt:       pgconv.PgTimestamptzToTime(product.DeletedAt),
+			CategoryName:    product.CategoryName,
+			SellInBulk:      product.SellInBulk,
+			Unit:            string(product.Unit),
+			TotalRegistered: product.TotalRegistered,
+			TotalSold:       product.TotalSold,
 		})
 	}
 
@@ -371,7 +376,6 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		Description: currentProduct.Description,
 		CategoryID:  currentProduct.CategoryID,
 		Barcode:     currentProduct.Barcode,
-		Quantity:    currentProduct.Quantity,
 		Size:        currentProduct.Size,
 		CostPrice:   currentProduct.CostPrice,
 		SalePrice:   currentProduct.SalePrice,
@@ -400,6 +404,54 @@ func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.Up
 		UpdatedBy:   pgconv.PgUUIDToUUID(product.UpdatedBy),
 		UpdatedAt:   pgconv.PgTimestamptzToTime(product.UpdatedAt),
 	}, nil
+}
+
+// CreateStockMovement lança uma entrada ou ajuste manual, alterando o saldo de forma relativa
+// (quantity + delta) para não sobrescrever vendas feitas ao mesmo tempo.
+func (s *Service) CreateStockMovement(ctx context.Context, userId, companyId, productId uuid.UUID, req domain.CreateStockMovementRequest) (domain.StockMovementResponse, error) {
+	if err := domain.ValidateCreateStockMovementRequest(req); err != nil {
+		return domain.StockMovementResponse{}, err
+	}
+
+	movement, err := s.repo.AdjustStock(ctx, db.AdjustStockParams{
+		Quantity:  req.Quantity,
+		CreatedBy: pgconv.ParseUUIDToPgType(userId),
+		ProductID: pgconv.ParseUUIDToPgType(productId),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+		Type:      db.StockMovementType(req.Type),
+		Reason:    pgconv.ParseStringToPgText(strings.TrimSpace(req.Reason)),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.StockMovementResponse{}, s.explainRejectedStockMovement(ctx, companyId, productId)
+	}
+	if err != nil {
+		return domain.StockMovementResponse{}, err
+	}
+
+	return domain.StockMovementResponse{
+		ID:              pgconv.PgUUIDToUUID(movement.ID),
+		ProductID:       pgconv.PgUUIDToUUID(movement.ProductID),
+		Type:            string(movement.Type),
+		Quantity:        movement.Quantity,
+		Reason:          pgconv.ParsePgTextToString(movement.Reason),
+		CurrentQuantity: int32(pgconv.PgInt4ToInt(movement.CurrentQuantity)),
+		CreatedAt:       pgconv.PgTimestamptzToTime(movement.CreatedAt),
+	}, nil
+}
+
+// explainRejectedStockMovement descobre por que o AdjustStock não alterou nenhuma linha.
+func (s *Service) explainRejectedStockMovement(ctx context.Context, companyId, productId uuid.UUID) error {
+	product, err := s.repo.GetProductById(ctx, pgconv.ParseUUIDToPgType(productId))
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && pgconv.PgUUIDToUUID(product.CompanyID) != companyId) {
+		return domain.ErrProductNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if product.SellInBulk {
+		return domain.ErrProductSoldInBulk
+	}
+	return domain.ErrInsufficientStock
 }
 
 func (s *Service) DecrementStock(ctx context.Context, req domain.DecrementStockRequest) error {

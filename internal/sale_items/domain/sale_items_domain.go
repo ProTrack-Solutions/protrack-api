@@ -17,6 +17,7 @@ type CreateSaleItemRequest struct {
 	Quantity  int32     `json:"quantity"`
 	UnitPrice float64   `json:"unit_price"`
 	Discount  float64   `json:"discount"`
+	CreatedBy uuid.UUID `json:"created_by"`
 }
 
 type ListItemsFromPendingSaleRow struct {
