@@ -28,7 +28,8 @@ func (r *Repository) queries() *db.Queries {
 }
 
 func (r *Repository) CreateProduct(ctx context.Context, arg db.CreateProductParams) (db.Product, error) {
-	return r.queries().CreateProduct(ctx, arg)
+	product, err := r.queries().CreateProduct(ctx, arg)
+	return db.Product(product), err
 }
 
 func (r *Repository) DeleteProduct(ctx context.Context, arg db.DeleteProductParams) error {
@@ -55,8 +56,16 @@ func (r *Repository) UpdateProduct(ctx context.Context, arg db.UpdateProductPara
 	return r.queries().UpdateProduct(ctx, arg)
 }
 
+func (r *Repository) AdjustStock(ctx context.Context, arg db.AdjustStockParams) (db.AdjustStockRow, error) {
+	return r.queries().AdjustStock(ctx, arg)
+}
+
 func (r *Repository) DecrementStock(ctx context.Context, arg db.DecrementStockParams) error {
 	return r.queries().DecrementStock(ctx, arg)
+}
+
+func (r *Repository) CreateStockMovement(ctx context.Context, arg db.CreateStockMovementParams) error {
+	return r.queries().CreateStockMovement(ctx, arg)
 }
 
 func (r *Repository) CountProducts(ctx context.Context, companyId pgtype.UUID) (int64, error) {

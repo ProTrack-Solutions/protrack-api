@@ -12,6 +12,10 @@ import (
 
 type Querier interface {
 	AddModuleToDepartment(ctx context.Context, arg AddModuleToDepartmentParams) error
+	// Soma (ou subtrai) a quantidade ao saldo atual e registra a movimentação na mesma instrução.
+	// Incremento relativo + trava da linha pelo UPDATE evitam perder vendas concorrentes.
+	// Nenhuma linha retornada = produto inexistente, a granel ou sem saldo suficiente.
+	AdjustStock(ctx context.Context, arg AdjustStockParams) (AdjustStockRow, error)
 	CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -44,10 +48,12 @@ type Querier interface {
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.UUID, error)
 	CreatePlanFeature(ctx context.Context, arg CreatePlanFeatureParams) error
-	CreateProduct(ctx context.Context, arg CreateProductParams) (Product, error)
+	// Registra a entrada inicial em stock_movements na mesma instrução (produtos a granel não controlam estoque)
+	CreateProduct(ctx context.Context, arg CreateProductParams) (CreateProductRow, error)
 	CreateProductCategory(ctx context.Context, arg CreateProductCategoryParams) (ProductCategory, error)
 	CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error)
 	CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) error
+	CreateStockMovement(ctx context.Context, arg CreateStockMovementParams) error
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
@@ -229,6 +235,7 @@ type Querier interface {
 	UpdateOwnProfile(ctx context.Context, arg UpdateOwnProfileParams) error
 	UpdatePasswordHash(ctx context.Context, arg UpdatePasswordHashParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) error
+	// A quantidade não é editada aqui: entradas e ajustes de estoque passam pelo AdjustStock, que registra a movimentação
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
 	UpdateSale(ctx context.Context, arg UpdateSaleParams) error

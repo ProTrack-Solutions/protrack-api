@@ -18,8 +18,19 @@ import (
 // respondProductError mapeia erros de domínio conhecidos para status HTTP apropriados,
 // evitando que violações de constraint (nome duplicado, categoria inexistente) virem 500.
 func respondProductError(c *gin.Context, err error) {
-	if errors.Is(err, domain.ErrProductCategoryNotFound) {
+	switch {
+	case errors.Is(err, domain.ErrProductCategoryNotFound),
+		errors.Is(err, domain.ErrInvalidStockMovementType),
+		errors.Is(err, domain.ErrInvalidStockMovementQuantity),
+		errors.Is(err, domain.ErrStockMovementReasonRequired),
+		errors.Is(err, domain.ErrProductSoldInBulk):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	case errors.Is(err, domain.ErrProductNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	case errors.Is(err, domain.ErrInsufficientStock):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -261,6 +272,54 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"product": product})
+}
+
+// CreateStockMovement godoc
+// @Summary      Lança entrada ou ajuste de estoque
+// @Description  ENTRY soma ao estoque (quantidade positiva). ADJUSTMENT corrige o saldo (positivo ou negativo) e exige motivo.
+// @Tags         products
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do produto"
+// @Param        movement body domain.CreateStockMovementRequest true "Movimentação"
+// @Success      201 {object} domain.StockMovementResponse
+// @Router       /product/{id}/stock-movements [post]
+func (h *Handler) CreateStockMovement(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "company_id null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	userId, err := uuid.Parse(c.GetString("sub"))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		return
+	}
+
+	productId, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var req domain.CreateStockMovementRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	movement, err := h.service.CreateStockMovement(c.Request.Context(), userId, companyId, productId, req)
+	if err != nil {
+		respondProductError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"stock_movement": movement})
 }
 
 // CountProducts godoc

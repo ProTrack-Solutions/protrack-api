@@ -16,6 +16,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	subscriptionsDomain "github.com/ProTrack-Solutions/protrack-api/internal/subscriptions/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/mock/gomock"
 )
@@ -823,6 +824,107 @@ func TestUpdateProduct_UpdateRepositoryError(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório ao atualizar")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// CreateStockMovement
+// ---------------------------------------------------------------------------
+
+func TestCreateStockMovement_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	userID, companyID, productID, movementID := uuid.New(), uuid.New(), uuid.New(), uuid.New()
+
+	repo.EXPECT().
+		AdjustStock(gomock.Any(), db.AdjustStockParams{
+			Quantity:  -2,
+			CreatedBy: pgconv.ParseUUIDToPgType(userID),
+			ProductID: pgconv.ParseUUIDToPgType(productID),
+			CompanyID: pgconv.ParseUUIDToPgType(companyID),
+			Type:      db.StockMovementTypeADJUSTMENT,
+			Reason:    pgconv.ParseStringToPgText("Avaria"),
+		}).
+		Return(db.AdjustStockRow{
+			ID:              pgconv.ParseUUIDToPgType(movementID),
+			ProductID:       pgconv.ParseUUIDToPgType(productID),
+			Type:            db.StockMovementTypeADJUSTMENT,
+			Quantity:        -2,
+			Reason:          pgconv.ParseStringToPgText("Avaria"),
+			CurrentQuantity: pgconv.IntToPgInt4(48),
+		}, nil)
+
+	resp, err := svc.CreateStockMovement(context.Background(), userID, companyID, productID, domain.CreateStockMovementRequest{
+		Type:     "ADJUSTMENT",
+		Quantity: -2,
+		Reason:   " Avaria ",
+	})
+	if err != nil {
+		t.Fatalf("esperava nil, obteve: %v", err)
+	}
+	if resp.ID != movementID || resp.CurrentQuantity != 48 || resp.Quantity != -2 {
+		t.Errorf("resposta inesperada: %+v", resp)
+	}
+}
+
+func TestCreateStockMovement_InvalidRequestDoesNotHitRepository(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	_, err := svc.CreateStockMovement(context.Background(), uuid.New(), uuid.New(), uuid.New(), domain.CreateStockMovementRequest{
+		Type:     "ENTRY",
+		Quantity: -5,
+	})
+	if !errors.Is(err, domain.ErrInvalidStockMovementQuantity) {
+		t.Fatalf("esperava ErrInvalidStockMovementQuantity, obteve: %v", err)
+	}
+}
+
+func TestCreateStockMovement_Rejected(t *testing.T) {
+	companyID, productID := uuid.New(), uuid.New()
+
+	bulkProduct := buildDbProduct(productID, companyID, uuid.New(), uuid.New())
+	bulkProduct.SellInBulk = true
+
+	cases := []struct {
+		name    string
+		product db.Product
+		getErr  error
+		want    error
+	}{
+		{"produto inexistente", db.Product{}, pgx.ErrNoRows, domain.ErrProductNotFound},
+		{"produto de outra empresa", buildDbProduct(productID, uuid.New(), uuid.New(), uuid.New()), nil, domain.ErrProductNotFound},
+		{"produto a granel", bulkProduct, nil, domain.ErrProductSoldInBulk},
+		{"saldo insuficiente", buildDbProduct(productID, companyID, uuid.New(), uuid.New()), nil, domain.ErrInsufficientStock},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repo := mocks.NewMockRepositoryInterface(ctrl)
+			svc := newService(t, repo)
+
+			repo.EXPECT().AdjustStock(gomock.Any(), gomock.Any()).Return(db.AdjustStockRow{}, pgx.ErrNoRows)
+			repo.EXPECT().GetProductById(gomock.Any(), pgconv.ParseUUIDToPgType(productID)).Return(tc.product, tc.getErr)
+
+			_, err := svc.CreateStockMovement(context.Background(), uuid.New(), companyID, productID, domain.CreateStockMovementRequest{
+				Type:     "ADJUSTMENT",
+				Quantity: -1000,
+				Reason:   "Inventário",
+			})
+			if !errors.Is(err, tc.want) {
+				t.Errorf("esperava %v, obteve %v", tc.want, err)
+			}
+		})
 	}
 }
 
