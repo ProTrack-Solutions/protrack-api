@@ -42,7 +42,7 @@ func NewService(repo *repository.Repository, pool *pgxpool.Pool, productRepo *pr
 }
 
 // CreateSaleItemInTx cria um item de venda dentro de uma transação existente.
-// Usado pelo CreateSale para garantir atomicidade (sale + items + decremento de estoque).
+// Usado pelo CreateSale para garantir atomicidade (sale + items + decremento de estoque + movimentação).
 func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain.CreateSaleItemRequest, companyID uuid.UUID) error {
 	txRepo := s.repo.WithTx(tx)
 	txProductRepo := s.productRepo.WithTx(tx)
@@ -81,6 +81,17 @@ func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain
 
 		if productAfter.Quantity != pgconv.IntToPgInt4(int(quantityBefore-req.Quantity)) {
 			return fmt.Errorf("%w para o produto %s", domain.ErrInsufficientStock, product.Name)
+		}
+
+		if err := txProductRepo.CreateStockMovement(ctx, db.CreateStockMovementParams{
+			CompanyID: product.CompanyID,
+			ProductID: product.ID,
+			SaleID:    pgconv.ParseUUIDToPgType(req.SaleID),
+			Type:      db.StockMovementTypeSALE,
+			Quantity:  -req.Quantity,
+			CreatedBy: pgconv.ParseUUIDToPgType(req.CreatedBy),
+		}); err != nil {
+			return err
 		}
 	}
 

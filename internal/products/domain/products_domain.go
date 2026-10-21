@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -60,7 +61,6 @@ type UpdateProductRequest struct {
 	Description string    `json:"description"`
 	CategoryID  uuid.UUID `json:"category_id"`
 	Barcode     string    `json:"barcode"`
-	Quantity    int32     `json:"quantity"`
 	Size        string    `json:"size"`
 	CostPrice   float64   `json:"cost_price"`
 	SalePrice   float64   `json:"sale_price"`
@@ -107,11 +107,52 @@ type ListProductsByCompanyRow struct {
 	CategoryName string    `json:"category_name"`
 	SellInBulk   bool      `json:"sell_in_bulk"`
 	Unit         string    `json:"unit"`
+	// Total que já entrou no estoque (cadastro + reposições); o saldo atual é Quantity
+	TotalRegistered int32 `json:"total_registered"`
+	// Total vendido, já descontando as vendas canceladas
+	TotalSold int32 `json:"total_sold"`
 }
 
 type DecrementStockRequest struct {
 	ID       uuid.UUID `json:"id"`
 	Quantity int32     `json:"quantity"`
+}
+
+// CreateStockMovementRequest lança uma entrada ou um ajuste manual de estoque.
+// ENTRY exige quantidade positiva; ADJUSTMENT aceita positivo (sobra) ou negativo (perda, avaria) e exige motivo.
+type CreateStockMovementRequest struct {
+	Type     string `json:"type"`
+	Quantity int32  `json:"quantity"`
+	Reason   string `json:"reason"`
+}
+
+type StockMovementResponse struct {
+	ID              uuid.UUID `json:"id"`
+	ProductID       uuid.UUID `json:"product_id"`
+	Type            string    `json:"type"`
+	Quantity        int32     `json:"quantity"`
+	Reason          string    `json:"reason"`
+	CurrentQuantity int32     `json:"current_quantity"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+func ValidateCreateStockMovementRequest(req CreateStockMovementRequest) error {
+	switch db.StockMovementType(req.Type) {
+	case db.StockMovementTypeENTRY:
+		if req.Quantity <= 0 {
+			return ErrInvalidStockMovementQuantity
+		}
+	case db.StockMovementTypeADJUSTMENT:
+		if req.Quantity == 0 {
+			return ErrInvalidStockMovementQuantity
+		}
+		if strings.TrimSpace(req.Reason) == "" {
+			return ErrStockMovementReasonRequired
+		}
+	default:
+		return ErrInvalidStockMovementType
+	}
+	return nil
 }
 
 type GetTop5BestSellingProductsRow struct {
@@ -186,10 +227,6 @@ func ApplyUpdateProductParams(
 
 	if req.Barcode != "" {
 		arg.Barcode = pgconv.ParseStringToPgText(req.Barcode)
-	}
-
-	if req.Quantity != 0 {
-		arg.Quantity = pgconv.IntToPgInt4(int(req.Quantity))
 	}
 
 	if req.Size != "" {

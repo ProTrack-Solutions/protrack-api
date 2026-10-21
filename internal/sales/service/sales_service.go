@@ -265,6 +265,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 			Quantity:  itemReq.Quantity,
 			UnitPrice: product.SalePrice,
 			Discount:  discount,
+			CreatedBy: userId,
 		}, companyId); err != nil {
 			// Estoque pode ter mudado entre a conferência e a baixa (venda concorrente)
 			switch {
@@ -353,7 +354,7 @@ func (s *Service) DeleteSale(ctx context.Context, id uuid.UUID, req domain.Delet
 		return domain.ErrSaleAlreadyCanceled
 	}
 
-	// 1. Devolve o estoque (inverso do DecrementStock feito no CreateSaleItemInTx)
+	// 1. Devolve o estoque (inverso do DecrementStock feito no CreateSaleItemInTx) e registra a movimentação
 	items, err := q.ListItemsBySaleForRestock(ctx, saleID)
 	if err != nil {
 		return err
@@ -366,6 +367,16 @@ func (s *Service) DeleteSale(ctx context.Context, id uuid.UUID, req domain.Delet
 		if err := q.IncrementStock(ctx, db.IncrementStockParams{
 			Quantity: pgconv.IntToPgInt4(int(item.Quantity)),
 			ID:       item.ProductID,
+		}); err != nil {
+			return err
+		}
+		if err := q.CreateStockMovement(ctx, db.CreateStockMovementParams{
+			CompanyID: companyID,
+			ProductID: item.ProductID,
+			SaleID:    saleID,
+			Type:      db.StockMovementTypeSALECANCEL,
+			Quantity:  item.Quantity,
+			CreatedBy: userID,
 		}); err != nil {
 			return err
 		}

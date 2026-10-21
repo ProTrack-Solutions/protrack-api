@@ -1,33 +1,45 @@
 -- name: CreateProduct :one
-INSERT INTO products(
-        company_id,
-        name,
-        description,
-        category_id,
-        barcode,
-        quantity,
-        size,
-        cost_price,
-        sale_price,
-        created_by,
-        sell_in_bulk,
-        unit
-    )
-VALUES(
-        $1,
-        $2,
-        $3,
-        $4,
-        $5,
-        $6,
-        $7,
-        $8,
-        $9,
-        $10,
-        $11,
-        $12
-    )
-RETURNING *;
+-- Registra a entrada inicial em stock_movements na mesma instrução (produtos a granel não controlam estoque)
+WITH new_product AS (
+    INSERT INTO products(
+            company_id,
+            name,
+            description,
+            category_id,
+            barcode,
+            quantity,
+            size,
+            cost_price,
+            sale_price,
+            created_by,
+            sell_in_bulk,
+            unit
+        )
+    VALUES(
+            $1,
+            $2,
+            $3,
+            $4,
+            $5,
+            $6,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12
+        )
+    RETURNING *
+),
+initial_stock AS (
+    INSERT INTO stock_movements (company_id, product_id, type, quantity, reason, created_by)
+    SELECT np.company_id, np.id, 'ENTRY', np.quantity, 'Cadastro do produto', np.created_by
+    FROM new_product np
+    WHERE np.sell_in_bulk = FALSE
+        AND np.quantity <> 0
+)
+SELECT *
+FROM new_product;
 -- name: GetProductById :one
 SELECT *
 FROM products
@@ -52,17 +64,17 @@ WHERE category_id = $1
     AND company_id = $2
     AND deleted_at IS NULL;
 -- name: UpdateProduct :one
+-- A quantidade não é editada aqui: entradas e ajustes de estoque passam pelo AdjustStock, que registra a movimentação
 UPDATE products
 SET name = $2,
     description = $3,
     category_id = $4,
     barcode = $5,
-    quantity = $6,
-    size = $7,
-    cost_price = $8,
-    sale_price = $9,
-    updated_by = $10,
-    unit = $11,
+    size = $6,
+    cost_price = $7,
+    sale_price = $8,
+    updated_by = $9,
+    unit = $10,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
@@ -81,6 +93,49 @@ WHERE id = $2
 UPDATE products
 SET quantity = quantity + $1
 WHERE id = $2;
+-- name: AdjustStock :one
+-- Soma (ou subtrai) a quantidade ao saldo atual e registra a movimentação na mesma instrução.
+-- Incremento relativo + trava da linha pelo UPDATE evitam perder vendas concorrentes.
+-- Nenhuma linha retornada = produto inexistente, a granel ou sem saldo suficiente.
+WITH updated_product AS (
+    UPDATE products
+    SET quantity = quantity + sqlc.arg(quantity)::INT,
+        updated_by = sqlc.arg(created_by)::UUID,
+        updated_at = NOW()
+    WHERE id = sqlc.arg(product_id)::UUID
+        AND company_id = sqlc.arg(company_id)::UUID
+        AND deleted_at IS NULL
+        AND sell_in_bulk = FALSE
+        AND quantity + sqlc.arg(quantity)::INT >= 0
+    RETURNING id,
+        company_id,
+        quantity
+),
+movement AS (
+    INSERT INTO stock_movements (company_id, product_id, type, quantity, reason, created_by)
+    SELECT up.company_id,
+        up.id,
+        sqlc.arg(type)::stock_movement_type,
+        sqlc.arg(quantity)::INT,
+        sqlc.narg(reason)::TEXT,
+        sqlc.arg(created_by)::UUID
+    FROM updated_product up
+    RETURNING id,
+        product_id,
+        type,
+        quantity,
+        reason,
+        created_at
+)
+SELECT m.id,
+    m.product_id,
+    m.type,
+    m.quantity,
+    m.reason,
+    m.created_at,
+    up.quantity AS current_quantity
+FROM movement m
+    INNER JOIN updated_product up ON up.id = m.product_id;
 -- name: CountProducts :one
 SELECT SUM(quantity)
 FROM products
@@ -177,9 +232,17 @@ SELECT
     p.created_at, p.updated_at, p.deleted_at,
     p.sell_in_bulk, p.unit,
     c.name AS category_name,
+    COALESCE(sm.total_registered, 0)::INT AS total_registered,
+    COALESCE(sm.total_sold, 0)::INT AS total_sold,
     count(*) OVER() AS total_count
 FROM products p
 JOIN product_categories c ON c.id = p.category_id
+LEFT JOIN LATERAL (
+    SELECT SUM(m.quantity) FILTER (WHERE m.type = 'ENTRY') AS total_registered,
+        -SUM(m.quantity) FILTER (WHERE m.type IN ('SALE', 'SALE_CANCEL')) AS total_sold
+    FROM stock_movements m
+    WHERE m.product_id = p.id
+) sm ON TRUE
 WHERE p.company_id = $1
     AND p.deleted_at IS NULL
     AND (

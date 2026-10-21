@@ -1,6 +1,7 @@
 package domain_test
 
 import (
+	"errors"
 	"testing"
 
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
@@ -49,7 +50,6 @@ func TestApplyUpdateProductParams_UpdatesOnlyNonZeroFields(t *testing.T) {
 		Description: newPgText("Descrição original"),
 		CategoryID:  newPgUUID(originalCategoryID),
 		Barcode:     newPgText("1234567890"),
-		Quantity:    newPgInt(10),
 		Size:        newPgText("M"),
 		CostPrice:   newPgNumeric(50.00),
 		SalePrice:   newPgNumeric(100.00),
@@ -62,7 +62,6 @@ func TestApplyUpdateProductParams_UpdatesOnlyNonZeroFields(t *testing.T) {
 		Description: "Nova descrição",
 		CategoryID:  newCategoryID,
 		Barcode:     "0987654321",
-		Quantity:    20,
 		Size:        "L",
 		CostPrice:   75.00,
 		SalePrice:   150.00,
@@ -79,9 +78,6 @@ func TestApplyUpdateProductParams_UpdatesOnlyNonZeroFields(t *testing.T) {
 	}
 	if arg.Barcode.String != "0987654321" {
 		t.Errorf("esperava Barcode='0987654321', obteve '%s'", arg.Barcode.String)
-	}
-	if arg.Quantity.Int32 != 20 {
-		t.Errorf("esperava Quantity=20, obteve %d", arg.Quantity.Int32)
 	}
 	if arg.Size.String != "L" {
 		t.Errorf("esperava Size='L', obteve '%s'", arg.Size.String)
@@ -110,7 +106,6 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 		Description: newPgText("Descrição original"),
 		CategoryID:  newPgUUID(originalCategoryID),
 		Barcode:     newPgText("1234567890"),
-		Quantity:    newPgInt(10),
 		Size:        newPgText("M"),
 		CostPrice:   newPgNumeric(50.00),
 		SalePrice:   newPgNumeric(100.00),
@@ -123,7 +118,6 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 		Description: "",
 		CategoryID:  uuid.Nil,
 		Barcode:     "",
-		Quantity:    0,
 		Size:        "",
 		CostPrice:   0,
 		SalePrice:   0,
@@ -142,9 +136,6 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 	if pgconv.PgUUIDToUUID(arg.CategoryID) != originalCategoryID {
 		t.Errorf("CategoryID não deve ter sido alterado")
 	}
-	if arg.Quantity.Int32 != 10 {
-		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity.Int32)
-	}
 	if arg.Barcode.String != "1234567890" {
 		t.Errorf("Barcode não deve ter sido alterado; obteve '%s'", arg.Barcode.String)
 	}
@@ -156,7 +147,6 @@ func TestApplyUpdateProductParams_DoesNotOverwriteWithZeroValues(t *testing.T) {
 func TestApplyUpdateProductParams_PartialUpdate(t *testing.T) {
 	arg := db.UpdateProductParams{
 		Name:      "Original",
-		Quantity:  newPgInt(5),
 		CostPrice: newPgNumeric(10.00),
 		SalePrice: newPgNumeric(20.00),
 	}
@@ -171,9 +161,6 @@ func TestApplyUpdateProductParams_PartialUpdate(t *testing.T) {
 
 	if arg.Name != "Atualizado" {
 		t.Errorf("esperava Name='Atualizado', obteve '%s'", arg.Name)
-	}
-	if arg.Quantity.Int32 != 5 {
-		t.Errorf("Quantity não deve ter sido alterada; obteve %d", arg.Quantity.Int32)
 	}
 	if pgconv.PgNumericToFloat64(arg.CostPrice) != 10.00 {
 		t.Errorf("CostPrice não deve ter sido alterado; obteve %f", pgconv.PgNumericToFloat64(arg.CostPrice))
@@ -245,5 +232,31 @@ func TestDecrementStockRequest_FieldAssignment(t *testing.T) {
 	}
 	if req.Quantity != 5 {
 		t.Errorf("Quantity incorreta: %d", req.Quantity)
+	}
+}
+
+func TestValidateCreateStockMovementRequest(t *testing.T) {
+	cases := []struct {
+		name string
+		req  domain.CreateStockMovementRequest
+		want error
+	}{
+		{"entrada válida", domain.CreateStockMovementRequest{Type: "ENTRY", Quantity: 10}, nil},
+		{"entrada com quantidade zero", domain.CreateStockMovementRequest{Type: "ENTRY", Quantity: 0}, domain.ErrInvalidStockMovementQuantity},
+		{"entrada com quantidade negativa", domain.CreateStockMovementRequest{Type: "ENTRY", Quantity: -1}, domain.ErrInvalidStockMovementQuantity},
+		{"ajuste negativo com motivo", domain.CreateStockMovementRequest{Type: "ADJUSTMENT", Quantity: -2, Reason: "Avaria"}, nil},
+		{"ajuste positivo com motivo", domain.CreateStockMovementRequest{Type: "ADJUSTMENT", Quantity: 3, Reason: "Inventário"}, nil},
+		{"ajuste sem motivo", domain.CreateStockMovementRequest{Type: "ADJUSTMENT", Quantity: -2, Reason: "  "}, domain.ErrStockMovementReasonRequired},
+		{"ajuste com quantidade zero", domain.CreateStockMovementRequest{Type: "ADJUSTMENT", Quantity: 0, Reason: "x"}, domain.ErrInvalidStockMovementQuantity},
+		{"tipo de venda não é permitido", domain.CreateStockMovementRequest{Type: "SALE", Quantity: -1}, domain.ErrInvalidStockMovementType},
+		{"tipo vazio", domain.CreateStockMovementRequest{Quantity: 1}, domain.ErrInvalidStockMovementType},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := domain.ValidateCreateStockMovementRequest(tc.req); !errors.Is(err, tc.want) {
+				t.Errorf("esperava %v, obteve %v", tc.want, err)
+			}
+		})
 	}
 }
