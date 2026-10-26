@@ -74,6 +74,7 @@ func (s *Service) ListAnnoucements(ctx context.Context, companyId uuid.UUID, pag
 		response = append(response, domain.ListAnnoucementsResponse{
 			ID:        pgconv.PgUUIDToUUID(annoucement.ID),
 			Title:     annoucement.Title,
+			Content:   annoucement.Content,
 			Type:      string(annoucement.Type),
 			IsActive:  annoucement.IsActive,
 			StartsAt:  pgconv.PgTimestamptzToTime(annoucement.StartsAt),
