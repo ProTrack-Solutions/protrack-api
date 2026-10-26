@@ -14,6 +14,7 @@ VALUES ($1, $2, $3, $4, COALESCE($5, NOW()), $6, $7, $8);
 SELECT 
     id, 
     title, 
+    content,
     type, 
     is_active, 
     starts_at, 
@@ -21,6 +22,7 @@ SELECT
     created_at
 FROM announcements
 WHERE company_id = $1
+    AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
 -- name: CountAnnoucementsByCompany :one

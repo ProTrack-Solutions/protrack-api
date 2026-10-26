@@ -27,6 +27,7 @@ type CreateAnnouncementsRequest struct {
 type ListAnnoucementsResponse struct {
 	ID        uuid.UUID `json:"id"`
 	Title     string    `json:"title"`
+	Content   string    `json:"content"`
 	Type      string    `json:"type" enums:"info,warning,success,maintenance" example:"info"`
 	IsActive  bool      `json:"is_active"`
 	StartsAt  time.Time `json:"starts_at"`
