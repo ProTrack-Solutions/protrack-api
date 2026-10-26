@@ -88,6 +88,7 @@ const listAnnoucements = `-- name: ListAnnoucements :many
 SELECT 
     id, 
     title, 
+    content,
     type, 
     is_active, 
     starts_at, 
@@ -95,6 +96,7 @@ SELECT
     created_at
 FROM announcements
 WHERE company_id = $1
+    AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
 `
@@ -108,6 +110,7 @@ type ListAnnoucementsParams struct {
 type ListAnnoucementsRow struct {
 	ID        pgtype.UUID        `json:"id"`
 	Title     string             `json:"title"`
+	Content   string             `json:"content"`
 	Type      AnnouncementType   `json:"type"`
 	IsActive  bool               `json:"is_active"`
 	StartsAt  pgtype.Timestamptz `json:"starts_at"`
@@ -127,6 +130,7 @@ func (q *Queries) ListAnnoucements(ctx context.Context, arg ListAnnoucementsPara
 		if err := rows.Scan(
 			&i.ID,
 			&i.Title,
+			&i.Content,
 			&i.Type,
 			&i.IsActive,
 			&i.StartsAt,
