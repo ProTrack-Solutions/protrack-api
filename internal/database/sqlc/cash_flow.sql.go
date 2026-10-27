@@ -11,6 +11,256 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getCashFlowForecast = `-- name: GetCashFlowForecast :many
+WITH days AS (
+    SELECT gs::date AS day
+    FROM generate_series(
+            ($1::date)::timestamp,
+            ($2::date)::timestamp - INTERVAL '1 day',
+            INTERVAL '1 day'
+        ) AS gs
+),
+receivable AS (
+    SELECT ar.due_date AS day,
+        SUM(ar.balance)::FLOAT AS total
+    FROM accounts_receivable ar
+    WHERE ar.company_id = $3
+        AND ar.deleted_at IS NULL
+        AND ar.status IN ('pending', 'partial', 'overdue')
+        AND ar.due_date >= $1::date
+        AND ar.due_date < $2::date
+    GROUP BY 1
+),
+payable AS (
+    SELECT b.due_date AS day,
+        SUM(b.amount - COALESCE(b.amount_paid, 0))::FLOAT AS total
+    FROM bills_payable b
+    WHERE b.company_id = $3
+        AND b.status NOT IN ('paid', 'canceled')
+        AND b.due_date >= $1::date
+        AND b.due_date < $2::date
+    GROUP BY 1
+)
+SELECT d.day::date AS day,
+    COALESCE(r.total, 0)::FLOAT AS receivable,
+    COALESCE(p.total, 0)::FLOAT AS payable
+FROM days d
+    LEFT JOIN receivable r ON r.day = d.day
+    LEFT JOIN payable p ON p.day = d.day
+ORDER BY d.day
+`
+
+type GetCashFlowForecastParams struct {
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+type GetCashFlowForecastRow struct {
+	Day        pgtype.Date `json:"day"`
+	Receivable float64     `json:"receivable"`
+	Payable    float64     `json:"payable"`
+}
+
+// O que está previsto entrar (parcelas em aberto) e sair (contas em aberto)
+// em cada dia de [start_date, end_date)
+func (q *Queries) GetCashFlowForecast(ctx context.Context, arg GetCashFlowForecastParams) ([]GetCashFlowForecastRow, error) {
+	rows, err := q.db.Query(ctx, getCashFlowForecast, arg.StartDate, arg.EndDate, arg.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashFlowForecastRow{}
+	for rows.Next() {
+		var i GetCashFlowForecastRow
+		if err := rows.Scan(&i.Day, &i.Receivable, &i.Payable); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCashFlowOverdue = `-- name: GetCashFlowOverdue :one
+SELECT (
+        SELECT COALESCE(SUM(ar.balance), 0)
+        FROM accounts_receivable ar
+        WHERE ar.company_id = $1
+            AND ar.deleted_at IS NULL
+            AND ar.status IN ('pending', 'partial', 'overdue')
+            AND ar.due_date < $2::date
+    )::FLOAT AS receivable,
+    (
+        SELECT COALESCE(SUM(b.amount - COALESCE(b.amount_paid, 0)), 0)
+        FROM bills_payable b
+        WHERE b.company_id = $1
+            AND b.status NOT IN ('paid', 'canceled')
+            AND b.due_date < $2::date
+    )::FLOAT AS payable
+`
+
+type GetCashFlowOverdueParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Today     pgtype.Date `json:"today"`
+}
+
+type GetCashFlowOverdueRow struct {
+	Receivable float64 `json:"receivable"`
+	Payable    float64 `json:"payable"`
+}
+
+// Valores em aberto com vencimento antes de hoje
+func (q *Queries) GetCashFlowOverdue(ctx context.Context, arg GetCashFlowOverdueParams) (GetCashFlowOverdueRow, error) {
+	row := q.db.QueryRow(ctx, getCashFlowOverdue, arg.CompanyID, arg.Today)
+	var i GetCashFlowOverdueRow
+	err := row.Scan(&i.Receivable, &i.Payable)
+	return i, err
+}
+
+const getCashFlowSeries = `-- name: GetCashFlowSeries :many
+WITH buckets AS (
+    SELECT gs::date AS bucket
+    FROM generate_series(
+            ($1::date)::timestamp,
+            ($2::date)::timestamp,
+            ($3::text)::interval
+        ) AS gs
+),
+inflow AS (
+    SELECT date_trunc($4::text, s.created_at AT TIME ZONE $5::text)::date AS bucket,
+        SUM(s.total_amount)::FLOAT AS total,
+        COUNT(*)::INT AS movements
+    FROM sales s
+    WHERE s.company_id = $6
+        AND s.deleted_at IS NULL
+        AND s.status <> 'canceled'
+        AND s.created_at >= ($1::date)::timestamp AT TIME ZONE $5::text
+        AND s.created_at < ($7::date)::timestamp AT TIME ZONE $5::text
+    GROUP BY 1
+),
+outflow AS (
+    SELECT date_trunc($4::text, b.payment_date::timestamp)::date AS bucket,
+        SUM(COALESCE(b.amount_paid, b.amount))::FLOAT AS total,
+        COUNT(*)::INT AS movements
+    FROM bills_payable b
+    WHERE b.company_id = $6
+        AND b.status = 'paid'
+        AND b.payment_date >= $1::date
+        AND b.payment_date < $7::date
+    GROUP BY 1
+)
+SELECT bk.bucket::date AS bucket,
+    COALESCE(i.total, 0)::FLOAT AS inflow,
+    COALESCE(o.total, 0)::FLOAT AS outflow,
+    COALESCE(i.movements, 0)::INT AS inflow_count,
+    COALESCE(o.movements, 0)::INT AS outflow_count
+FROM buckets bk
+    LEFT JOIN inflow i ON i.bucket = bk.bucket
+    LEFT JOIN outflow o ON o.bucket = bk.bucket
+ORDER BY bk.bucket
+`
+
+type GetCashFlowSeriesParams struct {
+	StartDate  pgtype.Date `json:"start_date"`
+	LastBucket pgtype.Date `json:"last_bucket"`
+	Step       string      `json:"step"`
+	Unit       string      `json:"unit"`
+	Tz         string      `json:"tz"`
+	CompanyID  pgtype.UUID `json:"company_id"`
+	EndDate    pgtype.Date `json:"end_date"`
+}
+
+type GetCashFlowSeriesRow struct {
+	Bucket       pgtype.Date `json:"bucket"`
+	Inflow       float64     `json:"inflow"`
+	Outflow      float64     `json:"outflow"`
+	InflowCount  int32       `json:"inflow_count"`
+	OutflowCount int32       `json:"outflow_count"`
+}
+
+// Entradas e saídas agrupadas por dia/semana/mês numa única ida ao banco,
+// generate_series garante um ponto por período, mesmo sem movimento.
+func (q *Queries) GetCashFlowSeries(ctx context.Context, arg GetCashFlowSeriesParams) ([]GetCashFlowSeriesRow, error) {
+	rows, err := q.db.Query(ctx, getCashFlowSeries,
+		arg.StartDate,
+		arg.LastBucket,
+		arg.Step,
+		arg.Unit,
+		arg.Tz,
+		arg.CompanyID,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashFlowSeriesRow{}
+	for rows.Next() {
+		var i GetCashFlowSeriesRow
+		if err := rows.Scan(
+			&i.Bucket,
+			&i.Inflow,
+			&i.Outflow,
+			&i.InflowCount,
+			&i.OutflowCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCashFlowTotalsByRange = `-- name: GetCashFlowTotalsByRange :one
+SELECT (
+        SELECT COALESCE(SUM(s.total_amount), 0)
+        FROM sales s
+        WHERE s.company_id = $1
+            AND s.deleted_at IS NULL
+            AND s.status <> 'canceled'
+            AND s.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND s.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    )::FLOAT AS inflow,
+    (
+        SELECT COALESCE(SUM(COALESCE(b.amount_paid, b.amount)), 0)
+        FROM bills_payable b
+        WHERE b.company_id = $1
+            AND b.status = 'paid'
+            AND b.payment_date >= $3::date
+            AND b.payment_date < $4::date
+    )::FLOAT AS outflow
+`
+
+type GetCashFlowTotalsByRangeParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Tz        string      `json:"tz"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetCashFlowTotalsByRangeRow struct {
+	Inflow  float64 `json:"inflow"`
+	Outflow float64 `json:"outflow"`
+}
+
+func (q *Queries) GetCashFlowTotalsByRange(ctx context.Context, arg GetCashFlowTotalsByRangeParams) (GetCashFlowTotalsByRangeRow, error) {
+	row := q.db.QueryRow(ctx, getCashFlowTotalsByRange,
+		arg.CompanyID,
+		arg.Tz,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var i GetCashFlowTotalsByRangeRow
+	err := row.Scan(&i.Inflow, &i.Outflow)
+	return i, err
+}
+
 const getCashInFlowByCategory = `-- name: GetCashInFlowByCategory :many
 SELECT pc.name AS category_name,
     COALESCE(SUM(si.unit_price * si.quantity), 0)::FLOAT AS total_amount,
@@ -94,6 +344,111 @@ func (q *Queries) GetCashInFlowCategoryByPeriod(ctx context.Context, arg GetCash
 	for rows.Next() {
 		var i GetCashInFlowCategoryByPeriodRow
 		if err := rows.Scan(&i.CategoryName, &i.TotalAmount, &i.SalesCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCashInFlowCategoryByRange = `-- name: GetCashInFlowCategoryByRange :many
+SELECT COALESCE(pc.name, 'Sem categoria')::TEXT AS category_name,
+    SUM(si.unit_price * si.quantity)::FLOAT AS total_amount
+FROM sales s
+    JOIN sale_items si ON si.sale_id = s.id
+    LEFT JOIN products p ON p.id = si.product_id
+    LEFT JOIN product_categories pc ON pc.id = p.category_id
+WHERE s.company_id = $1
+    AND s.deleted_at IS NULL
+    AND s.status <> 'canceled'
+    AND s.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+    AND s.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+GROUP BY 1
+ORDER BY total_amount DESC
+`
+
+type GetCashInFlowCategoryByRangeParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Tz        string      `json:"tz"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetCashInFlowCategoryByRangeRow struct {
+	CategoryName string  `json:"category_name"`
+	TotalAmount  float64 `json:"total_amount"`
+}
+
+func (q *Queries) GetCashInFlowCategoryByRange(ctx context.Context, arg GetCashInFlowCategoryByRangeParams) ([]GetCashInFlowCategoryByRangeRow, error) {
+	rows, err := q.db.Query(ctx, getCashInFlowCategoryByRange,
+		arg.CompanyID,
+		arg.Tz,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashInFlowCategoryByRangeRow{}
+	for rows.Next() {
+		var i GetCashInFlowCategoryByRangeRow
+		if err := rows.Scan(&i.CategoryName, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCashInFlowPaymentMethodByRange = `-- name: GetCashInFlowPaymentMethodByRange :many
+SELECT s.payment_method::TEXT AS payment_method,
+    SUM(s.total_amount)::FLOAT AS total_amount,
+    COUNT(*)::INT AS sales_count
+FROM sales s
+WHERE s.company_id = $1
+    AND s.deleted_at IS NULL
+    AND s.status <> 'canceled'
+    AND s.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+    AND s.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+GROUP BY 1
+ORDER BY total_amount DESC
+`
+
+type GetCashInFlowPaymentMethodByRangeParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Tz        string      `json:"tz"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetCashInFlowPaymentMethodByRangeRow struct {
+	PaymentMethod string  `json:"payment_method"`
+	TotalAmount   float64 `json:"total_amount"`
+	SalesCount    int32   `json:"sales_count"`
+}
+
+func (q *Queries) GetCashInFlowPaymentMethodByRange(ctx context.Context, arg GetCashInFlowPaymentMethodByRangeParams) ([]GetCashInFlowPaymentMethodByRangeRow, error) {
+	rows, err := q.db.Query(ctx, getCashInFlowPaymentMethodByRange,
+		arg.CompanyID,
+		arg.Tz,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashInFlowPaymentMethodByRangeRow{}
+	for rows.Next() {
+		var i GetCashInFlowPaymentMethodByRangeRow
+		if err := rows.Scan(&i.PaymentMethod, &i.TotalAmount, &i.SalesCount); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -193,6 +548,67 @@ func (q *Queries) GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCas
 	return items, nil
 }
 
+const getCashOutFlowCategoryByRange = `-- name: GetCashOutFlowCategoryByRange :many
+SELECT COALESCE(bc.name, 'Sem categoria')::TEXT AS category_name,
+    SUM(COALESCE(b.amount_paid, b.amount))::FLOAT AS total_amount
+FROM bills_payable b
+    LEFT JOIN bill_categories bc ON bc.id = b.category_id
+WHERE b.company_id = $1
+    AND b.status = 'paid'
+    AND b.payment_date >= $2::date
+    AND b.payment_date < $3::date
+GROUP BY 1
+ORDER BY total_amount DESC
+`
+
+type GetCashOutFlowCategoryByRangeParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetCashOutFlowCategoryByRangeRow struct {
+	CategoryName string  `json:"category_name"`
+	TotalAmount  float64 `json:"total_amount"`
+}
+
+func (q *Queries) GetCashOutFlowCategoryByRange(ctx context.Context, arg GetCashOutFlowCategoryByRangeParams) ([]GetCashOutFlowCategoryByRangeRow, error) {
+	rows, err := q.db.Query(ctx, getCashOutFlowCategoryByRange, arg.CompanyID, arg.StartDate, arg.EndDate)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashOutFlowCategoryByRangeRow{}
+	for rows.Next() {
+		var i GetCashOutFlowCategoryByRangeRow
+		if err := rows.Scan(&i.CategoryName, &i.TotalAmount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getCompanyTimezone = `-- name: GetCompanyTimezone :one
+SELECT COALESCE(NULLIF(timezone, ''), 'America/Sao_Paulo')::TEXT AS timezone
+FROM companies
+WHERE id = $1
+`
+
+// Consultas da visão geral (/cash-flow/overview). O intervalo chega como datas
+// locais [start_date, end_date) junto com o fuso da empresa, então o "dia" segue
+// o horário dela e não o do servidor. Entrada = venda não cancelada (data da venda)
+// e saída = conta paga (data do pagamento).
+func (q *Queries) GetCompanyTimezone(ctx context.Context, id pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getCompanyTimezone, id)
+	var timezone string
+	err := row.Scan(&timezone)
+	return timezone, err
+}
+
 const getTotalInflowByPeriod = `-- name: GetTotalInflowByPeriod :one
 SELECT COALESCE(SUM(total_amount), 0)::FLOAT AS total_inflow
 FROM sales
@@ -233,4 +649,92 @@ func (q *Queries) GetTotalOutflowByPeriod(ctx context.Context, arg GetTotalOutfl
 	var total_outflow float64
 	err := row.Scan(&total_outflow)
 	return total_outflow, err
+}
+
+const listRecentCashMovements = `-- name: ListRecentCashMovements :many
+SELECT m.id,
+    m.kind,
+    m.description,
+    m.detail,
+    m.amount,
+    m.occurred_at
+FROM (
+        (
+            SELECT s.id,
+                'inflow'::TEXT AS kind,
+                COALESCE(c.full_name, 'Consumidor final')::TEXT AS description,
+                s.payment_method::TEXT AS detail,
+                s.total_amount::FLOAT AS amount,
+                s.created_at AS occurred_at
+            FROM sales s
+                LEFT JOIN customers c ON c.id = s.customer_id
+            WHERE s.company_id = $1
+                AND s.deleted_at IS NULL
+                AND s.status <> 'canceled'
+            ORDER BY s.created_at DESC
+            LIMIT $2::int
+        )
+        UNION ALL
+        (
+            SELECT b.id,
+                'outflow'::TEXT AS kind,
+                COALESCE(NULLIF(b.description, ''), v.name, 'Conta paga')::TEXT AS description,
+                COALESCE(bc.name, 'Sem categoria')::TEXT AS detail,
+                COALESCE(b.amount_paid, b.amount)::FLOAT AS amount,
+                (b.payment_date::timestamp AT TIME ZONE $3::text) AS occurred_at
+            FROM bills_payable b
+                LEFT JOIN vendors v ON v.id = b.vendor_id
+                LEFT JOIN bill_categories bc ON bc.id = b.category_id
+            WHERE b.company_id = $1
+                AND b.status = 'paid'
+                AND b.payment_date IS NOT NULL
+            ORDER BY b.payment_date DESC, b.updated_at DESC
+            LIMIT $2::int
+        )
+    ) AS m
+ORDER BY m.occurred_at DESC
+LIMIT $2::int
+`
+
+type ListRecentCashMovementsParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	RowLimit  int32       `json:"row_limit"`
+	Tz        string      `json:"tz"`
+}
+
+type ListRecentCashMovementsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	Kind        string             `json:"kind"`
+	Description string             `json:"description"`
+	Detail      string             `json:"detail"`
+	Amount      float64            `json:"amount"`
+	OccurredAt  pgtype.Timestamptz `json:"occurred_at"`
+}
+
+// Últimas entradas e saídas misturadas, para o extrato da tela
+func (q *Queries) ListRecentCashMovements(ctx context.Context, arg ListRecentCashMovementsParams) ([]ListRecentCashMovementsRow, error) {
+	rows, err := q.db.Query(ctx, listRecentCashMovements, arg.CompanyID, arg.RowLimit, arg.Tz)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListRecentCashMovementsRow{}
+	for rows.Next() {
+		var i ListRecentCashMovementsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Kind,
+			&i.Description,
+			&i.Detail,
+			&i.Amount,
+			&i.OccurredAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
