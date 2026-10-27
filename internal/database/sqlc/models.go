@@ -55,6 +55,90 @@ func (ns NullAnnouncementType) Value() (driver.Value, error) {
 	return string(ns.AnnouncementType), nil
 }
 
+type CashMovementType string
+
+const (
+	CashMovementTypeWithdrawal CashMovementType = "withdrawal"
+	CashMovementTypeSupply     CashMovementType = "supply"
+)
+
+func (e *CashMovementType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CashMovementType(s)
+	case string:
+		*e = CashMovementType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CashMovementType: %T", src)
+	}
+	return nil
+}
+
+type NullCashMovementType struct {
+	CashMovementType CashMovementType `json:"cash_movement_type"`
+	Valid            bool             `json:"valid"` // Valid is true if CashMovementType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCashMovementType) Scan(value interface{}) error {
+	if value == nil {
+		ns.CashMovementType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CashMovementType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCashMovementType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CashMovementType), nil
+}
+
+type CashSessionStatus string
+
+const (
+	CashSessionStatusOpen   CashSessionStatus = "open"
+	CashSessionStatusClosed CashSessionStatus = "closed"
+)
+
+func (e *CashSessionStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CashSessionStatus(s)
+	case string:
+		*e = CashSessionStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CashSessionStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCashSessionStatus struct {
+	CashSessionStatus CashSessionStatus `json:"cash_session_status"`
+	Valid             bool              `json:"valid"` // Valid is true if CashSessionStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCashSessionStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CashSessionStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CashSessionStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCashSessionStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CashSessionStatus), nil
+}
+
 type StockMovementType string
 
 const (
@@ -337,6 +421,40 @@ type BillsPayable struct {
 	Notes           pgtype.Text        `json:"notes"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CashSession struct {
+	ID               pgtype.UUID        `json:"id"`
+	CompanyID        pgtype.UUID        `json:"company_id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	Status           CashSessionStatus  `json:"status"`
+	OpeningAmount    pgtype.Numeric     `json:"opening_amount"`
+	OpeningNotes     pgtype.Text        `json:"opening_notes"`
+	OpenedAt         pgtype.Timestamptz `json:"opened_at"`
+	ClosedAt         pgtype.Timestamptz `json:"closed_at"`
+	ClosedBy         pgtype.UUID        `json:"closed_by"`
+	ClosingNotes     pgtype.Text        `json:"closing_notes"`
+	SalesTotal       pgtype.Numeric     `json:"sales_total"`
+	SalesCount       pgtype.Int4        `json:"sales_count"`
+	ReceivedTotal    pgtype.Numeric     `json:"received_total"`
+	SuppliesTotal    pgtype.Numeric     `json:"supplies_total"`
+	WithdrawalsTotal pgtype.Numeric     `json:"withdrawals_total"`
+	ExpectedCash     pgtype.Numeric     `json:"expected_cash"`
+	CountedCash      pgtype.Numeric     `json:"counted_cash"`
+	Difference       pgtype.Numeric     `json:"difference"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type CashSessionMovement struct {
+	ID        pgtype.UUID        `json:"id"`
+	SessionID pgtype.UUID        `json:"session_id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	Type      CashMovementType   `json:"type"`
+	Amount    pgtype.Numeric     `json:"amount"`
+	Reason    pgtype.Text        `json:"reason"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Company struct {
@@ -636,6 +754,8 @@ type Sale struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy         pgtype.UUID        `json:"deleted_by"`
 	BuyerDocument     pgtype.Text        `json:"buyer_document"`
+	AmountReceived    pgtype.Numeric     `json:"amount_received"`
+	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
 }
 
 type SaleItem struct {

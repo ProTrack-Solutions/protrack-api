@@ -261,12 +261,18 @@ ORDER BY
     CASE WHEN sqlc.arg(order_by)::text = 'desc' THEN p.created_at END DESC
 LIMIT $2
 OFFSET $3;
+-- Abaixo do limite de estoque baixo configurado pela empresa (padrão 5)
 -- name: CountLowStockProductsByCompany :one
 SELECT COUNT(*) AS low_stock_count
-FROM products
-WHERE company_id = $1
-  AND quantity < 5
-  AND deleted_at IS NULL;
+FROM products p
+WHERE p.company_id = $1
+  AND p.quantity < COALESCE((
+      SELECT (cs.value #>> '{}')::numeric
+      FROM company_settings cs
+      WHERE cs.company_id = $1
+        AND cs.key = 'low_stock'
+  ), 5)
+  AND p.deleted_at IS NULL;
 -- name: GetGeneralTotalStockValue :one
 SELECT 
     COALESCE(SUM(quantity * cost_price), 0.0)::DOUBLE PRECISION AS total_cost_value

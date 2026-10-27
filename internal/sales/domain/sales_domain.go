@@ -34,6 +34,9 @@ type CreateSaleRequest struct {
 	InstallmentsCount int32                   `json:"installments_count"`
 	Items             []CreateSaleItemRequest `json:"items"`
 	Prohibited        float64                 `json:"prohibited"`
+	// Dinheiro entregue pelo cliente no balcão (total da venda em dinheiro ou
+	// entrada da venda a prazo). Nil quando ele pagou o valor exato.
+	AmountReceived *float64 `json:"amount_received"`
 }
 
 type CreateSaleItemRequest struct {
@@ -298,6 +301,15 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 		}
 		if req.Prohibited < 0 {
 			return invalid("a entrada não pode ser negativa")
+		}
+	}
+
+	if req.AmountReceived != nil {
+		if req.PaymentMethod != enums.PaymentMethodCash && req.PaymentMethod != enums.PaymentMethodInstallments {
+			return invalid("valor recebido só se aplica a pagamento em dinheiro")
+		}
+		if *req.AmountReceived < 0 {
+			return invalid("o valor recebido não pode ser negativo")
 		}
 	}
 

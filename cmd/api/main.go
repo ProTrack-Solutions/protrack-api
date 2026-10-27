@@ -30,6 +30,9 @@ import (
 	cashFlowHandler "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/handler"
 	cashFlowRepository "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/repository"
 	cashFlowService "github.com/ProTrack-Solutions/protrack-api/internal/cash_flow/service"
+	cashRegisterHandler "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/handler"
+	cashRegisterRepository "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/repository"
+	cashRegisterService "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/service"
 	companiesHandler "github.com/ProTrack-Solutions/protrack-api/internal/companies/handler"
 	companiesRepository "github.com/ProTrack-Solutions/protrack-api/internal/companies/repository"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
@@ -255,6 +258,7 @@ func main() {
 	invoiceHistoryRepository := invoiceHistoryRepository.NewRepository(db.Pool)
 	accountsReceivableRepository := accountsReceivableRepository.NewRepository(db.Pool)
 	cashFlowRepository := cashFlowRepository.NewRepository(db.Pool)
+	cashRegisterRepository := cashRegisterRepository.NewRepository(db.Pool)
 	annountmentsRepository := annountmentsRepository.NewRepository(db.Pool)
 	plansRepository := plansRepository.NewRepository(db.Pool)
 	platformAdminsRepository := platformAdminsRepository.NewRepository(db.Pool)
@@ -274,6 +278,7 @@ func main() {
 	subscriptionsService := subscriptionsService.NewService(subscriptionsRepository, db.Pool)
 	subscriptionPaymentMethodsService := subscriptionPaymentMethodsService.NewService(subscriptionPaymentMethodsRepository, db.Pool)
 	cashFlowService := cashFlowService.NewService(cashFlowRepository, db.Pool)
+	cashRegisterService := cashRegisterService.NewService(cashRegisterRepository, db.Pool)
 	usersService := usersService.NewService(usersRepository, db.Pool, cfg, plansService, subscriptionsService)
 	companiesService := companiesService.NewService(db.Pool, companiesRepository, usersRepository)
 	departmentsService := departmentsService.NewService(departmentsRepository, departmentModulesService, db.Pool)
@@ -333,6 +338,7 @@ func main() {
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
 	subscriptionPaymentMethodsHandler := subscriptionPaymentMethodsHandler.NewHandler(subscriptionPaymentMethodsService, jwtManager, blacklist)
 	cashFlowHandler := cashFlowHandler.NewHandler(cashFlowService, jwtManager, blacklist, departmentModulesService)
+	cashRegisterHandler := cashRegisterHandler.NewHandler(cashRegisterService, jwtManager, blacklist, departmentModulesService)
 	usersHandler := usersHandler.NewHandler(usersService, jwtManager, blacklist)
 	companiesHandler := companiesHandler.NewHandler(companiesService, jwtManager, blacklist)
 	departmentsHandler := departmentsHandler.NewHandler(departmentsService, jwtManager, blacklist)
@@ -381,6 +387,7 @@ func main() {
 	paymentsHandler.RegisterRoute(api)
 	reportsHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
+	cashRegisterHandler.RegisterRoutes(api)
 	annoucementsHandler.RegisterRoutes(api)
 	plansHandler.RegisterRoutes(api)
 	platformAdminsHandler.RegisterRoutes(api)

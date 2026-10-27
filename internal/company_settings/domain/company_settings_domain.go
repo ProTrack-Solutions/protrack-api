@@ -13,11 +13,12 @@ import (
 var DefaultSettings = map[enums.CompanySettingsKey]any{
 	enums.IsWhatsappActive:            true,
 	enums.IsExcessUsage:               false,
-	enums.LowStock:                    2,
+	enums.LowStock:                    5,
 	enums.MediumStock:                 3,
 	enums.NormalStock:                 5,
 	enums.SaleOverdueTemplate:         "venda_vencida",
 	enums.LanguageSaleOverdueTemplate: "pt_BR",
+	enums.RequireOpenCashRegister:     true,
 }
 
 type RepositoryInterface interface {
