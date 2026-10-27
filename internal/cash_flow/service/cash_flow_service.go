@@ -20,6 +20,15 @@ type RepositoryInterface interface {
 	GetCashOutFlowByCategory(ctx context.Context, companyId pgtype.UUID) ([]db.GetCashOutFlowByCategoryRow, error)
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg db.GetCashOutFlowCategoryByPeriodParams) ([]db.GetCashOutFlowCategoryByPeriodRow, error)
 	GetCashInFlowCategoryByPeriod(ctx context.Context, arg db.GetCashInFlowCategoryByPeriodParams) ([]db.GetCashInFlowCategoryByPeriodRow, error)
+	GetCompanyTimezone(ctx context.Context, companyId pgtype.UUID) (string, error)
+	GetCashFlowSeries(ctx context.Context, arg db.GetCashFlowSeriesParams) ([]db.GetCashFlowSeriesRow, error)
+	GetCashFlowTotalsByRange(ctx context.Context, arg db.GetCashFlowTotalsByRangeParams) (db.GetCashFlowTotalsByRangeRow, error)
+	GetCashInFlowCategoryByRange(ctx context.Context, arg db.GetCashInFlowCategoryByRangeParams) ([]db.GetCashInFlowCategoryByRangeRow, error)
+	GetCashOutFlowCategoryByRange(ctx context.Context, arg db.GetCashOutFlowCategoryByRangeParams) ([]db.GetCashOutFlowCategoryByRangeRow, error)
+	GetCashInFlowPaymentMethodByRange(ctx context.Context, arg db.GetCashInFlowPaymentMethodByRangeParams) ([]db.GetCashInFlowPaymentMethodByRangeRow, error)
+	GetCashFlowForecast(ctx context.Context, arg db.GetCashFlowForecastParams) ([]db.GetCashFlowForecastRow, error)
+	GetCashFlowOverdue(ctx context.Context, arg db.GetCashFlowOverdueParams) (db.GetCashFlowOverdueRow, error)
+	ListRecentCashMovements(ctx context.Context, arg db.ListRecentCashMovementsParams) ([]db.ListRecentCashMovementsRow, error)
 }
 
 type Service struct {

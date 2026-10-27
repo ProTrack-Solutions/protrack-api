@@ -50,3 +50,39 @@ func (r *Repository) GetCashInFlowCategoryByPeriod(ctx context.Context, arg db.G
 func (r *Repository) GetCashOutFlowCategoryByPeriod(ctx context.Context, arg db.GetCashOutFlowCategoryByPeriodParams) ([]db.GetCashOutFlowCategoryByPeriodRow, error) {
 	return r.queries().GetCashOutFlowCategoryByPeriod(ctx, arg)
 }
+
+func (r *Repository) GetCompanyTimezone(ctx context.Context, companyId pgtype.UUID) (string, error) {
+	return r.queries().GetCompanyTimezone(ctx, companyId)
+}
+
+func (r *Repository) GetCashFlowSeries(ctx context.Context, arg db.GetCashFlowSeriesParams) ([]db.GetCashFlowSeriesRow, error) {
+	return r.queries().GetCashFlowSeries(ctx, arg)
+}
+
+func (r *Repository) GetCashFlowTotalsByRange(ctx context.Context, arg db.GetCashFlowTotalsByRangeParams) (db.GetCashFlowTotalsByRangeRow, error) {
+	return r.queries().GetCashFlowTotalsByRange(ctx, arg)
+}
+
+func (r *Repository) GetCashInFlowCategoryByRange(ctx context.Context, arg db.GetCashInFlowCategoryByRangeParams) ([]db.GetCashInFlowCategoryByRangeRow, error) {
+	return r.queries().GetCashInFlowCategoryByRange(ctx, arg)
+}
+
+func (r *Repository) GetCashOutFlowCategoryByRange(ctx context.Context, arg db.GetCashOutFlowCategoryByRangeParams) ([]db.GetCashOutFlowCategoryByRangeRow, error) {
+	return r.queries().GetCashOutFlowCategoryByRange(ctx, arg)
+}
+
+func (r *Repository) GetCashInFlowPaymentMethodByRange(ctx context.Context, arg db.GetCashInFlowPaymentMethodByRangeParams) ([]db.GetCashInFlowPaymentMethodByRangeRow, error) {
+	return r.queries().GetCashInFlowPaymentMethodByRange(ctx, arg)
+}
+
+func (r *Repository) GetCashFlowForecast(ctx context.Context, arg db.GetCashFlowForecastParams) ([]db.GetCashFlowForecastRow, error) {
+	return r.queries().GetCashFlowForecast(ctx, arg)
+}
+
+func (r *Repository) GetCashFlowOverdue(ctx context.Context, arg db.GetCashFlowOverdueParams) (db.GetCashFlowOverdueRow, error) {
+	return r.queries().GetCashFlowOverdue(ctx, arg)
+}
+
+func (r *Repository) ListRecentCashMovements(ctx context.Context, arg db.ListRecentCashMovementsParams) ([]db.ListRecentCashMovementsRow, error) {
+	return r.queries().ListRecentCashMovements(ctx, arg)
+}

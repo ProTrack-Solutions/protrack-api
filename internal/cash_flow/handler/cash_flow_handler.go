@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -221,4 +222,45 @@ func (h *Handler) GetTotalSummary(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, totalSummary)
+}
+
+// GetOverview godoc
+// @Summary      Visão geral do fluxo de caixa
+// @Description  Série de entradas/saídas, comparação com o período anterior, categorias, formas de pagamento, previsão de recebimentos/pagamentos e últimas movimentações em uma única chamada
+// @Tags         cash-flow
+// @Produce      json
+// @Security     BearerAuth
+// @Param        query query domain.GetOverviewParams false "Parâmetros de busca"
+// @Success      200 {object} domain.GetOverviewResponse
+// @Failure      400 {object} map[string]string "Erro de validação"
+// @Failure      401 {object} map[string]string "Não autorizado"
+// @Failure      500 {object} map[string]string "Erro interno"
+// @Router       /cash-flow/overview [get]
+func (h *Handler) GetOverview(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	var params domain.GetOverviewParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	overview, err := h.service.GetOverview(c.Request.Context(), companyId, params)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidOverviewParams) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, overview)
 }

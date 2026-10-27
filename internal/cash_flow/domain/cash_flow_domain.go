@@ -1,9 +1,12 @@
 package domain
 
 import (
+	"errors"
 	"math"
 	"time"
 )
+
+var ErrInvalidOverviewParams = errors.New("parâmetros inválidos")
 
 type CashFlowSummaryResponse struct {
 	TotalInflow  float64 `json:"total_inflow"`
@@ -93,4 +96,81 @@ func CalcularProjecao(historico []float64, periodoFuturo int) float64 {
 	projecao := (a * float64(periodoFuturo)) + b
 
 	return math.Round(projecao*100) / 100
+}
+
+// GetOverviewParams filtros da visão geral: Quantity períodos de Period
+// (dia, semana ou mês) terminando no período atual, mais ForecastDays de previsão.
+type GetOverviewParams struct {
+	Period       string `json:"period" form:"period" binding:"omitempty,oneof=day week month" example:"day"`
+	Quantity     int    `json:"quantity" form:"quantity" binding:"omitempty,min=1" example:"30"`
+	ForecastDays int    `json:"forecast_days" form:"forecast_days" binding:"omitempty,min=1,max=90" example:"30"`
+}
+
+type OverviewTotals struct {
+	Inflow       float64 `json:"inflow"`
+	Outflow      float64 `json:"outflow"`
+	Net          float64 `json:"net"`
+	InflowCount  int     `json:"inflow_count"`
+	OutflowCount int     `json:"outflow_count"`
+}
+
+type OverviewPoint struct {
+	Date    string  `json:"date"`
+	Inflow  float64 `json:"inflow"`
+	Outflow float64 `json:"outflow"`
+	Net     float64 `json:"net"`
+	// Balance resultado acumulado desde o início do intervalo
+	Balance float64 `json:"balance"`
+}
+
+type OverviewShare struct {
+	Name       string  `json:"name"`
+	Total      float64 `json:"total"`
+	Percentage float64 `json:"percentage"`
+	Count      int     `json:"count,omitempty"`
+}
+
+type OverviewForecastPoint struct {
+	Date       string  `json:"date"`
+	Receivable float64 `json:"receivable"`
+	Payable    float64 `json:"payable"`
+	// Balance saldo previsto acumulado (a receber − a pagar) até o dia
+	Balance float64 `json:"balance"`
+}
+
+type OverviewForecast struct {
+	Days              int                     `json:"days"`
+	Receivable        float64                 `json:"receivable"`
+	Payable           float64                 `json:"payable"`
+	Net               float64                 `json:"net"`
+	OverdueReceivable float64                 `json:"overdue_receivable"`
+	OverduePayable    float64                 `json:"overdue_payable"`
+	Series            []OverviewForecastPoint `json:"series"`
+}
+
+type OverviewMovement struct {
+	ID          string    `json:"id"`
+	Kind        string    `json:"kind" enums:"inflow,outflow"`
+	Description string    `json:"description"`
+	Detail      string    `json:"detail"`
+	Amount      float64   `json:"amount"`
+	OccurredAt  time.Time `json:"occurred_at"`
+}
+
+type GetOverviewResponse struct {
+	Period    string `json:"period"`
+	Quantity  int    `json:"quantity"`
+	StartDate string `json:"start_date"`
+	// EndDate último dia (inclusivo) do intervalo
+	EndDate  string         `json:"end_date"`
+	Totals   OverviewTotals `json:"totals"`
+	Previous OverviewTotals `json:"previous"`
+	// Projection tendência linear do resultado para o próximo período
+	Projection            float64            `json:"projection"`
+	Series                []OverviewPoint    `json:"series"`
+	InflowByCategory      []OverviewShare    `json:"inflow_by_category"`
+	OutflowByCategory     []OverviewShare    `json:"outflow_by_category"`
+	InflowByPaymentMethod []OverviewShare    `json:"inflow_by_payment_method"`
+	Forecast              OverviewForecast   `json:"forecast"`
+	RecentMovements       []OverviewMovement `json:"recent_movements"`
 }
