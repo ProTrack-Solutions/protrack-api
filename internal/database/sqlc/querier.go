@@ -88,14 +88,31 @@ type Querier interface {
 	// Valor em aberto (descontando o que já foi pago) agrupado por vencimento
 	GetBillsPayableDashboard(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableDashboardRow, error)
 	GetBillsPayableSummary(ctx context.Context, companyID pgtype.UUID) (GetBillsPayableSummaryRow, error)
+	// O que está previsto entrar (parcelas em aberto) e sair (contas em aberto)
+	// em cada dia de [start_date, end_date)
+	GetCashFlowForecast(ctx context.Context, arg GetCashFlowForecastParams) ([]GetCashFlowForecastRow, error)
+	// Valores em aberto com vencimento antes de hoje
+	GetCashFlowOverdue(ctx context.Context, arg GetCashFlowOverdueParams) (GetCashFlowOverdueRow, error)
+	// Entradas e saídas agrupadas por dia/semana/mês numa única ida ao banco,
+	// generate_series garante um ponto por período, mesmo sem movimento.
+	GetCashFlowSeries(ctx context.Context, arg GetCashFlowSeriesParams) ([]GetCashFlowSeriesRow, error)
+	GetCashFlowTotalsByRange(ctx context.Context, arg GetCashFlowTotalsByRangeParams) (GetCashFlowTotalsByRangeRow, error)
 	GetCashInFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashInFlowByCategoryRow, error)
 	GetCashInFlowCategoryByPeriod(ctx context.Context, arg GetCashInFlowCategoryByPeriodParams) ([]GetCashInFlowCategoryByPeriodRow, error)
+	GetCashInFlowCategoryByRange(ctx context.Context, arg GetCashInFlowCategoryByRangeParams) ([]GetCashInFlowCategoryByRangeRow, error)
+	GetCashInFlowPaymentMethodByRange(ctx context.Context, arg GetCashInFlowPaymentMethodByRangeParams) ([]GetCashInFlowPaymentMethodByRangeRow, error)
 	GetCashOutFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashOutFlowByCategoryRow, error)
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
+	GetCashOutFlowCategoryByRange(ctx context.Context, arg GetCashOutFlowCategoryByRangeParams) ([]GetCashOutFlowCategoryByRangeRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
 	// Busca o valor de uma config específica de uma empresa.
 	GetCompanySetting(ctx context.Context, arg GetCompanySettingParams) (CompanySetting, error)
+	// Consultas da visão geral (/cash-flow/overview). O intervalo chega como datas
+	// locais [start_date, end_date) junto com o fuso da empresa, então o "dia" segue
+	// o horário dela e não o do servidor. Entrada = venda não cancelada (data da venda)
+	// e saída = conta paga (data do pagamento).
+	GetCompanyTimezone(ctx context.Context, id pgtype.UUID) (string, error)
 	GetCompanyWhatsAppConfig(ctx context.Context, companyID pgtype.UUID) (CompanyWhatsappConfig, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
@@ -191,6 +208,8 @@ type Querier interface {
 	ListProductsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListProductsByCompanyRow, error)
 	ListProductsByCompanyPaginated(ctx context.Context, arg ListProductsByCompanyPaginatedParams) ([]ListProductsByCompanyPaginatedRow, error)
 	ListProductsByDate(ctx context.Context, arg ListProductsByDateParams) ([]ListProductsByDateRow, error)
+	// Últimas entradas e saídas misturadas, para o extrato da tela
+	ListRecentCashMovements(ctx context.Context, arg ListRecentCashMovementsParams) ([]ListRecentCashMovementsRow, error)
 	ListSaleReceiptItems(ctx context.Context, saleID pgtype.UUID) ([]ListSaleReceiptItemsRow, error)
 	ListSales(ctx context.Context, companyID pgtype.UUID) ([]ListSalesRow, error)
 	ListSalesByCompanyAndStatus(ctx context.Context, arg ListSalesByCompanyAndStatusParams) ([]ListSalesByCompanyAndStatusRow, error)
