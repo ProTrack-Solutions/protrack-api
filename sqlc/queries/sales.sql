@@ -12,7 +12,9 @@ INSERT INTO sales (
         payment_method,
         created_by,
         status,
-        buyer_document
+        buyer_document,
+        amount_received,
+        change_amount
     )
 VALUES (
         $1,
@@ -27,7 +29,9 @@ VALUES (
         $9,
         $10,
         $11,
-        $12
+        $12,
+        $13,
+        $14
     )
 RETURNING id;
 -- name: ListSales :many
@@ -317,7 +321,9 @@ SET discount_amount = $1,
     payment_method = $7,
     updated_at = CURRENT_TIMESTAMP,
     updated_by = $8,
-    status = $9
+    status = $9,
+    amount_received = NULL,
+    change_amount = NULL
 WHERE id = $10
     AND company_id = $11;
 -- name: CountSalesDeletedByCompany :one

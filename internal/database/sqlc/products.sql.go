@@ -99,12 +99,18 @@ func (q *Queries) AdjustStock(ctx context.Context, arg AdjustStockParams) (Adjus
 
 const countLowStockProductsByCompany = `-- name: CountLowStockProductsByCompany :one
 SELECT COUNT(*) AS low_stock_count
-FROM products
-WHERE company_id = $1
-  AND quantity < 5
-  AND deleted_at IS NULL
+FROM products p
+WHERE p.company_id = $1
+  AND p.quantity < COALESCE((
+      SELECT (cs.value #>> '{}')::numeric
+      FROM company_settings cs
+      WHERE cs.company_id = $1
+        AND cs.key = 'low_stock'
+  ), 5)
+  AND p.deleted_at IS NULL
 `
 
+// Abaixo do limite de estoque baixo configurado pela empresa (padrão 5)
 func (q *Queries) CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countLowStockProductsByCompany, companyID)
 	var low_stock_count int64

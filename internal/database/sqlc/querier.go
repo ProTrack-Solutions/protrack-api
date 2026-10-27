@@ -18,6 +18,7 @@ type Querier interface {
 	AdjustStock(ctx context.Context, arg AdjustStockParams) (AdjustStockRow, error)
 	CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
+	CloseCashSession(ctx context.Context, arg CloseCashSessionParams) (CashSession, error)
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -26,6 +27,7 @@ type Querier interface {
 	CountCustomers(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCustomersByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountInvoices(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	// Abaixo do limite de estoque baixo configurado pela empresa (padrão 5)
 	CountLowStockProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	// Alimenta o job de sincronização de uso mensal com o Stripe.
 	CountMessagesInPeriod(ctx context.Context, arg CountMessagesInPeriodParams) (int64, error)
@@ -40,6 +42,8 @@ type Querier interface {
 	CreateAnnouncements(ctx context.Context, arg CreateAnnouncementsParams) error
 	CreateBillCategories(ctx context.Context, arg CreateBillCategoriesParams) error
 	CreateBillPayable(ctx context.Context, arg CreateBillPayableParams) error
+	CreateCashSession(ctx context.Context, arg CreateCashSessionParams) (CashSession, error)
+	CreateCashSessionMovement(ctx context.Context, arg CreateCashSessionMovementParams) (CashSessionMovement, error)
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
 	CreateCustomers(ctx context.Context, arg CreateCustomersParams) (pgtype.UUID, error)
 	CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error)
@@ -104,6 +108,14 @@ type Querier interface {
 	GetCashOutFlowByCategory(ctx context.Context, companyID pgtype.UUID) ([]GetCashOutFlowByCategoryRow, error)
 	GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCashOutFlowCategoryByPeriodParams) ([]GetCashOutFlowCategoryByPeriodRow, error)
 	GetCashOutFlowCategoryByRange(ctx context.Context, arg GetCashOutFlowCategoryByRangeParams) ([]GetCashOutFlowCategoryByRangeRow, error)
+	GetCashSessionById(ctx context.Context, arg GetCashSessionByIdParams) (GetCashSessionByIdRow, error)
+	// Parcelas de vendas a prazo recebidas pelo operador no turno
+	GetCashSessionReceiptsByMethod(ctx context.Context, arg GetCashSessionReceiptsByMethodParams) ([]GetCashSessionReceiptsByMethodRow, error)
+	// Vendas do operador no turno, por forma de pagamento. Na venda a prazo só a
+	// entrada (down_payment) é recebida no balcão; o resto vira contas a receber.
+	// O troco já está descontado: received é o que fica na gaveta, não o que o
+	// cliente entregou.
+	GetCashSessionSalesByMethod(ctx context.Context, arg GetCashSessionSalesByMethodParams) ([]GetCashSessionSalesByMethodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
 	// Busca o valor de uma config específica de uma empresa.
@@ -131,6 +143,9 @@ type Querier interface {
 	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
 	GetModule(ctx context.Context, code string) (Module, error)
 	GetOpenBalanceBySale(ctx context.Context, arg GetOpenBalanceBySaleParams) (pgtype.Numeric, error)
+	GetOpenCashSessionByUser(ctx context.Context, arg GetOpenCashSessionByUserParams) (CashSession, error)
+	// Trava a linha para que movimentos e fechamento concorrentes não se cruzem
+	GetOpenCashSessionByUserForUpdate(ctx context.Context, arg GetOpenCashSessionByUserForUpdateParams) (CashSession, error)
 	GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([]BillsPayable, error)
 	GetPaymentMethodByID(ctx context.Context, id pgtype.UUID) (PaymentMethod, error)
 	GetPaymentMethodsStats(ctx context.Context, companyID pgtype.UUID) ([]GetPaymentMethodsStatsRow, error)
@@ -180,6 +195,9 @@ type Querier interface {
 	ListBillCategories(ctx context.Context, companyID pgtype.UUID) ([]BillCategory, error)
 	ListBillCategoriesActive(ctx context.Context, id pgtype.UUID) ([]BillCategory, error)
 	ListBillsPayable(ctx context.Context, arg ListBillsPayableParams) ([]ListBillsPayableRow, error)
+	ListCashSessionMovements(ctx context.Context, sessionID pgtype.UUID) ([]CashSessionMovement, error)
+	// user_id nulo lista os caixas de todos os operadores (visão do administrador)
+	ListCashSessions(ctx context.Context, arg ListCashSessionsParams) ([]ListCashSessionsRow, error)
 	ListCompanies(ctx context.Context) ([]Company, error)
 	// Lista todas as configs de uma empresa de uma vez — útil pra telas de
 	// "configurações" que mostram tudo junto, evitando N chamadas separadas.

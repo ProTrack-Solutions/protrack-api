@@ -1,10 +1,12 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	cashRegisterDomain "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/domain"
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/payments/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/payments/service"
@@ -73,6 +75,10 @@ func (h *Handler) NewPayment(c *gin.Context) {
 	}
 
 	if err := h.service.NewPayment(c.Request.Context(), companyId, userId, req); err != nil {
+		if errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired) {
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+			return
+		}
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

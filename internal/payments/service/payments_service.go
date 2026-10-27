@@ -6,6 +6,7 @@ import (
 
 	accReceivableDomain "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/domain"
 	accReceivableService "github.com/ProTrack-Solutions/protrack-api/internal/accounts_receivable/service"
+	cashRegisterService "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/service"
 	customerDomain "github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	paymentHistoryDomain "github.com/ProTrack-Solutions/protrack-api/internal/payment_history/domain"
@@ -46,6 +47,10 @@ func (s *Service) NewPayment(ctx context.Context, companyId, userId uuid.UUID, r
 		return err
 	}
 	defer tx.Rollback(ctx)
+
+	if err := cashRegisterService.RequireOpenSession(ctx, tx, companyId, userId); err != nil {
+		return err
+	}
 
 	customer, err := s.customersService.GetCustomerByIdTx(ctx, tx, req.CustomerID)
 	if err != nil {
