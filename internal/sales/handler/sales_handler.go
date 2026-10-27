@@ -7,6 +7,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	cashRegisterDomain "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/domain"
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
@@ -96,7 +97,8 @@ func respondSaleError(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrInsufficientStock),
 		errors.Is(err, domain.ErrSaleAlreadyCanceled),
 		errors.Is(err, domain.ErrSaleUpdateExpired),
-		errors.Is(err, domain.ErrSaleHasPayments):
+		errors.Is(err, domain.ErrSaleHasPayments),
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	default:
 		log.Error().Err(err).Str("path", c.FullPath()).Msg("erro inesperado em vendas")

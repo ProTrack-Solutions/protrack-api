@@ -15,14 +15,15 @@ import (
 	pgconv "github.com/ProTrack-Solutions/protrack-api/internal/adapters/pgtype"
 	companiesService "github.com/ProTrack-Solutions/protrack-api/internal/companies/service"
 	companySettingsDomain "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/domain"
+	cashRegisterService "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/service"
 	customerDomain "github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
-	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
+	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
-	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	metaWhatsAppService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
+	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
 	productService "github.com/ProTrack-Solutions/protrack-api/internal/products/service"
 	productCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
@@ -135,6 +136,10 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 	defer tx.Rollback(ctx)
 
+	if err := cashRegisterService.RequireOpenSession(ctx, tx, companyId, userId); err != nil {
+		return uuid.Nil, err
+	}
+
 	txRepo := s.repo.WithTx(tx)
 	q := db.New(tx)
 
@@ -209,6 +214,11 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		status = "paid"
 	}
 
+	amountReceived, changeAmount, err := cashChange(req.AmountReceived, req.PaymentMethod, totalAmount, req.Prohibited)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
 	dueDaysVal := 0
 	if req.PaymentMethod == "installments" && req.DueDays > 0 {
 		dueDaysVal = int(req.DueDays)
@@ -232,6 +242,8 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		InstallmentsCount: installments,
 		DownPayment:       pgconv.Float64ToPgNumeric(req.Prohibited),
 		BuyerDocument:     pgconv.ParseStringToPgText(req.BuyerDocument),
+		AmountReceived:    amountReceived,
+		ChangeAmount:      changeAmount,
 	})
 	if err != nil {
 		return uuid.Nil, err
@@ -252,8 +264,6 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		}
 
 		saleID := pgconv.PgUUIDToUUID(id)
-
-
 
 		itemTotal := float64(itemReq.Quantity) * product.SalePrice
 		proportion := itemTotal / subTotal
@@ -285,6 +295,30 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 // roundMoney arredonda um valor em R$ para centavos.
 func roundMoney(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+// cashChange calcula o troco sobre o que é pago em dinheiro no balcão: o total na
+// venda em dinheiro ou a entrada na venda a prazo. Sem valor recebido informado
+// (pagamento exato), os dois campos ficam nulos.
+func cashChange(received *float64, method enums.PaymentMethod, total, downPayment float64) (pgtype.Numeric, pgtype.Numeric, error) {
+	if received == nil {
+		return pgtype.Numeric{}, pgtype.Numeric{}, nil
+	}
+
+	due := total
+	if method == enums.PaymentMethodInstallments {
+		due = downPayment
+	}
+	if due <= 0 {
+		return pgtype.Numeric{}, pgtype.Numeric{}, nil
+	}
+
+	amount := roundMoney(*received)
+	if amount < roundMoney(due) {
+		return pgtype.Numeric{}, pgtype.Numeric{}, fmt.Errorf("%w: o valor recebido (R$ %.2f) é menor que o valor a pagar (R$ %.2f)", domain.ErrInvalidSale, amount, due)
+	}
+
+	return pgconv.Float64ToPgNumeric(amount), pgconv.Float64ToPgNumeric(roundMoney(amount - due)), nil
 }
 
 // createInstallmentsTx gera as parcelas (contas a receber) de uma venda a prazo.

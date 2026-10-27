@@ -10,4 +10,5 @@ const (
 	NormalStock                 CompanySettingsKey = "normal_stock"
 	SaleOverdueTemplate         CompanySettingsKey = "sale_overdue_template"
 	LanguageSaleOverdueTemplate CompanySettingsKey = "language_sale_overdue_template"
+	RequireOpenCashRegister     CompanySettingsKey = "require_open_cash_register"
 )
