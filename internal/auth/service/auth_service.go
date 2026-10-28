@@ -42,9 +42,9 @@ var (
 	ErrInvalidResetToken = errors.New("link inválido ou expirado")
 
 	// Erros de login. Credenciais inválidas vêm de userService.ErrInvalidCredentials.
-	ErrInvalidAud           = errors.New("aplicação de origem (aud) inválida")
+	ErrInvalidAud = errors.New("aplicação de origem (aud) inválida")
 	// A sessão foi substituída por um login mais recente na mesma aplicação
-	ErrSessionReplaced = errors.New("sua conta foi acessada em outro dispositivo; entre novamente")
+	ErrSessionReplaced      = errors.New("sua conta foi acessada em outro dispositivo; entre novamente")
 	ErrSubscriptionNotFound = errors.New("nenhuma assinatura encontrada para a empresa")
 	ErrSubscriptionCanceled = errors.New("a assinatura da empresa foi cancelada")
 	ErrSubscriptionPaused   = errors.New("a assinatura da empresa está pausada")
