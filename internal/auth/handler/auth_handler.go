@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -187,19 +188,15 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	// Refresh token é de uso único: o já usado não renova de novo
-	tokenID := claims.TokenKey()
-	used, err := h.blacklist.IsRefreshBlacklisted(c.Request.Context(), tokenID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
-		return
-	}
-	if used {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
-		return
-	}
-
-	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken, userID)
+	// Refresh token é de uso único, com tolerância para renovações simultâneas:
+	// pedidos repetidos logo em seguida recebem o mesmo par novo
+	raw, err := h.blacklist.RefreshOnce(c.Request.Context(), claims.TokenKey(), time.Until(claims.ExpiresAt.Time), func() ([]byte, error) {
+		resp, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken, userID)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(resp)
+	})
 	if errors.Is(err, service.ErrSessionReplaced) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error(), "code": "SESSION_REPLACED"})
 		return
@@ -209,8 +206,10 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	if expiresIn := time.Until(claims.ExpiresAt.Time); expiresIn > 0 {
-		_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
+	var response domain.LoginResponse
+	if err := json.Unmarshal(raw, &response); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
 	}
 
 	c.SetCookie(
