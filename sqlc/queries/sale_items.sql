@@ -4,9 +4,10 @@ INSERT INTO sale_items (
         product_id,
         quantity,
         unit_price,
-        discount
+        discount,
+        unit_cost
     )
-VALUES ($1, $2, $3, $4, $5);
+VALUES ($1, $2, $3, $4, $5, $6);
 -- name: DeleteSaleItem :exec
 DELETE FROM sale_items
 WHERE id = $1;

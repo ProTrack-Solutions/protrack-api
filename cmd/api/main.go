@@ -16,7 +16,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/email"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
-	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	authHandler "github.com/ProTrack-Solutions/protrack-api/internal/auth/handler"
 	authService "github.com/ProTrack-Solutions/protrack-api/internal/auth/service"
@@ -60,6 +59,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord"
 	"github.com/ProTrack-Solutions/protrack-api/internal/logger/discord/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/client"
+	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/eligibility"
 	metaWhatsappHandler "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/handler"
 	metaWhatsappRepo "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/repository"
 	metaWhatsappService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
@@ -89,8 +89,15 @@ import (
 	productsCategoriesHandler "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/handler"
 	productsCategoriesRepository "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/repository"
 	productsCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
+	purchasesHandler "github.com/ProTrack-Solutions/protrack-api/internal/purchases/handler"
+	purchasesRepository "github.com/ProTrack-Solutions/protrack-api/internal/purchases/repository"
+	purchasesService "github.com/ProTrack-Solutions/protrack-api/internal/purchases/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/rabbitmq"
+	receivableRemindersHandler "github.com/ProTrack-Solutions/protrack-api/internal/receivable_reminders/handler"
+	receivableRemindersRepository "github.com/ProTrack-Solutions/protrack-api/internal/receivable_reminders/repository"
+	receivableRemindersService "github.com/ProTrack-Solutions/protrack-api/internal/receivable_reminders/service"
 	reportsHandler "github.com/ProTrack-Solutions/protrack-api/internal/reports/handler"
+	reportsRepository "github.com/ProTrack-Solutions/protrack-api/internal/reports/repository"
 	reportsService "github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	saleItemsHandler "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/handler"
 	saleItemsRepository "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/repository"
@@ -307,6 +314,8 @@ func main() {
 	saleItemsService := saleItemsService.NewService(saleItemsRepository, db.Pool, productsRepository)
 	accountsReceivableService := accountsReceivableService.NewService(accountsReceivableRepository, db.Pool)
 	metaWhatsappService := metaWhatsappService.NewService(metaWhatsappRepo, metaClient, subscriptionsService, plansService, billing, companiesService, cfg)
+	whatsAppEligibility := eligibility.NewChecker(subscriptionsService, plansService, metaWhatsappService, companySettingsService)
+	receivableRemindersService := receivableRemindersService.NewService(receivableRemindersRepository.NewRepository(db.Pool), db.Pool, metaWhatsappService, companySettingsService, whatsAppEligibility)
 	subscriptionManagementService := subscriptionManagementService.NewService(cfg, subscriptionsService, subscriptionPaymentMethodsService, discordLogger, subscriptionManagementRepository, metaWhatsappService, plansService)
 	salesService := salesService.NewService(
 		salesRepository,
@@ -328,8 +337,9 @@ func main() {
 	billsPayableService := billsPayableService.NewService(billsPayableRepository, db.Pool)
 	paymentHistoryService := paymentHistoryService.NewService(paymentHistoryRepository, db.Pool)
 	paymentsService := paymentsService.NewService(db.Pool, paymentHistoryService, accountsReceivableService, customersService, salesService)
-	analyticsService := analyticsService.NewService(productsService, saleItemsService)
-	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
+	reportsService := reportsService.NewService(reportsRepository.NewRepository(db.Pool))
+	purchasesService := purchasesService.NewService(purchasesRepository.NewRepository(db.Pool), db.Pool, subscriptionsService, plansService)
+	purchasesService.SetPublisher(rabbitmq.NewPublisher(ch))
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 	modulesService := modulesService.NewService(modulesRepo)
@@ -357,6 +367,8 @@ func main() {
 	accountsReceivableHandler := accountsReceivableHandler.NewHandler(accountsReceivableService, jwtManager, blacklist, discordLogger, departmentModulesService)
 	paymentsHandler := paymentsHandler.NewHandler(paymentsService, jwtManager, blacklist, departmentModulesService)
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist, departmentModulesService)
+	purchasesHandler := purchasesHandler.NewHandler(purchasesService, jwtManager, blacklist, departmentModulesService)
+	receivableRemindersHandler := receivableRemindersHandler.NewHandler(receivableRemindersService, jwtManager, blacklist, departmentModulesService)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService, jwtManager, blacklist)
 	platformAdminsHandler := platformAdminsHandler.NewHandler(platformAdminsService, cfg, rateLimiter)
@@ -386,6 +398,8 @@ func main() {
 	accountsReceivableHandler.RegisterRoute(api)
 	paymentsHandler.RegisterRoute(api)
 	reportsHandler.RegisterRoutes(api)
+	purchasesHandler.RegisterRoutes(api)
+	receivableRemindersHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
 	cashRegisterHandler.RegisterRoutes(api)
 	annoucementsHandler.RegisterRoutes(api)

@@ -139,13 +139,103 @@ func (ns NullCashSessionStatus) Value() (driver.Value, error) {
 	return string(ns.CashSessionStatus), nil
 }
 
+type PurchaseOrderStatus string
+
+const (
+	PurchaseOrderStatusDraft    PurchaseOrderStatus = "draft"
+	PurchaseOrderStatusSent     PurchaseOrderStatus = "sent"
+	PurchaseOrderStatusPartial  PurchaseOrderStatus = "partial"
+	PurchaseOrderStatusReceived PurchaseOrderStatus = "received"
+	PurchaseOrderStatusClosed   PurchaseOrderStatus = "closed"
+	PurchaseOrderStatusCanceled PurchaseOrderStatus = "canceled"
+)
+
+func (e *PurchaseOrderStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PurchaseOrderStatus(s)
+	case string:
+		*e = PurchaseOrderStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PurchaseOrderStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPurchaseOrderStatus struct {
+	PurchaseOrderStatus PurchaseOrderStatus `json:"purchase_order_status"`
+	Valid               bool                `json:"valid"` // Valid is true if PurchaseOrderStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPurchaseOrderStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PurchaseOrderStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PurchaseOrderStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPurchaseOrderStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PurchaseOrderStatus), nil
+}
+
+type PurchaseReceiptStatus string
+
+const (
+	PurchaseReceiptStatusActive   PurchaseReceiptStatus = "active"
+	PurchaseReceiptStatusReversed PurchaseReceiptStatus = "reversed"
+)
+
+func (e *PurchaseReceiptStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PurchaseReceiptStatus(s)
+	case string:
+		*e = PurchaseReceiptStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PurchaseReceiptStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPurchaseReceiptStatus struct {
+	PurchaseReceiptStatus PurchaseReceiptStatus `json:"purchase_receipt_status"`
+	Valid                 bool                  `json:"valid"` // Valid is true if PurchaseReceiptStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPurchaseReceiptStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PurchaseReceiptStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PurchaseReceiptStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPurchaseReceiptStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PurchaseReceiptStatus), nil
+}
+
 type StockMovementType string
 
 const (
-	StockMovementTypeENTRY      StockMovementType = "ENTRY"
-	StockMovementTypeSALE       StockMovementType = "SALE"
-	StockMovementTypeSALECANCEL StockMovementType = "SALE_CANCEL"
-	StockMovementTypeADJUSTMENT StockMovementType = "ADJUSTMENT"
+	StockMovementTypeENTRY            StockMovementType = "ENTRY"
+	StockMovementTypeSALE             StockMovementType = "SALE"
+	StockMovementTypeSALECANCEL       StockMovementType = "SALE_CANCEL"
+	StockMovementTypeADJUSTMENT       StockMovementType = "ADJUSTMENT"
+	StockMovementTypePURCHASE         StockMovementType = "PURCHASE"
+	StockMovementTypePURCHASEREVERSAL StockMovementType = "PURCHASE_REVERSAL"
 )
 
 func (e *StockMovementType) Scan(src interface{}) error {
@@ -406,21 +496,22 @@ type BillCategory struct {
 }
 
 type BillsPayable struct {
-	ID              pgtype.UUID        `json:"id"`
-	CompanyID       pgtype.UUID        `json:"company_id"`
-	VendorID        pgtype.UUID        `json:"vendor_id"`
-	CategoryID      pgtype.UUID        `json:"category_id"`
-	PaymentMethodID pgtype.UUID        `json:"payment_method_id"`
-	Amount          pgtype.Numeric     `json:"amount"`
-	DueDate         pgtype.Date        `json:"due_date"`
-	Status          interface{}        `json:"status"`
-	Description     pgtype.Text        `json:"description"`
-	ScheduledDate   pgtype.Date        `json:"scheduled_date"`
-	PaymentDate     pgtype.Date        `json:"payment_date"`
-	AmountPaid      pgtype.Numeric     `json:"amount_paid"`
-	Notes           pgtype.Text        `json:"notes"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                pgtype.UUID        `json:"id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	VendorID          pgtype.UUID        `json:"vendor_id"`
+	CategoryID        pgtype.UUID        `json:"category_id"`
+	PaymentMethodID   pgtype.UUID        `json:"payment_method_id"`
+	Amount            pgtype.Numeric     `json:"amount"`
+	DueDate           pgtype.Date        `json:"due_date"`
+	Status            interface{}        `json:"status"`
+	Description       pgtype.Text        `json:"description"`
+	ScheduledDate     pgtype.Date        `json:"scheduled_date"`
+	PaymentDate       pgtype.Date        `json:"payment_date"`
+	AmountPaid        pgtype.Numeric     `json:"amount_paid"`
+	Notes             pgtype.Text        `json:"notes"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	PurchaseReceiptID pgtype.UUID        `json:"purchase_receipt_id"`
 }
 
 type CashSession struct {
@@ -718,6 +809,8 @@ type Product struct {
 	CfopSaidaDentroEstado pgtype.Text        `json:"cfop_saida_dentro_estado"`
 	CfopSaidaForaEstado   pgtype.Text        `json:"cfop_saida_fora_estado"`
 	OrigemMercadoria      int16              `json:"origem_mercadoria"`
+	ModelName             pgtype.Text        `json:"model_name"`
+	Color                 pgtype.Text        `json:"color"`
 }
 
 type ProductCategory struct {
@@ -732,6 +825,89 @@ type ProductCategory struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type PurchaseOrder struct {
+	ID           pgtype.UUID         `json:"id"`
+	CompanyID    pgtype.UUID         `json:"company_id"`
+	Number       int32               `json:"number"`
+	VendorID     pgtype.UUID         `json:"vendor_id"`
+	Status       PurchaseOrderStatus `json:"status"`
+	ExpectedDate pgtype.Date         `json:"expected_date"`
+	Notes        pgtype.Text         `json:"notes"`
+	CreatedBy    pgtype.UUID         `json:"created_by"`
+	CreatedAt    pgtype.Timestamptz  `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz  `json:"updated_at"`
+	SentAt       pgtype.Timestamptz  `json:"sent_at"`
+	ClosedAt     pgtype.Timestamptz  `json:"closed_at"`
+	ClosedBy     pgtype.UUID         `json:"closed_by"`
+	CloseReason  pgtype.Text         `json:"close_reason"`
+}
+
+type PurchaseOrderEmail struct {
+	ID        pgtype.UUID        `json:"id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	OrderID   pgtype.UUID        `json:"order_id"`
+	Kind      string             `json:"kind"`
+	Recipient string             `json:"recipient"`
+	Cc        pgtype.Text        `json:"cc"`
+	SentBy    pgtype.UUID        `json:"sent_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PurchaseOrderItem struct {
+	ID               pgtype.UUID    `json:"id"`
+	OrderID          pgtype.UUID    `json:"order_id"`
+	ProductID        pgtype.UUID    `json:"product_id"`
+	Quantity         int32          `json:"quantity"`
+	UnitCost         pgtype.Numeric `json:"unit_cost"`
+	ReceivedQuantity int32          `json:"received_quantity"`
+}
+
+type PurchaseReceipt struct {
+	ID             pgtype.UUID           `json:"id"`
+	CompanyID      pgtype.UUID           `json:"company_id"`
+	OrderID        pgtype.UUID           `json:"order_id"`
+	Status         PurchaseReceiptStatus `json:"status"`
+	ReceivedAt     pgtype.Timestamptz    `json:"received_at"`
+	InvoiceNumber  pgtype.Text           `json:"invoice_number"`
+	InvoiceSeries  pgtype.Text           `json:"invoice_series"`
+	InvoiceKey     pgtype.Text           `json:"invoice_key"`
+	ItemsTotal     pgtype.Numeric        `json:"items_total"`
+	Freight        pgtype.Numeric        `json:"freight"`
+	OtherExpenses  pgtype.Numeric        `json:"other_expenses"`
+	Discount       pgtype.Numeric        `json:"discount"`
+	Total          pgtype.Numeric        `json:"total"`
+	Notes          pgtype.Text           `json:"notes"`
+	CreatedBy      pgtype.UUID           `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz    `json:"created_at"`
+	ReversedAt     pgtype.Timestamptz    `json:"reversed_at"`
+	ReversedBy     pgtype.UUID           `json:"reversed_by"`
+	ReversalReason pgtype.Text           `json:"reversal_reason"`
+}
+
+type PurchaseReceiptItem struct {
+	ID               pgtype.UUID    `json:"id"`
+	ReceiptID        pgtype.UUID    `json:"receipt_id"`
+	OrderItemID      pgtype.UUID    `json:"order_item_id"`
+	ProductID        pgtype.UUID    `json:"product_id"`
+	Quantity         int32          `json:"quantity"`
+	UnitCost         pgtype.Numeric `json:"unit_cost"`
+	LandedUnitCost   pgtype.Numeric `json:"landed_unit_cost"`
+	PreviousCost     pgtype.Numeric `json:"previous_cost"`
+	NewCost          pgtype.Numeric `json:"new_cost"`
+	PreviousQuantity pgtype.Int4    `json:"previous_quantity"`
+}
+
+type ReceivableReminder struct {
+	ID                  pgtype.UUID        `json:"id"`
+	CompanyID           pgtype.UUID        `json:"company_id"`
+	AccountReceivableID pgtype.UUID        `json:"account_receivable_id"`
+	WhatsappMessageID   pgtype.UUID        `json:"whatsapp_message_id"`
+	TemplateName        string             `json:"template_name"`
+	RecipientPhone      string             `json:"recipient_phone"`
+	SentBy              pgtype.UUID        `json:"sent_by"`
+	SentAt              pgtype.Timestamptz `json:"sent_at"`
 }
 
 type Sale struct {
@@ -766,18 +942,20 @@ type SaleItem struct {
 	UnitPrice pgtype.Numeric     `json:"unit_price"`
 	Discount  pgtype.Numeric     `json:"discount"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UnitCost  pgtype.Numeric     `json:"unit_cost"`
 }
 
 type StockMovement struct {
-	ID        pgtype.UUID        `json:"id"`
-	CompanyID pgtype.UUID        `json:"company_id"`
-	ProductID pgtype.UUID        `json:"product_id"`
-	SaleID    pgtype.UUID        `json:"sale_id"`
-	Type      StockMovementType  `json:"type"`
-	Quantity  int32              `json:"quantity"`
-	Reason    pgtype.Text        `json:"reason"`
-	CreatedBy pgtype.UUID        `json:"created_by"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID                pgtype.UUID        `json:"id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	ProductID         pgtype.UUID        `json:"product_id"`
+	SaleID            pgtype.UUID        `json:"sale_id"`
+	Type              StockMovementType  `json:"type"`
+	Quantity          int32              `json:"quantity"`
+	Reason            pgtype.Text        `json:"reason"`
+	CreatedBy         pgtype.UUID        `json:"created_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	PurchaseReceiptID pgtype.UUID        `json:"purchase_receipt_id"`
 }
 
 type Subscription struct {

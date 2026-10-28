@@ -329,9 +329,17 @@ const listAccountsReceivables = `-- name: ListAccountsReceivables :many
 SELECT
     ar.id, ar.company_id, ar.customer_id, ar.sale_id, ar.total_amount, ar.balance, ar.due_date, ar.installment_number, ar.total_installments, ar.status, ar.created_at, ar.created_by, ar.updated_at, ar.updated_by, ar.deleted_at,
     c.full_name AS customer_name,
-    count(*) OVER() AS total_count
+    count(*) OVER() AS total_count,
+    lr.sent_at AS last_reminder_at
 FROM accounts_receivable ar
 JOIN customers c ON c.id = ar.customer_id
+LEFT JOIN LATERAL (
+    SELECT rr.sent_at
+    FROM receivable_reminders rr
+    WHERE rr.account_receivable_id = ar.id
+    ORDER BY rr.sent_at DESC
+    LIMIT 1
+) lr ON TRUE
 WHERE ar.company_id = $1
     AND ar.deleted_at IS NULL
     AND (
@@ -386,6 +394,7 @@ type ListAccountsReceivablesRow struct {
 	DeletedAt         pgtype.Timestamptz `json:"deleted_at"`
 	CustomerName      string             `json:"customer_name"`
 	TotalCount        int64              `json:"total_count"`
+	LastReminderAt    pgtype.Timestamptz `json:"last_reminder_at"`
 }
 
 func (q *Queries) ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error) {
@@ -428,6 +437,7 @@ func (q *Queries) ListAccountsReceivables(ctx context.Context, arg ListAccountsR
 			&i.DeletedAt,
 			&i.CustomerName,
 			&i.TotalCount,
+			&i.LastReminderAt,
 		); err != nil {
 			return nil, err
 		}

@@ -17,9 +17,10 @@ INSERT INTO sale_items (
         product_id,
         quantity,
         unit_price,
-        discount
+        discount,
+        unit_cost
     )
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6)
 `
 
 type CreateSaleItemParams struct {
@@ -28,6 +29,7 @@ type CreateSaleItemParams struct {
 	Quantity  int32          `json:"quantity"`
 	UnitPrice pgtype.Numeric `json:"unit_price"`
 	Discount  pgtype.Numeric `json:"discount"`
+	UnitCost  pgtype.Numeric `json:"unit_cost"`
 }
 
 func (q *Queries) CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) error {
@@ -37,6 +39,7 @@ func (q *Queries) CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) 
 		arg.Quantity,
 		arg.UnitPrice,
 		arg.Discount,
+		arg.UnitCost,
 	)
 	return err
 }
