@@ -224,10 +224,12 @@ var statusLabels = map[string]string{
 }
 
 var stockMovementLabels = map[string]string{
-	"ENTRY":       "Entrada",
-	"SALE":        "Venda",
-	"SALE_CANCEL": "Cancelamento de venda",
-	"ADJUSTMENT":  "Ajuste",
+	"ENTRY":             "Entrada",
+	"SALE":              "Venda",
+	"SALE_CANCEL":       "Cancelamento de venda",
+	"ADJUSTMENT":        "Ajuste",
+	"PURCHASE":          "Compra",
+	"PURCHASE_REVERSAL": "Estorno de compra",
 }
 
 func label(labels map[string]string, value string) string {

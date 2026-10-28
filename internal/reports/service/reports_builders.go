@@ -517,7 +517,7 @@ func buildDRE(revenue db.ReportDreRevenueRow, expenses []db.ReportDreExpensesRow
 			summary("Resultado", result, domain.ColumnMoney),
 			summary("Margem líquida", percent(result, net), domain.ColumnPercent),
 		},
-		Notes: append(costNotes(), "Despesas vêm das contas a pagar com vencimento no período, exceto as canceladas."),
+		Notes: append(costNotes(), "Despesas vêm das contas a pagar com vencimento no período, exceto as canceladas e as de compra de mercadoria (já contadas no CMV)."),
 	}
 }
 

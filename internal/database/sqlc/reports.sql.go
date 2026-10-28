@@ -186,6 +186,7 @@ FROM bills_payable b
     LEFT JOIN bill_categories bc ON bc.id = b.category_id
 WHERE b.company_id = $1
     AND b.status <> 'canceled'
+    AND b.purchase_receipt_id IS NULL
     AND b.due_date >= $2::date
     AND b.due_date < $3::date
 GROUP BY bc.id, bc.name
@@ -204,7 +205,8 @@ type ReportDreExpensesRow struct {
 	Total        float64 `json:"total"`
 }
 
-// Despesas por competência: contas a pagar pelo vencimento, exceto canceladas
+// Despesas por competência: contas a pagar pelo vencimento, exceto canceladas.
+// Contas de compra de mercadoria ficam de fora: o custo delas já entra no CMV.
 func (q *Queries) ReportDreExpenses(ctx context.Context, arg ReportDreExpensesParams) ([]ReportDreExpensesRow, error) {
 	rows, err := q.db.Query(ctx, reportDreExpenses, arg.CompanyID, arg.StartDate, arg.EndDate)
 	if err != nil {

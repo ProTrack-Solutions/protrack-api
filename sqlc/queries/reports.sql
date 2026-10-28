@@ -288,7 +288,8 @@ WHERE s.company_id = @company_id
     AND s.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text;
 
 -- name: ReportDreExpenses :many
--- Despesas por competência: contas a pagar pelo vencimento, exceto canceladas
+-- Despesas por competência: contas a pagar pelo vencimento, exceto canceladas.
+-- Contas de compra de mercadoria ficam de fora: o custo delas já entra no CMV.
 SELECT COALESCE(bc.name, 'Sem categoria')::TEXT AS category_name,
     COUNT(*)::INT AS bills_count,
     COALESCE(SUM(b.amount), 0)::FLOAT AS total
@@ -296,6 +297,7 @@ FROM bills_payable b
     LEFT JOIN bill_categories bc ON bc.id = b.category_id
 WHERE b.company_id = @company_id
     AND b.status <> 'canceled'
+    AND b.purchase_receipt_id IS NULL
     AND b.due_date >= @start_date::date
     AND b.due_date < @end_date::date
 GROUP BY bc.id, bc.name

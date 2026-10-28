@@ -19,9 +19,9 @@ import (
 	customerDomain "github.com/ProTrack-Solutions/protrack-api/internal/customers/domain"
 	customerService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
 	db "github.com/ProTrack-Solutions/protrack-api/internal/database/sqlc"
-	"github.com/ProTrack-Solutions/protrack-api/internal/demo"
 	globalDomain "github.com/ProTrack-Solutions/protrack-api/internal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/domain/enums"
+	"github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/eligibility"
 	metaWhatsAppService "github.com/ProTrack-Solutions/protrack-api/internal/meta_whatsapp/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/pkg/generator"
 	plansService "github.com/ProTrack-Solutions/protrack-api/internal/plans/service"
@@ -113,15 +113,6 @@ func NewService(
 		plansService:              plansService,
 		metaWhatsAppService:       metaWhatsAppService,
 		companySettings:           companySettings,
-	}
-}
-
-func calculatePeriodStart(currentPeriodEnd time.Time, billingCycle string) time.Time {
-	switch strings.ToLower(billingCycle) {
-	case "yearly":
-		return currentPeriodEnd.AddDate(-1, 0, 0)
-	default: // "monthly" e qualquer valor não reconhecido caem aqui
-		return currentPeriodEnd.AddDate(0, -1, 0)
 	}
 }
 
@@ -721,6 +712,7 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 	companyCounts := make(map[uuid.UUID]int)
 
 	whatsAppEligibility := make(map[uuid.UUID]bool)
+	checker := eligibility.NewChecker(s.subscriptionService, s.plansService, s.metaWhatsAppService, s.companySettings)
 
 	for _, data := range response {
 
@@ -755,54 +747,16 @@ func (s *Service) UpdateOverdueSales(ctx context.Context) (domain.OverdueSalesRe
 		isWhatsappPlan, cached := whatsAppEligibility[companyID]
 
 		if !cached {
-			sub, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, companyID)
+			result, err := checker.Check(ctx, companyID)
 			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve subscription for company %s: %w", companyID, err)
+				return domain.OverdueSalesResult{}, err
 			}
-
-			plan, err := s.plansService.GetPlanByID(ctx, sub.PlanID)
-			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve plan %s for company %s: %w", sub.PlanID, companyID, err)
-			}
-
-			periodStart := calculatePeriodStart(sub.CurrentPeriodEnd, plan.BillingCycle)
-
-			countMessages, err := s.metaWhatsAppService.CountMessagesInPeriod(ctx, companyID, periodStart, sub.CurrentPeriodEnd)
-			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to count whatsapp messages for company %s: %w", companyID, err)
-			}
-			if countMessages == nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("contagem de mensagens indisponível para empresa %s", companyID)
-			}
-
-			isExcessUsage, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsExcessUsage)
-			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.IsExcessUsage, companyID, err)
-			}
-
-			isWhatsAppActive, err := s.companySettings.GetCompanySetting(ctx, companyID, enums.IsWhatsappActive)
-			if err != nil {
-				return domain.OverdueSalesResult{}, fmt.Errorf("failed to retrieve setting %s for company %s: %w", enums.IsWhatsappActive, companyID, err)
-			}
-
-			for _, ft := range plan.Features {
-				if ft.FeatureKey == "max_whatsapp_integration" && isWhatsAppActive.Value.(bool) {
-					switch {
-					case ft.LimitValue > *countMessages:
-						isWhatsappPlan = true
-					case ft.LimitValue <= *countMessages && isExcessUsage.Value.(bool):
-						isWhatsappPlan = true
-					default:
-						isWhatsappPlan = false
-					}
-				}
-			}
-
+			isWhatsappPlan = result.Allowed
 			whatsAppEligibility[companyID] = isWhatsappPlan
 		}
 
-		// Os clientes da empresa demo são fictícios: nunca envia WhatsApp.
-		if isWhatsappPlan && !demo.IsDemoCompany(companyID) {
+		// A elegibilidade já exclui a empresa demo (clientes fictícios)
+		if isWhatsappPlan {
 			whatsAppEvents = append(whatsAppEvents, events.WhatsApp{
 				IDSale:       pgconv.PgUUIDToUUID(data.SaleID),
 				CompanyID:    companyID,

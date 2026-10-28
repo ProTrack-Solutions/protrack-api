@@ -100,9 +100,17 @@ WHERE sale_id = $1
 SELECT
     ar.*,
     c.full_name AS customer_name,
-    count(*) OVER() AS total_count
+    count(*) OVER() AS total_count,
+    lr.sent_at AS last_reminder_at
 FROM accounts_receivable ar
 JOIN customers c ON c.id = ar.customer_id
+LEFT JOIN LATERAL (
+    SELECT rr.sent_at
+    FROM receivable_reminders rr
+    WHERE rr.account_receivable_id = ar.id
+    ORDER BY rr.sent_at DESC
+    LIMIT 1
+) lr ON TRUE
 WHERE ar.company_id = $1
     AND ar.deleted_at IS NULL
     AND (
