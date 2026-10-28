@@ -232,7 +232,25 @@ SELECT COUNT(*)::INT AS sales_count,
     COALESCE(SUM(s.subtotal), 0)::FLOAT AS gross,
     COALESCE(SUM(s.discount_amount), 0)::FLOAT AS discount,
     COALESCE(SUM(s.total_amount), 0)::FLOAT AS net,
-    COALESCE(SUM(it.cost), 0)::FLOAT AS cost
+    COALESCE(SUM(it.cost), 0)::FLOAT AS cost,
+    (
+        SELECT COALESCE(SUM(sr.returned_total), 0)
+        FROM sale_returns sr
+        WHERE sr.company_id = $1
+            AND sr.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND sr.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    )::FLOAT AS returns_total,
+    (
+        SELECT COALESCE(SUM(ri.quantity * COALESCE(si.unit_cost, p.cost_price)), 0)
+        FROM sale_return_items ri
+            INNER JOIN sale_returns sr ON sr.id = ri.return_id
+            INNER JOIN sale_items si ON si.id = ri.sale_item_id
+            INNER JOIN products p ON p.id = ri.product_id
+        WHERE sr.company_id = $1
+            AND ri.restock
+            AND sr.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND sr.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    )::FLOAT AS returns_cost
 FROM sales s
     LEFT JOIN LATERAL (
         SELECT SUM(si.quantity * COALESCE(si.unit_cost, p.cost_price)) AS cost
@@ -255,14 +273,18 @@ type ReportDreRevenueParams struct {
 }
 
 type ReportDreRevenueRow struct {
-	SalesCount int32   `json:"sales_count"`
-	Gross      float64 `json:"gross"`
-	Discount   float64 `json:"discount"`
-	Net        float64 `json:"net"`
-	Cost       float64 `json:"cost"`
+	SalesCount   int32   `json:"sales_count"`
+	Gross        float64 `json:"gross"`
+	Discount     float64 `json:"discount"`
+	Net          float64 `json:"net"`
+	Cost         float64 `json:"cost"`
+	ReturnsTotal float64 `json:"returns_total"`
+	ReturnsCost  float64 `json:"returns_cost"`
 }
 
-// DRE por competência: vendas pela data da venda
+// DRE por competência: vendas pela data da venda. Devoluções entram pela data
+// da devolução: o valor devolvido sai da receita e o custo das peças que
+// voltaram ao estoque sai do CMV (peça avariada continua como custo).
 func (q *Queries) ReportDreRevenue(ctx context.Context, arg ReportDreRevenueParams) (ReportDreRevenueRow, error) {
 	row := q.db.QueryRow(ctx, reportDreRevenue,
 		arg.CompanyID,
@@ -277,6 +299,8 @@ func (q *Queries) ReportDreRevenue(ctx context.Context, arg ReportDreRevenuePara
 		&i.Discount,
 		&i.Net,
 		&i.Cost,
+		&i.ReturnsTotal,
+		&i.ReturnsCost,
 	)
 	return i, err
 }

@@ -82,7 +82,8 @@ INSERT INTO sales (
         status,
         buyer_document,
         amount_received,
-        change_amount
+        change_amount,
+        credit_amount
     )
 VALUES (
         $1,
@@ -99,7 +100,8 @@ VALUES (
         $11,
         $12,
         $13,
-        $14
+        $14,
+        $15
     )
 RETURNING id
 `
@@ -119,6 +121,7 @@ type CreateSaleParams struct {
 	BuyerDocument     pgtype.Text    `json:"buyer_document"`
 	AmountReceived    pgtype.Numeric `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric `json:"change_amount"`
+	CreditAmount      pgtype.Numeric `json:"credit_amount"`
 }
 
 func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error) {
@@ -137,6 +140,7 @@ func (q *Queries) CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.
 		arg.BuyerDocument,
 		arg.AmountReceived,
 		arg.ChangeAmount,
+		arg.CreditAmount,
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
@@ -282,7 +286,7 @@ func (q *Queries) GetPendingSalesDetailedReport(ctx context.Context, arg GetPend
 }
 
 const getSaleById = `-- name: GetSaleById :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount,
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount, s.credit_amount,
     COALESCE(c.full_name, '') as customer_name
 FROM sales s
     LEFT JOIN customers c ON s.customer_id = c.id
@@ -317,6 +321,7 @@ type GetSaleByIdRow struct {
 	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	AmountReceived    pgtype.Numeric     `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
+	CreditAmount      pgtype.Numeric     `json:"credit_amount"`
 	CustomerName      string             `json:"customer_name"`
 }
 
@@ -345,13 +350,14 @@ func (q *Queries) GetSaleById(ctx context.Context, arg GetSaleByIdParams) (GetSa
 		&i.BuyerDocument,
 		&i.AmountReceived,
 		&i.ChangeAmount,
+		&i.CreditAmount,
 		&i.CustomerName,
 	)
 	return i, err
 }
 
 const getSaleByIdForUpdate = `-- name: GetSaleByIdForUpdate :one
-SELECT id, customer_id, company_id, sale_at, discount_amount, subtotal, total_amount, down_payment, installments_count, due_days, payment_method, status, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by, buyer_document, amount_received, change_amount
+SELECT id, customer_id, company_id, sale_at, discount_amount, subtotal, total_amount, down_payment, installments_count, due_days, payment_method, status, created_at, created_by, updated_at, updated_by, deleted_at, deleted_by, buyer_document, amount_received, change_amount, credit_amount
 FROM sales
 WHERE id = $1
     AND company_id = $2
@@ -388,12 +394,13 @@ func (q *Queries) GetSaleByIdForUpdate(ctx context.Context, arg GetSaleByIdForUp
 		&i.BuyerDocument,
 		&i.AmountReceived,
 		&i.ChangeAmount,
+		&i.CreditAmount,
 	)
 	return i, err
 }
 
 const getSaleByIdJust = `-- name: GetSaleByIdJust :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount,
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount, s.credit_amount,
     COALESCE(c.full_name, '') as customer_name
 FROM sales s
     LEFT JOIN customers c ON s.customer_id = c.id
@@ -422,6 +429,7 @@ type GetSaleByIdJustRow struct {
 	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	AmountReceived    pgtype.Numeric     `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
+	CreditAmount      pgtype.Numeric     `json:"credit_amount"`
 	CustomerName      string             `json:"customer_name"`
 }
 
@@ -450,13 +458,14 @@ func (q *Queries) GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleB
 		&i.BuyerDocument,
 		&i.AmountReceived,
 		&i.ChangeAmount,
+		&i.CreditAmount,
 		&i.CustomerName,
 	)
 	return i, err
 }
 
 const getSaleByIdWhatsapp = `-- name: GetSaleByIdWhatsapp :one
-SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount,
+SELECT s.id, s.customer_id, s.company_id, s.sale_at, s.discount_amount, s.subtotal, s.total_amount, s.down_payment, s.installments_count, s.due_days, s.payment_method, s.status, s.created_at, s.created_by, s.updated_at, s.updated_by, s.deleted_at, s.deleted_by, s.buyer_document, s.amount_received, s.change_amount, s.credit_amount,
     COALESCE(c.full_name, '') as customer_name,
     COALESCE(c.whatsapp, '') as customer_whatsApp
 FROM sales s
@@ -486,6 +495,7 @@ type GetSaleByIdWhatsappRow struct {
 	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	AmountReceived    pgtype.Numeric     `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
+	CreditAmount      pgtype.Numeric     `json:"credit_amount"`
 	CustomerName      string             `json:"customer_name"`
 	CustomerWhatsapp  string             `json:"customer_whatsapp"`
 }
@@ -515,6 +525,7 @@ func (q *Queries) GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetS
 		&i.BuyerDocument,
 		&i.AmountReceived,
 		&i.ChangeAmount,
+		&i.CreditAmount,
 		&i.CustomerName,
 		&i.CustomerWhatsapp,
 	)
@@ -1137,6 +1148,10 @@ SELECT
     ar.due_date,
     ar.installment_number,
     ar.status AS installment_status,
+    -- Devoluções: valor devolvido da venda e se ela nasceu de uma troca
+    COALESCE((SELECT SUM(sr.returned_total) FROM sale_returns sr WHERE sr.sale_id = s.id), 0)::float8 AS returned_total,
+    EXISTS (SELECT 1 FROM sale_returns sr WHERE sr.exchange_sale_id = s.id) AS is_exchange_sale,
+    s.credit_amount::float8 AS credit_amount,
     ps.total_count
 FROM paginated_sales ps
     INNER JOIN sales s ON s.id = ps.id
@@ -1190,6 +1205,9 @@ type ListSalesWithDetailsPaginateRow struct {
 	DueDate                pgtype.Date        `json:"due_date"`
 	InstallmentNumber      pgtype.Int4        `json:"installment_number"`
 	InstallmentStatus      pgtype.Text        `json:"installment_status"`
+	ReturnedTotal          float64            `json:"returned_total"`
+	IsExchangeSale         bool               `json:"is_exchange_sale"`
+	CreditAmount           float64            `json:"credit_amount"`
 	TotalCount             int64              `json:"total_count"`
 }
 
@@ -1239,6 +1257,9 @@ func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSale
 			&i.DueDate,
 			&i.InstallmentNumber,
 			&i.InstallmentStatus,
+			&i.ReturnedTotal,
+			&i.IsExchangeSale,
+			&i.CreditAmount,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err

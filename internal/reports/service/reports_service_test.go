@@ -122,8 +122,8 @@ func TestBuildDRE(t *testing.T) {
 	if last[0] != "(=) Resultado do período" || last[1] != 76.5 {
 		t.Fatalf("resultado: esperava 76.5, veio %v", last)
 	}
-	if len(report.Rows) != 9 {
-		t.Fatalf("esperava 9 linhas (7 fixas + 2 categorias), veio %d", len(report.Rows))
+	if len(report.Rows) != 10 {
+		t.Fatalf("esperava 10 linhas (8 fixas + 2 categorias), veio %d", len(report.Rows))
 	}
 
 	summary := map[string]float64{}
@@ -132,6 +132,25 @@ func TestBuildDRE(t *testing.T) {
 	}
 	if summary["Lucro bruto"] != 146.5 || summary["Margem bruta"] != 34.23 || summary["Margem líquida"] != 17.87 {
 		t.Errorf("indicadores inesperados: %v", summary)
+	}
+}
+
+func TestBuildDREComDevolucoes(t *testing.T) {
+	// Receita 428 - devoluções 28 = 400; CMV 281.5 - 18.5 (peças que voltaram) = 263
+	report := buildDRE(
+		db.ReportDreRevenueRow{SalesCount: 4, Gross: 438, Discount: 10, Net: 428, Cost: 281.5, ReturnsTotal: 28, ReturnsCost: 18.5},
+		nil,
+	)
+
+	summary := map[string]float64{}
+	for _, s := range report.Summary {
+		summary[s.Label] = s.Value
+	}
+	if summary["Receita líquida"] != 400 || summary["Lucro bruto"] != 137 {
+		t.Errorf("indicadores inesperados: %v", summary)
+	}
+	if report.Rows[2][0] != "(-) Devoluções" || report.Rows[2][1] != -28.0 {
+		t.Errorf("linha de devoluções: %v", report.Rows[2])
 	}
 }
 

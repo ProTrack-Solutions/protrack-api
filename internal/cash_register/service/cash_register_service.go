@@ -384,6 +384,13 @@ func (s *Service) summary(ctx context.Context, repo *repository.Repository, sess
 		return domain.CashSummary{}, err
 	}
 
+	refunds, err := repo.GetCashSessionRefundsByMethod(ctx, db.GetCashSessionRefundsByMethodParams{
+		CompanyID: companyId, UserID: userId, StartAt: startAt, EndAt: endAt,
+	})
+	if err != nil {
+		return domain.CashSummary{}, err
+	}
+
 	movements, err := repo.ListCashSessionMovements(ctx, pgconv.ParseUUIDToPgType(session.ID))
 	if err != nil {
 		return domain.CashSummary{}, err
@@ -434,6 +441,22 @@ func (s *Service) summary(ctx context.Context, repo *repository.Repository, sess
 		}
 	}
 
+	// Reembolso de troca/devolução sai do que entrou naquela forma de pagamento
+	for _, r := range refunds {
+		m := get(r.PaymentMethod)
+		m.RefundsCount += r.RefundsCount
+		m.RefundsTotal += r.Refunded
+		m.Received -= r.Refunded
+
+		sum.RefundsCount += r.RefundsCount
+		sum.RefundsTotal += r.Refunded
+		sum.ReceivedTotal -= r.Refunded
+
+		if r.PaymentMethod == "cash" {
+			sum.CashRefunds += r.Refunded
+		}
+	}
+
 	for _, m := range movements {
 		amount := pgconv.PgNumericToFloat64(m.Amount)
 		if m.Type == db.CashMovementTypeSupply {
@@ -448,6 +471,7 @@ func (s *Service) summary(ctx context.Context, repo *repository.Repository, sess
 		m.SalesTotal = round(m.SalesTotal)
 		m.ReceiptsTotal = round(m.ReceiptsTotal)
 		m.Received = round(m.Received)
+		m.RefundsTotal = round(m.RefundsTotal)
 		sum.ByMethod = append(sum.ByMethod, *m)
 	}
 	sort.Slice(sum.ByMethod, func(i, j int) bool {
@@ -461,7 +485,9 @@ func (s *Service) summary(ctx context.Context, repo *repository.Repository, sess
 	sum.ChangeTotal = round(sum.ChangeTotal)
 	sum.SuppliesTotal = round(sum.SuppliesTotal)
 	sum.WithdrawalsTotal = round(sum.WithdrawalsTotal)
-	sum.ExpectedCash = round(session.OpeningAmount + sum.CashReceived + sum.SuppliesTotal - sum.WithdrawalsTotal)
+	sum.RefundsTotal = round(sum.RefundsTotal)
+	sum.CashRefunds = round(sum.CashRefunds)
+	sum.ExpectedCash = round(session.OpeningAmount + sum.CashReceived + sum.SuppliesTotal - sum.WithdrawalsTotal - sum.CashRefunds)
 
 	return sum, nil
 }

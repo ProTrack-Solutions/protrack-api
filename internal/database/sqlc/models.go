@@ -227,6 +227,48 @@ func (ns NullPurchaseReceiptStatus) Value() (driver.Value, error) {
 	return string(ns.PurchaseReceiptStatus), nil
 }
 
+type SaleReturnKind string
+
+const (
+	SaleReturnKindReturn   SaleReturnKind = "return"
+	SaleReturnKindExchange SaleReturnKind = "exchange"
+)
+
+func (e *SaleReturnKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = SaleReturnKind(s)
+	case string:
+		*e = SaleReturnKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for SaleReturnKind: %T", src)
+	}
+	return nil
+}
+
+type NullSaleReturnKind struct {
+	SaleReturnKind SaleReturnKind `json:"sale_return_kind"`
+	Valid          bool           `json:"valid"` // Valid is true if SaleReturnKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullSaleReturnKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.SaleReturnKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.SaleReturnKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullSaleReturnKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.SaleReturnKind), nil
+}
+
 type StockMovementType string
 
 const (
@@ -236,6 +278,7 @@ const (
 	StockMovementTypeADJUSTMENT       StockMovementType = "ADJUSTMENT"
 	StockMovementTypePURCHASE         StockMovementType = "PURCHASE"
 	StockMovementTypePURCHASEREVERSAL StockMovementType = "PURCHASE_REVERSAL"
+	StockMovementTypeRETURN           StockMovementType = "RETURN"
 )
 
 func (e *StockMovementType) Scan(src interface{}) error {
@@ -649,6 +692,20 @@ type Customer struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	StoreCredit         pgtype.Numeric     `json:"store_credit"`
+}
+
+type CustomerCreditMovement struct {
+	ID           pgtype.UUID        `json:"id"`
+	CompanyID    pgtype.UUID        `json:"company_id"`
+	CustomerID   pgtype.UUID        `json:"customer_id"`
+	Type         string             `json:"type"`
+	Amount       pgtype.Numeric     `json:"amount"`
+	BalanceAfter pgtype.Numeric     `json:"balance_after"`
+	SaleReturnID pgtype.UUID        `json:"sale_return_id"`
+	SaleID       pgtype.UUID        `json:"sale_id"`
+	CreatedBy    pgtype.UUID        `json:"created_by"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
 type Department struct {
@@ -932,6 +989,7 @@ type Sale struct {
 	BuyerDocument     pgtype.Text        `json:"buyer_document"`
 	AmountReceived    pgtype.Numeric     `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
+	CreditAmount      pgtype.Numeric     `json:"credit_amount"`
 }
 
 type SaleItem struct {
@@ -945,6 +1003,42 @@ type SaleItem struct {
 	UnitCost  pgtype.Numeric     `json:"unit_cost"`
 }
 
+type SaleReturn struct {
+	ID               pgtype.UUID        `json:"id"`
+	CompanyID        pgtype.UUID        `json:"company_id"`
+	Number           int32              `json:"number"`
+	Kind             SaleReturnKind     `json:"kind"`
+	SaleID           pgtype.UUID        `json:"sale_id"`
+	ExchangeSaleID   pgtype.UUID        `json:"exchange_sale_id"`
+	CustomerID       pgtype.UUID        `json:"customer_id"`
+	ReturnedTotal    pgtype.Numeric     `json:"returned_total"`
+	ExchangeTotal    pgtype.Numeric     `json:"exchange_total"`
+	ExchangeCredit   pgtype.Numeric     `json:"exchange_credit"`
+	DebtReduction    pgtype.Numeric     `json:"debt_reduction"`
+	CreditAmount     pgtype.Numeric     `json:"credit_amount"`
+	RefundAmount     pgtype.Numeric     `json:"refund_amount"`
+	RefundMethod     pgtype.Text        `json:"refund_method"`
+	DifferencePaid   pgtype.Numeric     `json:"difference_paid"`
+	DifferenceMethod pgtype.Text        `json:"difference_method"`
+	Reason           string             `json:"reason"`
+	Notes            pgtype.Text        `json:"notes"`
+	OutOfWindow      bool               `json:"out_of_window"`
+	OverrideReason   pgtype.Text        `json:"override_reason"`
+	CreatedBy        pgtype.UUID        `json:"created_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+}
+
+type SaleReturnItem struct {
+	ID         pgtype.UUID    `json:"id"`
+	ReturnID   pgtype.UUID    `json:"return_id"`
+	SaleItemID pgtype.UUID    `json:"sale_item_id"`
+	ProductID  pgtype.UUID    `json:"product_id"`
+	Quantity   int32          `json:"quantity"`
+	UnitAmount pgtype.Numeric `json:"unit_amount"`
+	Total      pgtype.Numeric `json:"total"`
+	Restock    bool           `json:"restock"`
+}
+
 type StockMovement struct {
 	ID                pgtype.UUID        `json:"id"`
 	CompanyID         pgtype.UUID        `json:"company_id"`
@@ -956,6 +1050,7 @@ type StockMovement struct {
 	CreatedBy         pgtype.UUID        `json:"created_by"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	PurchaseReceiptID pgtype.UUID        `json:"purchase_receipt_id"`
+	SaleReturnID      pgtype.UUID        `json:"sale_return_id"`
 }
 
 type Subscription struct {

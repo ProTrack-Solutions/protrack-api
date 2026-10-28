@@ -16,7 +16,7 @@ import (
 type PaginationParams struct {
 	globalDomain.PaginationParams
 	SaleStatus       string `form:"saleStatus" validate:"omitempty,oneof=pending paid overdue scheduled canceled partial"`
-	PaymentMethod    string `form:"paymentMethod" validate:"omitempty,oneof=cash credit_card debit_card pix bank_transfer installments other"`
+	PaymentMethod    string `form:"paymentMethod" validate:"omitempty,oneof=cash credit_card debit_card pix bank_transfer installments other store_credit"`
 	PaymentStartDate string `form:"paymentStartDate" validate:"omitempty,datetime=2006-01-02"`
 	PaymentEndDate   string `form:"paymentEndDate" validate:"omitempty,datetime=2006-01-02"`
 	SaleStartDate    string `form:"saleStartDate" validate:"omitempty,datetime=2006-01-02"`
@@ -37,6 +37,9 @@ type CreateSaleRequest struct {
 	// Dinheiro entregue pelo cliente no balcão (total da venda em dinheiro ou
 	// entrada da venda a prazo). Nil quando ele pagou o valor exato.
 	AmountReceived *float64 `json:"amount_received"`
+	// Parte paga com o vale-troca do cliente. Cobrindo o total, a forma de
+	// pagamento é store_credit; parcial, o resto vai na forma informada.
+	CreditAmount float64 `json:"credit_amount"`
 }
 
 type CreateSaleItemRequest struct {
@@ -55,6 +58,10 @@ var (
 	ErrSaleCustomerNotFound = errors.New("cliente não encontrado")
 	ErrSaleProductNotFound  = errors.New("produto não encontrado")
 	ErrInsufficientStock    = errors.New("estoque insuficiente")
+
+	ErrInsufficientCredit = errors.New("vale-troca insuficiente")
+	ErrSaleHasReturns     = errors.New("a venda tem trocas ou devoluções registradas e não pode ser cancelada nem alterada")
+	ErrExchangeSale       = errors.New("venda gerada por uma troca não pode ser cancelada nem alterada")
 )
 
 // MaxInstallments é o limite de parcelas de uma venda a prazo (o mesmo oferecido na tela).
@@ -165,6 +172,10 @@ type ListSalesResponse struct {
 	CustomerName           string      `json:"customer_name"`
 	InstallmentTotalAmount float64     `json:"installment_total_amount"`
 	DownPayment            float64     `json:"down_payments"`
+	// Valor já devolvido da venda e se ela foi criada por uma troca
+	ReturnedTotal  float64 `json:"returned_total"`
+	IsExchangeSale bool    `json:"is_exchange_sale"`
+	CreditAmount   float64 `json:"credit_amount"`
 }
 
 type ListProductResponse struct {
@@ -302,6 +313,21 @@ func ValidateCreateSaleRequest(req CreateSaleRequest) error {
 		if req.Prohibited < 0 {
 			return invalid("a entrada não pode ser negativa")
 		}
+	}
+
+	if req.CreditAmount < 0 {
+		return invalid("o vale-troca usado não pode ser negativo")
+	}
+	if req.CreditAmount > 0 {
+		if req.CustomerID == uuid.Nil {
+			return invalid("para usar vale-troca, informe o cliente")
+		}
+		if req.PaymentMethod == enums.PaymentMethodInstallments {
+			return invalid("vale-troca não pode ser usado em venda a prazo")
+		}
+	}
+	if req.PaymentMethod == enums.PaymentMethodStoreCredit && req.CreditAmount <= 0 {
+		return invalid("informe o valor do vale-troca usado")
 	}
 
 	if req.AmountReceived != nil {

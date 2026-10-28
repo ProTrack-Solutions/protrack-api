@@ -160,7 +160,7 @@ func (q *Queries) DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) 
 }
 
 const getCustomerByCPF = `-- name: GetCustomerByCPF :one
-SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, store_credit
 FROM customers
 WHERE cpf = $1
     AND deleted_at IS NULL
@@ -197,12 +197,13 @@ func (q *Queries) GetCustomerByCPF(ctx context.Context, cpf string) (Customer, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.StoreCredit,
 	)
 	return i, err
 }
 
 const getCustomerById = `-- name: GetCustomerById :one
-SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, store_credit
 FROM customers
 WHERE id = $1
     AND deleted_at IS NULL
@@ -239,6 +240,7 @@ func (q *Queries) GetCustomerById(ctx context.Context, id pgtype.UUID) (Customer
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.StoreCredit,
 	)
 	return i, err
 }
@@ -269,7 +271,7 @@ func (q *Queries) GetCustomersPerformanceSummary(ctx context.Context, companyID 
 }
 
 const listCustomers = `-- name: ListCustomers :many
-SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, store_credit
 FROM customers
 WHERE company_id = $1
     AND deleted_at IS NULL
@@ -312,6 +314,7 @@ func (q *Queries) ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]C
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.StoreCredit,
 		); err != nil {
 			return nil, err
 		}
@@ -325,7 +328,7 @@ func (q *Queries) ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]C
 
 const listCustomersPaginate = `-- name: ListCustomersPaginate :many
 SELECT
-    c.id, c.company_id, c.full_name, c.birth_date, c.cpf, c.rg, c.marital_status, c.gender, c.whatsapp, c.mobile_phone, c.home_phone, c.email, c.address_street, c.address_number, c.address_complement, c.address_neighborhood, c.address_city, c.address_state, c.address_zipcode, c.address_country, c.balance_due, c.created_by, c.updated_by, c.deleted_by, c.created_at, c.updated_at, c.deleted_at,
+    c.id, c.company_id, c.full_name, c.birth_date, c.cpf, c.rg, c.marital_status, c.gender, c.whatsapp, c.mobile_phone, c.home_phone, c.email, c.address_street, c.address_number, c.address_complement, c.address_neighborhood, c.address_city, c.address_state, c.address_zipcode, c.address_country, c.balance_due, c.created_by, c.updated_by, c.deleted_by, c.created_at, c.updated_at, c.deleted_at, c.store_credit,
     count(*) OVER() AS total_count
 FROM customers c
 WHERE c.company_id = $1
@@ -392,6 +395,7 @@ type ListCustomersPaginateRow struct {
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	DeletedAt           pgtype.Timestamptz `json:"deleted_at"`
+	StoreCredit         pgtype.Numeric     `json:"store_credit"`
 	TotalCount          int64              `json:"total_count"`
 }
 
@@ -441,6 +445,7 @@ func (q *Queries) ListCustomersPaginate(ctx context.Context, arg ListCustomersPa
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.StoreCredit,
 			&i.TotalCount,
 		); err != nil {
 			return nil, err

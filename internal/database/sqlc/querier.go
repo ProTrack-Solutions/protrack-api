@@ -11,6 +11,8 @@ import (
 )
 
 type Querier interface {
+	// amount negativo usa o crédito; o CHECK (store_credit >= 0) barra saldo negativo
+	AddCustomerStoreCredit(ctx context.Context, arg AddCustomerStoreCreditParams) (float64, error)
 	AddModuleToDepartment(ctx context.Context, arg AddModuleToDepartmentParams) error
 	// Nenhuma linha = passaria da quantidade pedida (ou item de outro pedido)
 	AddReceivedQuantity(ctx context.Context, arg AddReceivedQuantityParams) (pgtype.UUID, error)
@@ -45,6 +47,8 @@ type Querier interface {
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountPurchaseOrdersByStatus(ctx context.Context, companyID pgtype.UUID) ([]CountPurchaseOrdersByStatusRow, error)
+	// Vendas com devolução ou geradas por troca não podem ser canceladas nem editadas
+	CountSaleReturnsBySale(ctx context.Context, saleID pgtype.UUID) (CountSaleReturnsBySaleRow, error)
 	CountSales(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountSalesDeletedByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -57,8 +61,13 @@ type Querier interface {
 	CreateCashSession(ctx context.Context, arg CreateCashSessionParams) (CashSession, error)
 	CreateCashSessionMovement(ctx context.Context, arg CreateCashSessionMovementParams) (CashSessionMovement, error)
 	CreateCompany(ctx context.Context, arg CreateCompanyParams) (Company, error)
+	CreateCustomerCreditMovement(ctx context.Context, arg CreateCustomerCreditMovementParams) error
 	CreateCustomers(ctx context.Context, arg CreateCustomersParams) (pgtype.UUID, error)
 	CreateDepartment(ctx context.Context, arg CreateDepartmentParams) (Department, error)
+	// Venda com os itens levados na troca. credit_amount é a parte paga com o
+	// valor dos itens devolvidos; o resto (diferença) na forma informada.
+	CreateExchangeSale(ctx context.Context, arg CreateExchangeSaleParams) (pgtype.UUID, error)
+	CreateExchangeSaleItem(ctx context.Context, arg CreateExchangeSaleItemParams) (pgtype.UUID, error)
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
@@ -77,8 +86,11 @@ type Querier interface {
 	CreatePurchaseReceiptItem(ctx context.Context, arg CreatePurchaseReceiptItemParams) error
 	CreatePurchaseStockMovement(ctx context.Context, arg CreatePurchaseStockMovementParams) error
 	CreateReceivableReminder(ctx context.Context, arg CreateReceivableReminderParams) (pgtype.Timestamptz, error)
+	CreateReturnStockMovement(ctx context.Context, arg CreateReturnStockMovementParams) error
 	CreateSale(ctx context.Context, arg CreateSaleParams) (pgtype.UUID, error)
 	CreateSaleItem(ctx context.Context, arg CreateSaleItemParams) error
+	CreateSaleReturn(ctx context.Context, arg CreateSaleReturnParams) (pgtype.UUID, error)
+	CreateSaleReturnItem(ctx context.Context, arg CreateSaleReturnItemParams) error
 	CreateStockMovement(ctx context.Context, arg CreateStockMovementParams) error
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
@@ -86,6 +98,7 @@ type Querier interface {
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
 	CreateWhatsAppMessage(ctx context.Context, arg CreateWhatsAppMessageParams) (WhatsappMessage, error)
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
+	DecrementStockForExchange(ctx context.Context, arg DecrementStockForExchangeParams) (int64, error)
 	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
 	// Remove todas as configs de uma empresa — normalmente não precisa ser chamado
 	// manualmente (o ON DELETE CASCADE da FK já cuida disso quando a empresa é
@@ -134,10 +147,12 @@ type Querier interface {
 	GetCashSessionById(ctx context.Context, arg GetCashSessionByIdParams) (GetCashSessionByIdRow, error)
 	// Parcelas de vendas a prazo recebidas pelo operador no turno
 	GetCashSessionReceiptsByMethod(ctx context.Context, arg GetCashSessionReceiptsByMethodParams) ([]GetCashSessionReceiptsByMethodRow, error)
+	// Dinheiro devolvido ao cliente pelo operador no turno
+	GetCashSessionRefundsByMethod(ctx context.Context, arg GetCashSessionRefundsByMethodParams) ([]GetCashSessionRefundsByMethodRow, error)
 	// Vendas do operador no turno, por forma de pagamento. Na venda a prazo só a
 	// entrada (down_payment) é recebida no balcão; o resto vira contas a receber.
 	// O troco já está descontado: received é o que fica na gaveta, não o que o
-	// cliente entregou.
+	// cliente entregou. A parte paga com vale-troca/troca (credit_amount) não entra.
 	GetCashSessionSalesByMethod(ctx context.Context, arg GetCashSessionSalesByMethodParams) ([]GetCashSessionSalesByMethodRow, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
@@ -152,7 +167,9 @@ type Querier interface {
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
 	GetCustomerById(ctx context.Context, id pgtype.UUID) (Customer, error)
+	GetCustomerCredit(ctx context.Context, arg GetCustomerCreditParams) (GetCustomerCreditRow, error)
 	GetCustomerDebtSummary(ctx context.Context, customerID pgtype.UUID) (GetCustomerDebtSummaryRow, error)
+	GetCustomerForCredit(ctx context.Context, arg GetCustomerForCreditParams) (GetCustomerForCreditRow, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetCustomersPerformanceSummaryRow, error)
 	GetDepartmentById(ctx context.Context, id pgtype.UUID) (Department, error)
 	// Usado pelo serviço de disparo pra validar se um template pode ser usado
@@ -167,6 +184,7 @@ type Querier interface {
 	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
 	GetModule(ctx context.Context, code string) (Module, error)
 	GetOpenBalanceBySale(ctx context.Context, arg GetOpenBalanceBySaleParams) (pgtype.Numeric, error)
+	GetOpenBalanceForReturn(ctx context.Context, arg GetOpenBalanceForReturnParams) (float64, error)
 	GetOpenCashSessionByUser(ctx context.Context, arg GetOpenCashSessionByUserParams) (CashSession, error)
 	// Trava a linha para que movimentos e fechamento concorrentes não se cruzem
 	GetOpenCashSessionByUserForUpdate(ctx context.Context, arg GetOpenCashSessionByUserForUpdateParams) (CashSession, error)
@@ -199,8 +217,13 @@ type Querier interface {
 	GetSaleByIdForUpdate(ctx context.Context, arg GetSaleByIdForUpdateParams) (Sale, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
+	// Trava a venda: duas devoluções simultâneas não devolvem o mesmo item duas vezes
+	GetSaleForReturn(ctx context.Context, arg GetSaleForReturnParams) (GetSaleForReturnRow, error)
 	// Cabeçalho do recibo de venda: dados da venda, da empresa, do cliente e do vendedor
 	GetSaleReceipt(ctx context.Context, arg GetSaleReceiptParams) (GetSaleReceiptRow, error)
+	GetSaleReturn(ctx context.Context, arg GetSaleReturnParams) (GetSaleReturnRow, error)
+	// Dados da venda mostrados na tela de devolução
+	GetSaleReturnHeader(ctx context.Context, arg GetSaleReturnHeaderParams) (GetSaleReturnHeaderRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
 	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error)
 	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)
@@ -222,6 +245,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
 	IncrementStock(ctx context.Context, arg IncrementStockParams) error
+	IncrementStockForReturn(ctx context.Context, arg IncrementStockForReturnParams) error
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
 	ListApprovedTemplates(ctx context.Context) ([]WhatsappTemplate, error)
@@ -235,9 +259,11 @@ type Querier interface {
 	// Lista todas as configs de uma empresa de uma vez — útil pra telas de
 	// "configurações" que mostram tudo junto, evitando N chamadas separadas.
 	ListCompanySettings(ctx context.Context, companyID pgtype.UUID) ([]CompanySetting, error)
+	ListCustomerCreditMovements(ctx context.Context, arg ListCustomerCreditMovementsParams) ([]ListCustomerCreditMovementsRow, error)
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]ListDepartmentsByCompanyIdRow, error)
+	ListExchangeSaleItems(ctx context.Context, saleID pgtype.UUID) ([]ListExchangeSaleItemsRow, error)
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
@@ -248,6 +274,9 @@ type Querier interface {
 	ListModelVariations(ctx context.Context, arg ListModelVariationsParams) ([]ListModelVariationsRow, error)
 	ListModules(ctx context.Context) ([]Module, error)
 	ListModulesByDepartment(ctx context.Context, departmentID pgtype.UUID) ([]Module, error)
+	// Parcelas em aberto da venda, da última para a primeira: a devolução abate
+	// primeiro as que vencem mais tarde
+	ListOpenReceivablesForReturn(ctx context.Context, arg ListOpenReceivablesForReturnParams) ([]ListOpenReceivablesForReturnRow, error)
 	ListOverdueReceivables(ctx context.Context, companyID pgtype.UUID) ([]ListOverdueReceivablesRow, error)
 	ListPaymentHistory(ctx context.Context, companyID pgtype.UUID) ([]ListPaymentHistoryRow, error)
 	ListPaymentMethod(ctx context.Context, companyID pgtype.UUID) ([]PaymentMethod, error)
@@ -260,6 +289,7 @@ type Querier interface {
 	ListProductsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListProductsByCompanyRow, error)
 	ListProductsByCompanyPaginated(ctx context.Context, arg ListProductsByCompanyPaginatedParams) ([]ListProductsByCompanyPaginatedRow, error)
 	ListProductsByDate(ctx context.Context, arg ListProductsByDateParams) ([]ListProductsByDateRow, error)
+	ListProductsForExchange(ctx context.Context, arg ListProductsForExchangeParams) ([]ListProductsForExchangeRow, error)
 	ListProductsForPurchase(ctx context.Context, arg ListProductsForPurchaseParams) ([]ListProductsForPurchaseRow, error)
 	ListPurchaseBillsByOrder(ctx context.Context, orderID pgtype.UUID) ([]ListPurchaseBillsByOrderRow, error)
 	ListPurchaseCategories(ctx context.Context, companyID pgtype.UUID) ([]ListPurchaseCategoriesRow, error)
@@ -272,7 +302,13 @@ type Querier interface {
 	ListPurchaseReceipts(ctx context.Context, orderID pgtype.UUID) ([]ListPurchaseReceiptsRow, error)
 	// Últimas entradas e saídas misturadas, para o extrato da tela
 	ListRecentCashMovements(ctx context.Context, arg ListRecentCashMovementsParams) ([]ListRecentCashMovementsRow, error)
+	// Itens da venda com o que já foi devolvido. net_total é o valor pago pela
+	// linha (preço menos o desconto rateado da venda).
+	ListReturnableItems(ctx context.Context, saleID pgtype.UUID) ([]ListReturnableItemsRow, error)
 	ListSaleReceiptItems(ctx context.Context, saleID pgtype.UUID) ([]ListSaleReceiptItemsRow, error)
+	ListSaleReturnItems(ctx context.Context, returnID pgtype.UUID) ([]ListSaleReturnItemsRow, error)
+	ListSaleReturns(ctx context.Context, arg ListSaleReturnsParams) ([]ListSaleReturnsRow, error)
+	ListSaleReturnsBySale(ctx context.Context, arg ListSaleReturnsBySaleParams) ([]ListSaleReturnsBySaleRow, error)
 	ListSales(ctx context.Context, companyID pgtype.UUID) ([]ListSalesRow, error)
 	ListSalesByCompanyAndStatus(ctx context.Context, arg ListSalesByCompanyAndStatusParams) ([]ListSalesByCompanyAndStatusRow, error)
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsRow, error)
@@ -288,6 +324,8 @@ type Querier interface {
 	ListVendorsIsActive(ctx context.Context, companyID pgtype.UUID) ([]Vendor, error)
 	// Serializa a numeração dos pedidos da empresa até o fim da transação
 	LockCompanyPurchaseNumbers(ctx context.Context, companyID string) error
+	// Serializa a numeração das devoluções da empresa até o fim da transação
+	LockCompanyReturnNumbers(ctx context.Context, companyID string) error
 	LockProductForPurchase(ctx context.Context, arg LockProductForPurchaseParams) (LockProductForPurchaseRow, error)
 	LockPurchaseOrder(ctx context.Context, arg LockPurchaseOrderParams) (LockPurchaseOrderRow, error)
 	LockPurchaseReceipt(ctx context.Context, arg LockPurchaseReceiptParams) (LockPurchaseReceiptRow, error)
@@ -296,8 +334,12 @@ type Querier interface {
 	MarkPurchaseReceiptReversed(ctx context.Context, arg MarkPurchaseReceiptReversedParams) error
 	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error
 	NextPurchaseOrderNumber(ctx context.Context, companyID pgtype.UUID) (int32, error)
+	NextSaleReturnNumber(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	PayBill(ctx context.Context, arg PayBillParams) error
 	PaymentMethodBelongsToCompany(ctx context.Context, arg PaymentMethodBelongsToCompanyParams) (bool, error)
+	// Parcela zerada pela devolução: sem nada pago ela é cancelada; com pagamento
+	// parcial fica quitada
+	ReduceReceivableForReturn(ctx context.Context, arg ReduceReceivableForReturnParams) error
 	RemoveModuleFromDepartment(ctx context.Context, arg RemoveModuleFromDepartmentParams) error
 	ReplaceDepartmentModules(ctx context.Context, departmentID pgtype.UUID) error
 	ReportBillsPayable(ctx context.Context, arg ReportBillsPayableParams) ([]ReportBillsPayableRow, error)
@@ -306,7 +348,9 @@ type Querier interface {
 	// Despesas por competência: contas a pagar pelo vencimento, exceto canceladas.
 	// Contas de compra de mercadoria ficam de fora: o custo delas já entra no CMV.
 	ReportDreExpenses(ctx context.Context, arg ReportDreExpensesParams) ([]ReportDreExpensesRow, error)
-	// DRE por competência: vendas pela data da venda
+	// DRE por competência: vendas pela data da venda. Devoluções entram pela data
+	// da devolução: o valor devolvido sai da receita e o custo das peças que
+	// voltaram ao estoque sai do CMV (peça avariada continua como custo).
 	ReportDreRevenue(ctx context.Context, arg ReportDreRevenueParams) (ReportDreRevenueRow, error)
 	// Posição atual do estoque: não depende do período
 	ReportInventory(ctx context.Context, companyID pgtype.UUID) ([]ReportInventoryRow, error)
@@ -329,10 +373,14 @@ type Querier interface {
 	SearchPurchaseModels(ctx context.Context, arg SearchPurchaseModelsParams) ([]SearchPurchaseModelsRow, error)
 	// Busca de produtos para o pedido (Compras não depende do módulo Estoque)
 	SearchPurchaseProducts(ctx context.Context, arg SearchPurchaseProductsParams) ([]SearchPurchaseProductsRow, error)
+	// Vendas que ainda podem ter itens devolvidos (não canceladas e com saldo de itens)
+	SearchSalesForReturn(ctx context.Context, arg SearchSalesForReturnParams) ([]SearchSalesForReturnRow, error)
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
+	SetSaleStatusForReturn(ctx context.Context, arg SetSaleStatusForReturnParams) error
 	SetStatusDepartment(ctx context.Context, arg SetStatusDepartmentParams) (int64, error)
+	SubtractCustomerBalanceDue(ctx context.Context, arg SubtractCustomerBalanceDueParams) error
 	SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error)
