@@ -87,6 +87,31 @@ func (s *Service) GetCustomerByCPF(ctx context.Context, cpf string) (domain.Cust
 		return domain.CustomerResponse{}, err
 	}
 
+	return toCustomerResponse(customer), nil
+}
+
+// GetCustomerByCPFForCompany busca pelo CPF só entre os clientes da empresa
+func (s *Service) GetCustomerByCPFForCompany(ctx context.Context, companyId uuid.UUID, cpf string) (domain.CustomerResponse, error) {
+	customer, err := db.New(s.pool).GetCustomerByCPFAndCompany(ctx, db.GetCustomerByCPFAndCompanyParams{
+		Cpf:       cpf,
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+	if err != nil {
+		return domain.CustomerResponse{}, err
+	}
+	return toCustomerResponse(customer), nil
+}
+
+// CustomerBelongsToCompany diz se o cliente é da empresa (ativo ou inativo).
+// As rotas por ID usam antes de ler, alterar ou inativar o cadastro.
+func (s *Service) CustomerBelongsToCompany(ctx context.Context, id, companyId uuid.UUID) (bool, error) {
+	return db.New(s.pool).CustomerBelongsToCompany(ctx, db.CustomerBelongsToCompanyParams{
+		ID:        pgconv.ParseUUIDToPgType(id),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+}
+
+func toCustomerResponse(customer db.Customer) domain.CustomerResponse {
 	return domain.CustomerResponse{
 		ID:                  pgconv.PgUUIDToUUID(customer.ID),
 		CompanyID:           pgconv.PgUUIDToUUID(customer.CompanyID),
@@ -115,7 +140,7 @@ func (s *Service) GetCustomerByCPF(ctx context.Context, cpf string) (domain.Cust
 		CreatedAt:           pgconv.PgTimestamptzToTime(customer.CreatedAt),
 		UpdatedAt:           pgconv.PgTimestamptzToTime(customer.UpdatedAt),
 		DeletedAt:           pgconv.PgTimestamptzToTime(customer.DeletedAt),
-	}, nil
+	}
 }
 
 func (s *Service) GetCustomerById(ctx context.Context, id uuid.UUID) (domain.CustomerResponse, error) {

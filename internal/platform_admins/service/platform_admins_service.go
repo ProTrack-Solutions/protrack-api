@@ -43,7 +43,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (*domain.Lo
 		return nil, errors.New("invalid credentials")
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(uuid.Nil, pgconv.PgUUIDToUUID(admin.ID), uuid.Nil, "SUPER_ADMIN", "platform")
+	tokenPair, err := s.jwtManager.GenerateTokenPair(uuid.Nil, pgconv.PgUUIDToUUID(admin.ID), uuid.Nil, "SUPER_ADMIN", jwt.AudiencePlatform, "")
 	if err != nil {
 		return nil, err
 	}

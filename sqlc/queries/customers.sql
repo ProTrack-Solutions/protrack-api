@@ -155,3 +155,20 @@ OFFSET $3;
 SELECT COUNT(*) FROM customers
 WHERE company_id = $1
     AND deleted_at IS NULL;
+-- name: CustomerBelongsToCompany :one
+-- As rotas por ID conferem se o cliente é da empresa do usuário antes de agir
+SELECT EXISTS (
+        SELECT 1
+        FROM customers
+        WHERE id = $1
+            AND company_id = $2
+    )::boolean AS belongs;
+
+-- name: GetCustomerByCPFAndCompany :one
+-- CPF pode existir em várias empresas: a busca fica restrita à do usuário
+SELECT *
+FROM customers
+WHERE cpf = $1
+    AND company_id = $2
+    AND deleted_at IS NULL
+LIMIT 1;

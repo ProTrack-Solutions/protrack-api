@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -25,8 +24,14 @@ func PlatformAuthMiddleware(jwtManager *jwt.JWTManager, blacklist *cache.TokenBl
 			return
 		}
 
-		tokenId := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
-		isBlacklisted, err := blacklist.IsTokenBlacklisted(c.Request.Context(), tokenId)
+		// Token do web/app não abre o painel da plataforma
+		if claims.AudienceValue() != jwt.AudiencePlatform {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			c.Abort()
+			return
+		}
+
+		isBlacklisted, err := blacklist.IsTokenBlacklisted(c.Request.Context(), claims.TokenKey())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 			c.Abort()
