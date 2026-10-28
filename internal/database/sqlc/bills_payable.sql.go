@@ -66,7 +66,7 @@ func (q *Queries) CreateBillPayable(ctx context.Context, arg CreateBillPayablePa
 }
 
 const getBillsById = `-- name: GetBillsById :one
-SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at
+SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at, purchase_receipt_id
 FROM bills_payable
 WHERE company_id = $1
     AND id = $2
@@ -97,12 +97,13 @@ func (q *Queries) GetBillsById(ctx context.Context, arg GetBillsByIdParams) (Bil
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PurchaseReceiptID,
 	)
 	return i, err
 }
 
 const getBillsByStatus = `-- name: GetBillsByStatus :many
-SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at
+SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at, purchase_receipt_id
 FROM bills_payable
 WHERE company_id = $1
     AND status = $2
@@ -139,6 +140,7 @@ func (q *Queries) GetBillsByStatus(ctx context.Context, arg GetBillsByStatusPara
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PurchaseReceiptID,
 		); err != nil {
 			return nil, err
 		}
@@ -242,7 +244,7 @@ func (q *Queries) GetBillsPayableSummary(ctx context.Context, companyID pgtype.U
 }
 
 const getOverdueBills = `-- name: GetOverdueBills :many
-SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at
+SELECT id, company_id, vendor_id, category_id, payment_method_id, amount, due_date, status, description, scheduled_date, payment_date, amount_paid, notes, created_at, updated_at, purchase_receipt_id
 FROM bills_payable
 WHERE company_id = $1
     AND due_date < CURRENT_DATE
@@ -275,6 +277,7 @@ func (q *Queries) GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PurchaseReceiptID,
 		); err != nil {
 			return nil, err
 		}
@@ -288,7 +291,7 @@ func (q *Queries) GetOverdueBills(ctx context.Context, companyID pgtype.UUID) ([
 
 const listBillsPayable = `-- name: ListBillsPayable :many
 SELECT
-    b.id, b.company_id, b.vendor_id, b.category_id, b.payment_method_id, b.amount, b.due_date, b.status, b.description, b.scheduled_date, b.payment_date, b.amount_paid, b.notes, b.created_at, b.updated_at,
+    b.id, b.company_id, b.vendor_id, b.category_id, b.payment_method_id, b.amount, b.due_date, b.status, b.description, b.scheduled_date, b.payment_date, b.amount_paid, b.notes, b.created_at, b.updated_at, b.purchase_receipt_id,
     v.name AS vendor_name,
     c.name AS category_name,
     pm.name AS payment_method_name,
@@ -368,6 +371,7 @@ type ListBillsPayableRow struct {
 	Notes             pgtype.Text        `json:"notes"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	PurchaseReceiptID pgtype.UUID        `json:"purchase_receipt_id"`
 	VendorName        pgtype.Text        `json:"vendor_name"`
 	CategoryName      pgtype.Text        `json:"category_name"`
 	PaymentMethodName pgtype.Text        `json:"payment_method_name"`
@@ -416,6 +420,7 @@ func (q *Queries) ListBillsPayable(ctx context.Context, arg ListBillsPayablePara
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PurchaseReceiptID,
 			&i.VendorName,
 			&i.CategoryName,
 			&i.PaymentMethodName,

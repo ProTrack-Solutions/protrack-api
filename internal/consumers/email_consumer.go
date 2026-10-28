@@ -71,6 +71,29 @@ func StartEmailCOnsumer(amqpChan *amqp.Channel, sender *email.Sender) {
 					continue
 				}
 				sendErr = sender.SendPasswordChanged(event.Email, event.Name)
+			case events.RoutingKeyPurchaseOrderEmail:
+				var event events.PurchaseOrderEmail
+				if err := json.Unmarshal(d.Body, &event); err != nil {
+					log.Error().Err(err).Msg("Erro ao desserializar e-mail de pedido de compra")
+					d.Ack(false)
+					continue
+				}
+				attachments := make([]email.Attachment, 0, len(event.Attachments))
+				for _, a := range event.Attachments {
+					attachments = append(attachments, email.Attachment{Filename: a.Filename, ContentType: a.ContentType, Data: a.Data})
+				}
+				sendErr = sender.SendMessage(email.Message{
+					To:          event.To,
+					Cc:          event.Cc,
+					ReplyTo:     event.ReplyTo,
+					FromName:    event.FromName,
+					Subject:     event.Subject,
+					HTML:        event.HTML,
+					Attachments: attachments,
+				})
+				if sendErr == nil {
+					log.Info().Str("order_id", event.OrderID.String()).Strs("to", event.To).Msg("E-mail do pedido de compra enviado")
+				}
 			default:
 				log.Warn().Str("routing_key", d.RoutingKey).Msg("Routing key de e-mail desconhecida, descartando mensagem")
 				d.Ack(false)

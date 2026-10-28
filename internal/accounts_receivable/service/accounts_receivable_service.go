@@ -488,6 +488,7 @@ func (s *Service) ListAccountsReceivables(ctx context.Context, companyId uuid.UU
 			DeletedAt:         pgconv.PgTimestamptzToTime(account.DeletedAt),
 			CustomerName:      account.CustomerName,
 			DaysOverdue:       days,
+			LastReminderAt:    pgconv.PgTimestamptzToTimePtr(account.LastReminderAt),
 		})
 	}
 

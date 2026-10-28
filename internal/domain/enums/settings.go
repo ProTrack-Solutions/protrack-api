@@ -11,4 +11,7 @@ const (
 	SaleOverdueTemplate         CompanySettingsKey = "sale_overdue_template"
 	LanguageSaleOverdueTemplate CompanySettingsKey = "language_sale_overdue_template"
 	RequireOpenCashRegister     CompanySettingsKey = "require_open_cash_register"
+	// Template do lembrete manual de parcela a vencer; vazio = não configurado
+	DueReminderTemplate         CompanySettingsKey = "due_reminder_template"
+	LanguageDueReminderTemplate CompanySettingsKey = "language_due_reminder_template"
 )

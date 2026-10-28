@@ -88,7 +88,7 @@ func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID
 
 	for _, pf := range plan.Features {
 		if pf.FeatureKey == "max_products" {
-			if pf.LimitValue == contProducts {
+			if contProducts >= pf.LimitValue {
 				return domain.ProductResponse{}, errors.New("product limit reached for plan")
 			}
 			break
