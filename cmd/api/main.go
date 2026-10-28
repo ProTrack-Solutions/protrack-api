@@ -16,7 +16,6 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/email"
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/http/middleware"
 	redis_connection "github.com/ProTrack-Solutions/protrack-api/internal/adapters/redis"
-	analyticsService "github.com/ProTrack-Solutions/protrack-api/internal/analytics/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	authHandler "github.com/ProTrack-Solutions/protrack-api/internal/auth/handler"
 	authService "github.com/ProTrack-Solutions/protrack-api/internal/auth/service"
@@ -91,6 +90,7 @@ import (
 	productsCategoriesService "github.com/ProTrack-Solutions/protrack-api/internal/products_categories/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/rabbitmq"
 	reportsHandler "github.com/ProTrack-Solutions/protrack-api/internal/reports/handler"
+	reportsRepository "github.com/ProTrack-Solutions/protrack-api/internal/reports/repository"
 	reportsService "github.com/ProTrack-Solutions/protrack-api/internal/reports/service"
 	saleItemsHandler "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/handler"
 	saleItemsRepository "github.com/ProTrack-Solutions/protrack-api/internal/sale_items/repository"
@@ -328,8 +328,7 @@ func main() {
 	billsPayableService := billsPayableService.NewService(billsPayableRepository, db.Pool)
 	paymentHistoryService := paymentHistoryService.NewService(paymentHistoryRepository, db.Pool)
 	paymentsService := paymentsService.NewService(db.Pool, paymentHistoryService, accountsReceivableService, customersService, salesService)
-	analyticsService := analyticsService.NewService(productsService, saleItemsService)
-	reportsService := reportsService.NewService(salesService, analyticsService, paymentHistoryService, productsService)
+	reportsService := reportsService.NewService(reportsRepository.NewRepository(db.Pool))
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 	modulesService := modulesService.NewService(modulesRepo)

@@ -766,6 +766,7 @@ type SaleItem struct {
 	UnitPrice pgtype.Numeric     `json:"unit_price"`
 	Discount  pgtype.Numeric     `json:"discount"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UnitCost  pgtype.Numeric     `json:"unit_cost"`
 }
 
 type StockMovement struct {

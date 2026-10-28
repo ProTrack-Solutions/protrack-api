@@ -101,6 +101,7 @@ func (s *Service) CreateSaleItemInTx(ctx context.Context, tx db.DBTX, req domain
 		Quantity:  req.Quantity,
 		UnitPrice: pgconv.Float64ToPgNumeric(req.UnitPrice),
 		Discount:  pgconv.Float64ToPgNumeric(req.Discount),
+		UnitCost:  product.CostPrice,
 	})
 }
 

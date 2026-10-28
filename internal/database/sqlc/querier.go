@@ -246,6 +246,29 @@ type Querier interface {
 	PayBill(ctx context.Context, arg PayBillParams) error
 	RemoveModuleFromDepartment(ctx context.Context, arg RemoveModuleFromDepartmentParams) error
 	ReplaceDepartmentModules(ctx context.Context, departmentID pgtype.UUID) error
+	ReportBillsPayable(ctx context.Context, arg ReportBillsPayableParams) ([]ReportBillsPayableRow, error)
+	ReportCashSessions(ctx context.Context, arg ReportCashSessionsParams) ([]ReportCashSessionsRow, error)
+	ReportCompanyHeader(ctx context.Context, id pgtype.UUID) (ReportCompanyHeaderRow, error)
+	// Despesas por competência: contas a pagar pelo vencimento, exceto canceladas
+	ReportDreExpenses(ctx context.Context, arg ReportDreExpensesParams) ([]ReportDreExpensesRow, error)
+	// DRE por competência: vendas pela data da venda
+	ReportDreRevenue(ctx context.Context, arg ReportDreRevenueParams) (ReportDreRevenueRow, error)
+	// Posição atual do estoque: não depende do período
+	ReportInventory(ctx context.Context, companyID pgtype.UUID) ([]ReportInventoryRow, error)
+	// Parcelas com saldo em aberto que vencem no período; days_overdue é calculado
+	// contra today (data local da empresa) e fica 0 para as que ainda vão vencer
+	ReportOpenInstallments(ctx context.Context, arg ReportOpenInstallmentsParams) ([]ReportOpenInstallmentsRow, error)
+	ReportPaymentsReceived(ctx context.Context, arg ReportPaymentsReceivedParams) ([]ReportPaymentsReceivedRow, error)
+	ReportSales(ctx context.Context, arg ReportSalesParams) ([]ReportSalesRow, error)
+	ReportSalesByCategory(ctx context.Context, arg ReportSalesByCategoryParams) ([]ReportSalesByCategoryRow, error)
+	ReportSalesByCustomer(ctx context.Context, arg ReportSalesByCustomerParams) ([]ReportSalesByCustomerRow, error)
+	// Um ponto por dia do período, mesmo sem venda (generate_series)
+	ReportSalesByDay(ctx context.Context, arg ReportSalesByDayParams) ([]ReportSalesByDayRow, error)
+	ReportSalesByPaymentMethod(ctx context.Context, arg ReportSalesByPaymentMethodParams) ([]ReportSalesByPaymentMethodRow, error)
+	// Receita líquida do item já considera o desconto da venda rateado (sale_items.discount)
+	ReportSalesByProduct(ctx context.Context, arg ReportSalesByProductParams) ([]ReportSalesByProductRow, error)
+	ReportSalesBySeller(ctx context.Context, arg ReportSalesBySellerParams) ([]ReportSalesBySellerRow, error)
+	ReportStockMovements(ctx context.Context, arg ReportStockMovementsParams) ([]ReportStockMovementsRow, error)
 	ScheduleBill(ctx context.Context, arg ScheduleBillParams) error
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
