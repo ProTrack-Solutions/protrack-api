@@ -5,6 +5,7 @@ import (
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
+	"github.com/rs/zerolog/log"
 	extractorcontext "github.com/ProTrack-Solutions/protrack-api/internal/pkg/extractorContext"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/users/service"
@@ -92,6 +93,9 @@ func (h *Handler) DeleteUser(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Usuário removido sai na hora do web e do app
+	h.revokeSessions(c, idUUID)
 
 	c.Status(http.StatusNoContent)
 }
@@ -327,4 +331,15 @@ func (h *Handler) UpdateUserStatus(c *gin.Context){
 		return
 	}
 
+	// Usuário desativado sai na hora do web e do app
+	if req.Status != "ACTIVE" {
+		h.revokeSessions(c, id)
+	}
+
+}
+// revokeSessions derruba as sessões do usuário no web e no app
+func (h *Handler) revokeSessions(c *gin.Context, userID uuid.UUID) {
+	if err := h.blacklist.RevokeUserSessions(c.Request.Context(), userID.String(), jwt.AudienceWeb, jwt.AudienceApp); err != nil {
+		log.Error().Err(err).Str("user_id", userID.String()).Msg("falha ao derrubar sessões do usuário")
+	}
 }

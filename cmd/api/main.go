@@ -40,6 +40,9 @@ import (
 	companySettingsService "github.com/ProTrack-Solutions/protrack-api/internal/company_settings/service"
 	"github.com/ProTrack-Solutions/protrack-api/internal/config"
 	"github.com/ProTrack-Solutions/protrack-api/internal/consumers"
+	customerProfileHandler "github.com/ProTrack-Solutions/protrack-api/internal/customer_profile/handler"
+	customerProfileRepository "github.com/ProTrack-Solutions/protrack-api/internal/customer_profile/repository"
+	customerProfileService "github.com/ProTrack-Solutions/protrack-api/internal/customer_profile/service"
 	customersHandler "github.com/ProTrack-Solutions/protrack-api/internal/customers/handler"
 	customersRepository "github.com/ProTrack-Solutions/protrack-api/internal/customers/repository"
 	customersService "github.com/ProTrack-Solutions/protrack-api/internal/customers/service"
@@ -344,6 +347,7 @@ func main() {
 	purchasesService := purchasesService.NewService(purchasesRepository.NewRepository(db.Pool), db.Pool, subscriptionsService, plansService)
 	purchasesService.SetPublisher(rabbitmq.NewPublisher(ch))
 	saleReturnsService := saleReturnsService.NewService(saleReturnsRepository.NewRepository(db.Pool), db.Pool)
+	customerProfileService := customerProfileService.NewService(customerProfileRepository.NewRepository(db.Pool))
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 	modulesService := modulesService.NewService(modulesRepo)
@@ -373,6 +377,7 @@ func main() {
 	reportsHandler := reportsHandler.NewHandler(reportsService, jwtManager, blacklist, departmentModulesService)
 	purchasesHandler := purchasesHandler.NewHandler(purchasesService, jwtManager, blacklist, departmentModulesService)
 	saleReturnsHandler := saleReturnsHandler.NewHandler(saleReturnsService, jwtManager, blacklist, departmentModulesService)
+	customerProfileHandler := customerProfileHandler.NewHandler(customerProfileService, jwtManager, blacklist, departmentModulesService)
 	receivableRemindersHandler := receivableRemindersHandler.NewHandler(receivableRemindersService, jwtManager, blacklist, departmentModulesService)
 	annoucementsHandler := annoucementsHandler.NewHandler(annountmentsService, jwtManager, blacklist)
 	plansHandler := plansHandler.NewHandler(plansService, jwtManager, blacklist)
@@ -405,6 +410,7 @@ func main() {
 	reportsHandler.RegisterRoutes(api)
 	purchasesHandler.RegisterRoutes(api)
 	saleReturnsHandler.RegisterRoutes(api)
+	customerProfileHandler.RegisterRoutes(api)
 	receivableRemindersHandler.RegisterRoutes(api)
 	cashFlowHandler.RegisterRoute(api)
 	cashRegisterHandler.RegisterRoutes(api)

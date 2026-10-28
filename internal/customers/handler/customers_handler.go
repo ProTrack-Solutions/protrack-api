@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/adapters/cache"
@@ -10,6 +11,7 @@ import (
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
@@ -98,22 +100,31 @@ func (h *Handler) DeleteCustomer(c *gin.Context) {
 		return
 	}
 
-	companyIdAny, exists := c.Get("company_id")
+	userIdAny, exists := c.Get("sub")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "companyId is null"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "userId is null"})
+		return
+	}
+	userId, err := uuid.Parse(userIdAny.(string))
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid user id"})
 		return
 	}
 
-	companyId := companyIdAny.(uuid.UUID)
+	if !h.ensureOwnCustomer(c, id) {
+		return
+	}
 
 	var req domain.DeleteCustomerRequest
 
 	req.ID = id
 
-	req.DeletedBy = companyId
+	// Quem inativou é o usuário (antes gravava o ID da empresa aqui)
+	req.DeletedBy = userId
 
 	if err := h.service.DeleteCustomer(c.Request.Context(), req); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
 	c.Status(http.StatusNoContent)
@@ -130,7 +141,16 @@ func (h *Handler) DeleteCustomer(c *gin.Context) {
 func (h *Handler) GetCustomerByCPF(c *gin.Context) {
 	cpf := c.Param("cpf")
 
-	customer, err := h.service.GetCustomerByCPF(c.Request.Context(), cpf)
+	companyId, ok := companyFromContext(c)
+	if !ok {
+		return
+	}
+
+	customer, err := h.service.GetCustomerByCPFForCompany(c.Request.Context(), companyId, cpf)
+	if errors.Is(err, pgx.ErrNoRows) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "cliente não encontrado"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -153,6 +173,10 @@ func (h *Handler) GetCustomerById(c *gin.Context) {
 	id, err := uuid.Parse(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !h.ensureOwnCustomer(c, id) {
 		return
 	}
 
@@ -215,6 +239,7 @@ func (h *Handler) UpdateBalanceDueCustomer(c *gin.Context) {
 	userIdAny, exists := c.Get("sub")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "userId is null"})
+		return
 	}
 
 	userIdStr := userIdAny.(string)
@@ -229,7 +254,12 @@ func (h *Handler) UpdateBalanceDueCustomer(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !h.ensureOwnCustomer(c, id) {
+		return
 	}
 
 	var req domain.UpdateBalanceDueCustomerRequest
@@ -263,6 +293,7 @@ func (h *Handler) UpdateCustomer(c *gin.Context) {
 	userIdAny, exists := c.Get("sub")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "userId is null"})
+		return
 	}
 
 	userIdStr := userIdAny.(string)
@@ -277,7 +308,12 @@ func (h *Handler) UpdateCustomer(c *gin.Context) {
 
 	id, err := uuid.Parse(idStr)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if !h.ensureOwnCustomer(c, id) {
+		return
 	}
 
 	var req domain.UpdateCustomerRequest
@@ -345,4 +381,39 @@ func (h *Handler) GetCustomersPerformanceSummary(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"percentage": percentage})
+}
+
+// companyFromContext lê a empresa do token
+func companyFromContext(c *gin.Context) (uuid.UUID, bool) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return uuid.Nil, false
+	}
+	companyId, ok := companyIdAny.(uuid.UUID)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid company_id"})
+		return uuid.Nil, false
+	}
+	return companyId, true
+}
+
+// ensureOwnCustomer barra o acesso a cliente de outra empresa. Responde 404
+// (e não 403) para não revelar que o ID existe em outra empresa.
+func (h *Handler) ensureOwnCustomer(c *gin.Context, id uuid.UUID) bool {
+	companyId, ok := companyFromContext(c)
+	if !ok {
+		return false
+	}
+	belongs, err := h.service.CustomerBelongsToCompany(c.Request.Context(), id, companyId)
+	if err != nil {
+		log.Error().Err(err).Msg("falha ao conferir a empresa do cliente")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno"})
+		return false
+	}
+	if !belongs {
+		c.JSON(http.StatusNotFound, gin.H{"error": "cliente não encontrado"})
+		return false
+	}
+	return true
 }
