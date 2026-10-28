@@ -141,6 +141,28 @@ func (q *Queries) CreateCustomers(ctx context.Context, arg CreateCustomersParams
 	return id, err
 }
 
+const customerBelongsToCompany = `-- name: CustomerBelongsToCompany :one
+SELECT EXISTS (
+        SELECT 1
+        FROM customers
+        WHERE id = $1
+            AND company_id = $2
+    )::boolean AS belongs
+`
+
+type CustomerBelongsToCompanyParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+// As rotas por ID conferem se o cliente é da empresa do usuário antes de agir
+func (q *Queries) CustomerBelongsToCompany(ctx context.Context, arg CustomerBelongsToCompanyParams) (bool, error) {
+	row := q.db.QueryRow(ctx, customerBelongsToCompany, arg.ID, arg.CompanyID)
+	var belongs bool
+	err := row.Scan(&belongs)
+	return belongs, err
+}
+
 const deleteCustomer = `-- name: DeleteCustomer :exec
 UPDATE customers
 SET deleted_at = CURRENT_TIMESTAMP,
@@ -168,6 +190,57 @@ WHERE cpf = $1
 
 func (q *Queries) GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error) {
 	row := q.db.QueryRow(ctx, getCustomerByCPF, cpf)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.BirthDate,
+		&i.Cpf,
+		&i.Rg,
+		&i.MaritalStatus,
+		&i.Gender,
+		&i.Whatsapp,
+		&i.MobilePhone,
+		&i.HomePhone,
+		&i.Email,
+		&i.AddressStreet,
+		&i.AddressNumber,
+		&i.AddressComplement,
+		&i.AddressNeighborhood,
+		&i.AddressCity,
+		&i.AddressState,
+		&i.AddressZipcode,
+		&i.AddressCountry,
+		&i.BalanceDue,
+		&i.CreatedBy,
+		&i.UpdatedBy,
+		&i.DeletedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.StoreCredit,
+	)
+	return i, err
+}
+
+const getCustomerByCPFAndCompany = `-- name: GetCustomerByCPFAndCompany :one
+SELECT id, company_id, full_name, birth_date, cpf, rg, marital_status, gender, whatsapp, mobile_phone, home_phone, email, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, address_zipcode, address_country, balance_due, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, store_credit
+FROM customers
+WHERE cpf = $1
+    AND company_id = $2
+    AND deleted_at IS NULL
+LIMIT 1
+`
+
+type GetCustomerByCPFAndCompanyParams struct {
+	Cpf       string      `json:"cpf"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+// CPF pode existir em várias empresas: a busca fica restrita à do usuário
+func (q *Queries) GetCustomerByCPFAndCompany(ctx context.Context, arg GetCustomerByCPFAndCompanyParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, getCustomerByCPFAndCompany, arg.Cpf, arg.CompanyID)
 	var i Customer
 	err := row.Scan(
 		&i.ID,

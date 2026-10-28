@@ -24,6 +24,9 @@ type Querier interface {
 	ApplyPurchaseToProduct(ctx context.Context, arg ApplyPurchaseToProductParams) error
 	BarcodeExists(ctx context.Context, arg BarcodeExistsParams) (bool, error)
 	BillCategoryBelongsToCompany(ctx context.Context, arg BillCategoryBelongsToCompanyParams) (bool, error)
+	// Lista de clientes com o resumo de compras e do financeiro de cada um.
+	// Total comprado já desconta as devoluções.
+	BrowseCustomers(ctx context.Context, arg BrowseCustomersParams) ([]BrowseCustomersRow, error)
 	CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error
 	CancelPurchaseBills(ctx context.Context, arg CancelPurchaseBillsParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
@@ -97,6 +100,11 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
 	CreateWhatsAppMessage(ctx context.Context, arg CreateWhatsAppMessageParams) (WhatsappMessage, error)
+	// As rotas por ID conferem se o cliente é da empresa do usuário antes de agir
+	CustomerBelongsToCompany(ctx context.Context, arg CustomerBelongsToCompanyParams) (bool, error)
+	// Indicadores da tela de clientes. Os limites do mês chegam calculados no fuso
+	// da empresa.
+	CustomerOverview(ctx context.Context, arg CustomerOverviewParams) (CustomerOverviewRow, error)
 	DecrementStock(ctx context.Context, arg DecrementStockParams) error
 	DecrementStockForExchange(ctx context.Context, arg DecrementStockForExchangeParams) (int64, error)
 	DeleteAccountsReceivableBySaleId(ctx context.Context, arg DeleteAccountsReceivableBySaleIdParams) error
@@ -166,10 +174,13 @@ type Querier interface {
 	GetCompanyWhatsAppConfig(ctx context.Context, companyID pgtype.UUID) (CompanyWhatsappConfig, error)
 	GetCostTotalStock(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetCustomerByCPF(ctx context.Context, cpf string) (Customer, error)
+	// CPF pode existir em várias empresas: a busca fica restrita à do usuário
+	GetCustomerByCPFAndCompany(ctx context.Context, arg GetCustomerByCPFAndCompanyParams) (Customer, error)
 	GetCustomerById(ctx context.Context, id pgtype.UUID) (Customer, error)
 	GetCustomerCredit(ctx context.Context, arg GetCustomerCreditParams) (GetCustomerCreditRow, error)
 	GetCustomerDebtSummary(ctx context.Context, customerID pgtype.UUID) (GetCustomerDebtSummaryRow, error)
 	GetCustomerForCredit(ctx context.Context, arg GetCustomerForCreditParams) (GetCustomerForCreditRow, error)
+	GetCustomerProfile(ctx context.Context, arg GetCustomerProfileParams) (GetCustomerProfileRow, error)
 	GetCustomersPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetCustomersPerformanceSummaryRow, error)
 	GetDepartmentById(ctx context.Context, id pgtype.UUID) (Department, error)
 	// Usado pelo serviço de disparo pra validar se um template pode ser usado
@@ -260,6 +271,12 @@ type Querier interface {
 	// "configurações" que mostram tudo junto, evitando N chamadas separadas.
 	ListCompanySettings(ctx context.Context, companyID pgtype.UUID) ([]CompanySetting, error)
 	ListCustomerCreditMovements(ctx context.Context, arg ListCustomerCreditMovementsParams) ([]ListCustomerCreditMovementsRow, error)
+	ListCustomerOpenInstallments(ctx context.Context, arg ListCustomerOpenInstallmentsParams) ([]ListCustomerOpenInstallmentsRow, error)
+	// Itens comprados pelo cliente, já sem o que ele devolveu (base do perfil de compra)
+	ListCustomerPurchasedItems(ctx context.Context, arg ListCustomerPurchasedItemsParams) ([]ListCustomerPurchasedItemsRow, error)
+	ListCustomerRecentSales(ctx context.Context, arg ListCustomerRecentSalesParams) ([]ListCustomerRecentSalesRow, error)
+	// Quando e como o cliente comprou (dia, hora e forma de pagamento)
+	ListCustomerSaleMoments(ctx context.Context, arg ListCustomerSaleMomentsParams) ([]ListCustomerSaleMomentsRow, error)
 	ListCustomers(ctx context.Context, companyID pgtype.UUID) ([]Customer, error)
 	ListCustomersPaginate(ctx context.Context, arg ListCustomersPaginateParams) ([]ListCustomersPaginateRow, error)
 	ListDepartmentsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]ListDepartmentsByCompanyIdRow, error)
@@ -376,6 +393,8 @@ type Querier interface {
 	// Vendas que ainda podem ter itens devolvidos (não canceladas e com saldo de itens)
 	SearchSalesForReturn(ctx context.Context, arg SearchSalesForReturnParams) ([]SearchSalesForReturnRow, error)
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
+	// Inativar mantém o histórico; reativar volta o cliente para as listas
+	SetCustomerActive(ctx context.Context, arg SetCustomerActiveParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
 	SetSaleStatusForReturn(ctx context.Context, arg SetSaleStatusForReturnParams) error
