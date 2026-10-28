@@ -72,7 +72,7 @@ ORDER BY created_at DESC;
 -- Vendas do operador no turno, por forma de pagamento. Na venda a prazo só a
 -- entrada (down_payment) é recebida no balcão; o resto vira contas a receber.
 -- O troco já está descontado: received é o que fica na gaveta, não o que o
--- cliente entregou.
+-- cliente entregou. A parte paga com vale-troca/troca (credit_amount) não entra.
 -- name: GetCashSessionSalesByMethod :many
 SELECT s.payment_method::text AS payment_method,
     COUNT(*)::int AS sales_count,
@@ -80,7 +80,7 @@ SELECT s.payment_method::text AS payment_method,
     COALESCE(SUM(
         CASE
             WHEN s.payment_method = 'installments' THEN s.down_payment
-            ELSE s.total_amount
+            ELSE s.total_amount - s.credit_amount
         END
     ), 0)::float8 AS received,
     COUNT(*) FILTER (WHERE s.change_amount > 0)::int AS change_count,

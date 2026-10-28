@@ -66,3 +66,7 @@ func (r *Repository) GetCashSessionSalesByMethod(ctx context.Context, arg db.Get
 func (r *Repository) GetCashSessionReceiptsByMethod(ctx context.Context, arg db.GetCashSessionReceiptsByMethodParams) ([]db.GetCashSessionReceiptsByMethodRow, error) {
 	return r.queries().GetCashSessionReceiptsByMethod(ctx, arg)
 }
+
+func (r *Repository) GetCashSessionRefundsByMethod(ctx context.Context, arg db.GetCashSessionRefundsByMethodParams) ([]db.GetCashSessionRefundsByMethodRow, error) {
+	return r.queries().GetCashSessionRefundsByMethod(ctx, arg)
+}

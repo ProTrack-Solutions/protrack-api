@@ -268,12 +268,32 @@ WHERE cs.company_id = @company_id
 ORDER BY cs.opened_at;
 
 -- name: ReportDreRevenue :one
--- DRE por competência: vendas pela data da venda
+-- DRE por competência: vendas pela data da venda. Devoluções entram pela data
+-- da devolução: o valor devolvido sai da receita e o custo das peças que
+-- voltaram ao estoque sai do CMV (peça avariada continua como custo).
 SELECT COUNT(*)::INT AS sales_count,
     COALESCE(SUM(s.subtotal), 0)::FLOAT AS gross,
     COALESCE(SUM(s.discount_amount), 0)::FLOAT AS discount,
     COALESCE(SUM(s.total_amount), 0)::FLOAT AS net,
-    COALESCE(SUM(it.cost), 0)::FLOAT AS cost
+    COALESCE(SUM(it.cost), 0)::FLOAT AS cost,
+    (
+        SELECT COALESCE(SUM(sr.returned_total), 0)
+        FROM sale_returns sr
+        WHERE sr.company_id = @company_id
+            AND sr.created_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND sr.created_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    )::FLOAT AS returns_total,
+    (
+        SELECT COALESCE(SUM(ri.quantity * COALESCE(si.unit_cost, p.cost_price)), 0)
+        FROM sale_return_items ri
+            INNER JOIN sale_returns sr ON sr.id = ri.return_id
+            INNER JOIN sale_items si ON si.id = ri.sale_item_id
+            INNER JOIN products p ON p.id = ri.product_id
+        WHERE sr.company_id = @company_id
+            AND ri.restock
+            AND sr.created_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND sr.created_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    )::FLOAT AS returns_cost
 FROM sales s
     LEFT JOIN LATERAL (
         SELECT SUM(si.quantity * COALESCE(si.unit_cost, p.cost_price)) AS cost
