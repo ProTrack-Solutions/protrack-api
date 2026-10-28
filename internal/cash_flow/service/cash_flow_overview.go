@@ -154,7 +154,7 @@ func (s *Service) GetOverview(ctx context.Context, companyId uuid.UUID, params d
 	})
 	g.Go(func() (err error) {
 		outCategory, err = s.repo.GetCashOutFlowCategoryByRange(gctx, db.GetCashOutFlowCategoryByRangeParams{
-			CompanyID: companyPg, StartDate: start, EndDate: end,
+			CompanyID: companyPg, StartDate: start, EndDate: end, Tz: tz,
 		})
 		return err
 	})

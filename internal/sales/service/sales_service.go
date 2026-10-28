@@ -182,6 +182,18 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 	totalAmount = subTotal - discountValue
 
+	// Vale-troca: não passa do total e, cobrindo tudo, a forma de pagamento é store_credit
+	creditAmount := roundMoney(req.CreditAmount)
+	if creditAmount > totalAmount {
+		return uuid.Nil, fmt.Errorf("%w: o vale-troca usado não pode ser maior que o total da venda (R$ %.2f)", domain.ErrInvalidSale, totalAmount)
+	}
+	if creditAmount > 0 && creditAmount == roundMoney(totalAmount) {
+		req.PaymentMethod = enums.PaymentMethodStoreCredit
+		req.AmountReceived = nil
+	} else if req.PaymentMethod == enums.PaymentMethodStoreCredit {
+		return uuid.Nil, fmt.Errorf("%w: o vale-troca não cobre o total; escolha a forma de pagamento do restante", domain.ErrInvalidSale)
+	}
+
 	if req.PaymentMethod == enums.PaymentMethodInstallments && req.Prohibited >= totalAmount {
 		return uuid.Nil, fmt.Errorf("%w: a entrada deve ser menor que o total da venda (R$ %.2f)", domain.ErrInvalidSale, totalAmount)
 	}
@@ -205,7 +217,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		status = "paid"
 	}
 
-	amountReceived, changeAmount, err := cashChange(req.AmountReceived, req.PaymentMethod, totalAmount, req.Prohibited)
+	amountReceived, changeAmount, err := cashChange(req.AmountReceived, req.PaymentMethod, totalAmount-creditAmount, req.Prohibited)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -235,9 +247,16 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 		BuyerDocument:     pgconv.ParseStringToPgText(req.BuyerDocument),
 		AmountReceived:    amountReceived,
 		ChangeAmount:      changeAmount,
+		CreditAmount:      pgconv.Float64ToPgNumeric(creditAmount),
 	})
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	if creditAmount > 0 {
+		if err := useStoreCredit(ctx, q, companyId, userId, req.CustomerID, pgconv.PgUUIDToUUID(id), -creditAmount, "sale"); err != nil {
+			return uuid.Nil, err
+		}
 	}
 
 	if req.PaymentMethod == "installments" {
@@ -286,6 +305,58 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 // roundMoney arredonda um valor em R$ para centavos.
 func roundMoney(value float64) float64 {
 	return math.Round(value*100) / 100
+}
+
+// ensureNoReturns barra cancelar ou alterar venda com devolução registrada ou
+// criada por uma troca: o estoque e os valores já foram movimentados por ela.
+func ensureNoReturns(ctx context.Context, q *db.Queries, saleID pgtype.UUID) error {
+	info, err := q.CountSaleReturnsBySale(ctx, saleID)
+	if err != nil {
+		return err
+	}
+	if info.IsExchangeSale {
+		return domain.ErrExchangeSale
+	}
+	if info.ReturnsCount > 0 {
+		return domain.ErrSaleHasReturns
+	}
+	return nil
+}
+
+// useStoreCredit movimenta o vale-troca do cliente (amount negativo usa,
+// positivo devolve) e registra no extrato.
+func useStoreCredit(ctx context.Context, q *db.Queries, companyId, userId, customerId, saleId uuid.UUID, amount float64, movementType string) error {
+	customer, err := q.GetCustomerForCredit(ctx, db.GetCustomerForCreditParams{
+		ID:        pgconv.ParseUUIDToPgType(customerId),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrSaleCustomerNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if amount < 0 && roundMoney(customer.StoreCredit+amount) < 0 {
+		return fmt.Errorf("%w: o cliente tem R$ %.2f de vale-troca", domain.ErrInsufficientCredit, customer.StoreCredit)
+	}
+
+	balance, err := q.AddCustomerStoreCredit(ctx, db.AddCustomerStoreCreditParams{
+		Amount: pgconv.Float64ToPgNumeric(amount),
+		ID:     customer.ID,
+	})
+	if err != nil {
+		return err
+	}
+
+	return q.CreateCustomerCreditMovement(ctx, db.CreateCustomerCreditMovementParams{
+		CompanyID:    customer.CompanyID,
+		CustomerID:   customer.ID,
+		Type:         movementType,
+		Amount:       pgconv.Float64ToPgNumeric(amount),
+		BalanceAfter: pgconv.Float64ToPgNumeric(balance),
+		SaleID:       pgconv.ParseUUIDToPgType(saleId),
+		CreatedBy:    pgconv.ParseUUIDToPgType(userId),
+	})
 }
 
 // cashChange calcula o troco sobre o que é pago em dinheiro no balcão: o total na
@@ -377,6 +448,17 @@ func (s *Service) DeleteSale(ctx context.Context, id uuid.UUID, req domain.Delet
 
 	if sale.DeletedAt.Valid {
 		return domain.ErrSaleAlreadyCanceled
+	}
+
+	if err := ensureNoReturns(ctx, q, saleID); err != nil {
+		return err
+	}
+
+	// Vale-troca usado na venda volta para o cliente
+	if credit := pgconv.PgNumericToFloat64(sale.CreditAmount); credit > 0 && sale.CustomerID.Valid {
+		if err := useStoreCredit(ctx, q, req.CompanyID, req.DeletedBy, pgconv.PgUUIDToUUID(sale.CustomerID), id, credit, "sale_cancel"); err != nil {
+			return err
+		}
 	}
 
 	// 1. Devolve o estoque (inverso do DecrementStock feito no CreateSaleItemInTx) e registra a movimentação
@@ -1318,6 +1400,9 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 					CustomerName:           row.CustomerName,
 					InstallmentTotalAmount: pgconv.PgNumericToFloat64(row.InstallmentBalance),
 					DownPayment:            pgconv.PgNumericToFloat64(row.DownPayment),
+					ReturnedTotal:          row.ReturnedTotal,
+					IsExchangeSale:         row.IsExchangeSale,
+					CreditAmount:           row.CreditAmount,
 				},
 				Products:      []domain.ListProductResponse{},
 				AccReceivable: []domain.ListAccReceivableResponse{},
@@ -1422,6 +1507,10 @@ func (s *Service) UpdateSale(ctx context.Context, userId uuid.UUID, companyId uu
 
 	if sale.CreatedAt.Valid && time.Since(sale.CreatedAt.Time) > domain.SaleUpdateWindow {
 		return domain.ErrSaleUpdateExpired
+	}
+
+	if err := ensureNoReturns(ctx, q, saleID); err != nil {
+		return err
 	}
 
 	if !sale.CustomerID.Valid {

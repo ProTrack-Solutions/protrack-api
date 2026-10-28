@@ -14,7 +14,8 @@ INSERT INTO sales (
         status,
         buyer_document,
         amount_received,
-        change_amount
+        change_amount,
+        credit_amount
     )
 VALUES (
         $1,
@@ -31,7 +32,8 @@ VALUES (
         $11,
         $12,
         $13,
-        $14
+        $14,
+        $15
     )
 RETURNING id;
 -- name: ListSales :many
@@ -431,6 +433,10 @@ SELECT
     ar.due_date,
     ar.installment_number,
     ar.status AS installment_status,
+    -- Devoluções: valor devolvido da venda e se ela nasceu de uma troca
+    COALESCE((SELECT SUM(sr.returned_total) FROM sale_returns sr WHERE sr.sale_id = s.id), 0)::float8 AS returned_total,
+    EXISTS (SELECT 1 FROM sale_returns sr WHERE sr.exchange_sale_id = s.id) AS is_exchange_sale,
+    s.credit_amount::float8 AS credit_amount,
     ps.total_count
 FROM paginated_sales ps
     INNER JOIN sales s ON s.id = ps.id

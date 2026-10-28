@@ -131,26 +131,44 @@ WITH buckets AS (
 ),
 inflow AS (
     SELECT date_trunc($4::text, s.created_at AT TIME ZONE $5::text)::date AS bucket,
-        SUM(s.total_amount)::FLOAT AS total,
+        SUM(s.total_amount - s.credit_amount)::FLOAT AS total,
         COUNT(*)::INT AS movements
     FROM sales s
     WHERE s.company_id = $6
         AND s.deleted_at IS NULL
         AND s.status <> 'canceled'
+        AND s.total_amount > s.credit_amount
         AND s.created_at >= ($1::date)::timestamp AT TIME ZONE $5::text
         AND s.created_at < ($7::date)::timestamp AT TIME ZONE $5::text
     GROUP BY 1
 ),
 outflow AS (
-    SELECT date_trunc($4::text, b.payment_date::timestamp)::date AS bucket,
-        SUM(COALESCE(b.amount_paid, b.amount))::FLOAT AS total,
-        COUNT(*)::INT AS movements
-    FROM bills_payable b
-    WHERE b.company_id = $6
-        AND b.status = 'paid'
-        AND b.payment_date >= $1::date
-        AND b.payment_date < $7::date
-    GROUP BY 1
+    SELECT o.bucket,
+        SUM(o.total)::FLOAT AS total,
+        SUM(o.movements)::INT AS movements
+    FROM (
+            SELECT date_trunc($4::text, b.payment_date::timestamp)::date AS bucket,
+                SUM(COALESCE(b.amount_paid, b.amount)) AS total,
+                COUNT(*) AS movements
+            FROM bills_payable b
+            WHERE b.company_id = $6
+                AND b.status = 'paid'
+                AND b.payment_date >= $1::date
+                AND b.payment_date < $7::date
+            GROUP BY 1
+            UNION ALL
+            -- Dinheiro devolvido a clientes em trocas/devoluções
+            SELECT date_trunc($4::text, sr.created_at AT TIME ZONE $5::text)::date AS bucket,
+                SUM(sr.refund_amount) AS total,
+                COUNT(*) AS movements
+            FROM sale_returns sr
+            WHERE sr.company_id = $6
+                AND sr.refund_amount > 0
+                AND sr.created_at >= ($1::date)::timestamp AT TIME ZONE $5::text
+                AND sr.created_at < ($7::date)::timestamp AT TIME ZONE $5::text
+            GROUP BY 1
+        ) o
+    GROUP BY o.bucket
 )
 SELECT bk.bucket::date AS bucket,
     COALESCE(i.total, 0)::FLOAT AS inflow,
@@ -219,7 +237,7 @@ func (q *Queries) GetCashFlowSeries(ctx context.Context, arg GetCashFlowSeriesPa
 
 const getCashFlowTotalsByRange = `-- name: GetCashFlowTotalsByRange :one
 SELECT (
-        SELECT COALESCE(SUM(s.total_amount), 0)
+        SELECT COALESCE(SUM(s.total_amount - s.credit_amount), 0)
         FROM sales s
         WHERE s.company_id = $1
             AND s.deleted_at IS NULL
@@ -228,12 +246,20 @@ SELECT (
             AND s.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
     )::FLOAT AS inflow,
     (
-        SELECT COALESCE(SUM(COALESCE(b.amount_paid, b.amount)), 0)
-        FROM bills_payable b
-        WHERE b.company_id = $1
-            AND b.status = 'paid'
-            AND b.payment_date >= $3::date
-            AND b.payment_date < $4::date
+        (
+            SELECT COALESCE(SUM(COALESCE(b.amount_paid, b.amount)), 0)
+            FROM bills_payable b
+            WHERE b.company_id = $1
+                AND b.status = 'paid'
+                AND b.payment_date >= $3::date
+                AND b.payment_date < $4::date
+        ) + (
+            SELECT COALESCE(SUM(sr.refund_amount), 0)
+            FROM sale_returns sr
+            WHERE sr.company_id = $1
+                AND sr.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+                AND sr.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+        )
     )::FLOAT AS outflow
 `
 
@@ -409,12 +435,14 @@ func (q *Queries) GetCashInFlowCategoryByRange(ctx context.Context, arg GetCashI
 
 const getCashInFlowPaymentMethodByRange = `-- name: GetCashInFlowPaymentMethodByRange :many
 SELECT s.payment_method::TEXT AS payment_method,
-    SUM(s.total_amount)::FLOAT AS total_amount,
+    SUM(s.total_amount - s.credit_amount)::FLOAT AS total_amount,
     COUNT(*)::INT AS sales_count
 FROM sales s
 WHERE s.company_id = $1
     AND s.deleted_at IS NULL
     AND s.status <> 'canceled'
+    -- Parte paga com vale-troca não é dinheiro novo
+    AND s.total_amount > s.credit_amount
     AND s.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
     AND s.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
 GROUP BY 1
@@ -549,14 +577,26 @@ func (q *Queries) GetCashOutFlowCategoryByPeriod(ctx context.Context, arg GetCas
 }
 
 const getCashOutFlowCategoryByRange = `-- name: GetCashOutFlowCategoryByRange :many
-SELECT COALESCE(bc.name, 'Sem categoria')::TEXT AS category_name,
-    SUM(COALESCE(b.amount_paid, b.amount))::FLOAT AS total_amount
-FROM bills_payable b
-    LEFT JOIN bill_categories bc ON bc.id = b.category_id
-WHERE b.company_id = $1
-    AND b.status = 'paid'
-    AND b.payment_date >= $2::date
-    AND b.payment_date < $3::date
+SELECT o.category_name::TEXT AS category_name,
+    SUM(o.total)::FLOAT AS total_amount
+FROM (
+        SELECT COALESCE(bc.name, 'Sem categoria') AS category_name,
+            COALESCE(b.amount_paid, b.amount) AS total
+        FROM bills_payable b
+            LEFT JOIN bill_categories bc ON bc.id = b.category_id
+        WHERE b.company_id = $1
+            AND b.status = 'paid'
+            AND b.payment_date >= $2::date
+            AND b.payment_date < $3::date
+        UNION ALL
+        SELECT 'Devoluções a clientes' AS category_name,
+            sr.refund_amount AS total
+        FROM sale_returns sr
+        WHERE sr.company_id = $1
+            AND sr.refund_amount > 0
+            AND sr.created_at >= ($2::date)::timestamp AT TIME ZONE $4::text
+            AND sr.created_at < ($3::date)::timestamp AT TIME ZONE $4::text
+    ) o
 GROUP BY 1
 ORDER BY total_amount DESC
 `
@@ -565,6 +605,7 @@ type GetCashOutFlowCategoryByRangeParams struct {
 	CompanyID pgtype.UUID `json:"company_id"`
 	StartDate pgtype.Date `json:"start_date"`
 	EndDate   pgtype.Date `json:"end_date"`
+	Tz        string      `json:"tz"`
 }
 
 type GetCashOutFlowCategoryByRangeRow struct {
@@ -573,7 +614,12 @@ type GetCashOutFlowCategoryByRangeRow struct {
 }
 
 func (q *Queries) GetCashOutFlowCategoryByRange(ctx context.Context, arg GetCashOutFlowCategoryByRangeParams) ([]GetCashOutFlowCategoryByRangeRow, error) {
-	rows, err := q.db.Query(ctx, getCashOutFlowCategoryByRange, arg.CompanyID, arg.StartDate, arg.EndDate)
+	rows, err := q.db.Query(ctx, getCashOutFlowCategoryByRange,
+		arg.CompanyID,
+		arg.StartDate,
+		arg.EndDate,
+		arg.Tz,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -664,14 +710,29 @@ FROM (
                 'inflow'::TEXT AS kind,
                 COALESCE(c.full_name, 'Consumidor final')::TEXT AS description,
                 s.payment_method::TEXT AS detail,
-                s.total_amount::FLOAT AS amount,
+                (s.total_amount - s.credit_amount)::FLOAT AS amount,
                 s.created_at AS occurred_at
             FROM sales s
                 LEFT JOIN customers c ON c.id = s.customer_id
             WHERE s.company_id = $1
                 AND s.deleted_at IS NULL
                 AND s.status <> 'canceled'
+                AND s.total_amount > s.credit_amount
             ORDER BY s.created_at DESC
+            LIMIT $2::int
+        )
+        UNION ALL
+        (
+            SELECT sr.id,
+                'outflow'::TEXT AS kind,
+                ('Devolução nº ' || sr.number)::TEXT AS description,
+                COALESCE(sr.refund_method, 'other')::TEXT AS detail,
+                sr.refund_amount::FLOAT AS amount,
+                sr.created_at AS occurred_at
+            FROM sale_returns sr
+            WHERE sr.company_id = $1
+                AND sr.refund_amount > 0
+            ORDER BY sr.created_at DESC
             LIMIT $2::int
         )
         UNION ALL

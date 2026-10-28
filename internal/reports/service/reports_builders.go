@@ -476,8 +476,9 @@ func (s *Service) dreReport(ctx context.Context, p period) (domain.Report, error
 
 // buildDRE monta a DRE gerencial. Percentuais são sobre a receita líquida.
 func buildDRE(revenue db.ReportDreRevenueRow, expenses []db.ReportDreExpensesRow) domain.Report {
-	net := revenue.Net
-	grossProfit := round2(net - revenue.Cost)
+	net := round2(revenue.Net - revenue.ReturnsTotal)
+	cost := round2(revenue.Cost - revenue.ReturnsCost)
+	grossProfit := round2(net - cost)
 
 	var totalExpenses float64
 	for _, e := range expenses {
@@ -492,8 +493,9 @@ func buildDRE(revenue db.ReportDreRevenueRow, expenses []db.ReportDreExpensesRow
 	rows := [][]any{
 		line("(+) Receita bruta de vendas", revenue.Gross),
 		line("(-) Descontos concedidos", -revenue.Discount),
+		line("(-) Devoluções", -revenue.ReturnsTotal),
 		line("(=) Receita líquida", net),
-		line("(-) Custo das mercadorias vendidas (CMV)", -revenue.Cost),
+		line("(-) Custo das mercadorias vendidas (CMV)", -cost),
 		line("(=) Lucro bruto", grossProfit),
 		line("(-) Despesas operacionais", -totalExpenses),
 	}
@@ -504,7 +506,7 @@ func buildDRE(revenue db.ReportDreRevenueRow, expenses []db.ReportDreExpensesRow
 
 	return domain.Report{
 		Title:       "DRE gerencial",
-		Description: "Demonstração do resultado pelo regime de competência: vendas pela data da venda e despesas pelo vencimento.",
+		Description: "Demonstração do resultado pelo regime de competência: vendas pela data da venda, devoluções pela data da devolução e despesas pelo vencimento.",
 		UsesPeriod:  true,
 		Columns: []col{
 			text("description", "Descrição"), money("value", "Valor"), pct("share", "% da receita líquida"),

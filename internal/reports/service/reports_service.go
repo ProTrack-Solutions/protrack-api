@@ -210,6 +210,7 @@ var paymentMethodLabels = map[string]string{
 	"bank_transfer": "Transferência",
 	"installments":  "A prazo",
 	"other":         "Outros",
+	"store_credit":  "Vale-troca",
 }
 
 var statusLabels = map[string]string{
@@ -230,6 +231,7 @@ var stockMovementLabels = map[string]string{
 	"ADJUSTMENT":        "Ajuste",
 	"PURCHASE":          "Compra",
 	"PURCHASE_REVERSAL": "Estorno de compra",
+	"RETURN":            "Devolução de cliente",
 }
 
 func label(labels map[string]string, value string) string {

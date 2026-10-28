@@ -78,6 +78,9 @@ type MethodSummary struct {
 	ReceiptsCount int32   `json:"receipts_count"`
 	ReceiptsTotal float64 `json:"receipts_total"`
 	Received      float64 `json:"received"`
+	// Devolvido ao cliente em trocas/devoluções (já descontado de Received)
+	RefundsCount int32   `json:"refunds_count"`
+	RefundsTotal float64 `json:"refunds_total"`
 }
 
 type CashSummary struct {
@@ -91,7 +94,11 @@ type CashSummary struct {
 	CashReceived     float64 `json:"cash_received"`
 	SuppliesTotal    float64 `json:"supplies_total"`
 	WithdrawalsTotal float64 `json:"withdrawals_total"`
-	ExpectedCash     float64 `json:"expected_cash"`
+	// Dinheiro devolvido a clientes em trocas/devoluções do turno
+	RefundsCount int32   `json:"refunds_count"`
+	RefundsTotal float64 `json:"refunds_total"`
+	CashRefunds  float64 `json:"cash_refunds"`
+	ExpectedCash float64 `json:"expected_cash"`
 	// Troco devolvido nas vendas do turno (já descontado do dinheiro recebido)
 	ChangeCount int32           `json:"change_count"`
 	ChangeTotal float64         `json:"change_total"`

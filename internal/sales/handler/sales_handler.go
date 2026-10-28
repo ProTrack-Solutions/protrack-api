@@ -98,6 +98,9 @@ func respondSaleError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrSaleAlreadyCanceled),
 		errors.Is(err, domain.ErrSaleUpdateExpired),
 		errors.Is(err, domain.ErrSaleHasPayments),
+		errors.Is(err, domain.ErrInsufficientCredit),
+		errors.Is(err, domain.ErrSaleHasReturns),
+		errors.Is(err, domain.ErrExchangeSale),
 		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	default:

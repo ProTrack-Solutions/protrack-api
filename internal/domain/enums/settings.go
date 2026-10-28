@@ -14,4 +14,6 @@ const (
 	// Template do lembrete manual de parcela a vencer; vazio = não configurado
 	DueReminderTemplate         CompanySettingsKey = "due_reminder_template"
 	LanguageDueReminderTemplate CompanySettingsKey = "language_due_reminder_template"
+	// Prazo de troca/devolução em dias contados da venda; 0 = sem prazo
+	ReturnWindowDays CompanySettingsKey = "return_window_days"
 )

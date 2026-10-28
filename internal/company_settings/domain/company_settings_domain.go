@@ -21,6 +21,7 @@ var DefaultSettings = map[enums.CompanySettingsKey]any{
 	enums.RequireOpenCashRegister:     true,
 	enums.DueReminderTemplate:         "",
 	enums.LanguageDueReminderTemplate: "pt_BR",
+	enums.ReturnWindowDays:            30,
 }
 
 type RepositoryInterface interface {
