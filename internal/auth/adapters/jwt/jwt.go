@@ -2,17 +2,51 @@ package jwt
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
 
+// Aplicações que podem logar. Cada usuário tem no máximo uma sessão ativa em
+// cada uma: um login novo derruba o anterior da mesma aplicação.
+const (
+	AudienceWeb = "protrack-gerencial-web"
+	AudienceApp = "protrack-gerencial-app"
+	// Painel interno da plataforma (super admin), fora da regra de sessão única
+	AudiencePlatform = "platform"
+)
+
+// IsUserAudience diz se o aud é de uma aplicação de usuário (web ou app)
+func IsUserAudience(aud string) bool {
+	return aud == AudienceWeb || aud == AudienceApp
+}
+
 type Claims struct {
 	CompanyId    uuid.UUID `json:"company_id"`
 	Role         string    `json:"role"`
 	DepartmentId uuid.UUID `json:"department_id"`
+	// Sessão do login que gerou o token; mantida nas renovações
+	SessionId string `json:"sid,omitempty"`
 	jwt.RegisteredClaims
+}
+
+// Audience é o aud do token (vazio se não houver)
+func (c *Claims) AudienceValue() string {
+	if len(c.Audience) == 0 {
+		return ""
+	}
+	return c.Audience[0]
+}
+
+// TokenKey identifica o token na lista de revogados: o jti quando existe;
+// tokens antigos, sem jti, seguem pelo par usuário:expiração.
+func (c *Claims) TokenKey() string {
+	if c.ID != "" {
+		return c.ID
+	}
+	return fmt.Sprintf("%s:%d", c.Subject, c.ExpiresAt.Unix())
 }
 
 type TokenPair struct {
@@ -35,11 +69,17 @@ func NewJWTManager(secretKey string) *JWTManager {
 	}
 }
 
-func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, role string, aud string) (*TokenPair, error) {
+// RefreshTTL é a validade do refresh token (e da sessão no Redis)
+func (j *JWTManager) RefreshTTL() time.Duration {
+	return j.refreshTokenTTL
+}
+
+func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, role string, aud string, sessionId string) (*TokenPair, error) {
 	accessClaims := &Claims{
 		CompanyId:    companyId,
 		Role:         role,
 		DepartmentId: departmentId,
+		SessionId:    sessionId,
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.accessTokenTTL)),
@@ -48,6 +88,7 @@ func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, r
 			Issuer:    "protrack",
 			Subject:   sub.String(),
 			Audience:  []string{aud},
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -61,6 +102,7 @@ func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, r
 		CompanyId:    companyId,
 		Role:         role,
 		DepartmentId: departmentId,
+		SessionId:    sessionId,
 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(j.refreshTokenTTL)),
@@ -69,6 +111,7 @@ func (j *JWTManager) GenerateTokenPair(departmentId, sub, companyId uuid.UUID, r
 			Issuer:    "protrack",
 			Subject:   sub.String(),
 			Audience:  []string{aud},
+			ID:        uuid.NewString(),
 		},
 	}
 
@@ -118,5 +161,5 @@ func (j *JWTManager) RefreshToken(refreshTokenString string) (*TokenPair, error)
 		return nil, errors.New("missing audience")
 	}
 
-	return j.GenerateTokenPair(claims.DepartmentId, userID, claims.CompanyId, claims.Role, claims.Audience[0])
+	return j.GenerateTokenPair(claims.DepartmentId, userID, claims.CompanyId, claims.Role, claims.Audience[0], claims.SessionId)
 }

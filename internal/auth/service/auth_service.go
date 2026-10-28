@@ -43,6 +43,8 @@ var (
 
 	// Erros de login. Credenciais inválidas vêm de userService.ErrInvalidCredentials.
 	ErrInvalidAud           = errors.New("aplicação de origem (aud) inválida")
+	// A sessão foi substituída por um login mais recente na mesma aplicação
+	ErrSessionReplaced = errors.New("sua conta foi acessada em outro dispositivo; entre novamente")
 	ErrSubscriptionNotFound = errors.New("nenhuma assinatura encontrada para a empresa")
 	ErrSubscriptionCanceled = errors.New("a assinatura da empresa foi cancelada")
 	ErrSubscriptionPaused   = errors.New("a assinatura da empresa está pausada")
@@ -114,7 +116,7 @@ func NewService(stripeService *stripeService.Service,
 // sempre que as credenciais forem válidas (mesmo se a assinatura bloquear o
 // acesso), para que o handler consiga registrar quem tentou entrar.
 func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.LoginResponse, *userDomain.UserResponse, error) {
-	if req.Aud == "" {
+	if !jwt.IsUserAudience(req.Aud) {
 		return nil, nil, ErrInvalidAud
 	}
 
@@ -144,10 +146,16 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 		hasCompany = false
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, req.Aud)
+	// Uma sessão por usuário em cada aplicação: o login novo substitui a
+	// anterior e os tokens dela passam a ser recusados
+	sessionID := uuid.NewString()
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, req.Aud, sessionID)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to generate tokens")
 		return nil, &user, fmt.Errorf("gerando tokens: %w", err)
+	}
+	if err := s.blacklist.SetSession(ctx, user.ID.String(), req.Aud, sessionID, s.jwtManager.RefreshTTL()); err != nil {
+		return nil, &user, fmt.Errorf("gravando sessão: %w", err)
 	}
 
 	return &domain.LoginResponse{
@@ -162,7 +170,7 @@ func (s *Service) Login(ctx context.Context, req domain.LoginRequest) (*domain.L
 // DemoLogin gera tokens para o usuário da empresa de demonstração, sem senha.
 // A empresa precisa ter sido criada antes pelo cmd/seed-demo.
 func (s *Service) DemoLogin(ctx context.Context, aud string) (*domain.LoginResponse, error) {
-	if aud == "" {
+	if !jwt.IsUserAudience(aud) {
 		return nil, ErrInvalidAud
 	}
 
@@ -179,7 +187,8 @@ func (s *Service) DemoLogin(ctx context.Context, aud string) (*domain.LoginRespo
 		return nil, ErrDemoUnavailable
 	}
 
-	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, aud)
+	// O usuário demo é compartilhado pelos visitantes: fica fora da sessão única
+	tokenPair, err := s.jwtManager.GenerateTokenPair(user.DepartmentID, user.ID, user.CompanyID, user.Role, aud, "")
 	if err != nil {
 		return nil, fmt.Errorf("gerando tokens: %w", err)
 	}
@@ -214,9 +223,26 @@ func checkSubscriptionAccess(subscription subscriptionDomain.SubscriptionRespons
 }
 
 func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID uuid.UUID) (*domain.LoginResponse, error) {
+	claims, err := s.jwtManager.ValidateToken(refreshToken)
+	if err != nil {
+		return nil, err
+	}
+	aud := claims.AudienceValue()
+	if !jwt.IsUserAudience(aud) {
+		return nil, ErrInvalidAud
+	}
+
 	user, err := s.userService.GetUserByID(ctx, userID)
 	if err != nil {
 		return &domain.LoginResponse{}, err
+	}
+
+	// Só renova a sessão ativa; tokens de antes da sessão única (sem sid) não renovam
+	demoUser := demo.IsDemoCompany(user.CompanyID)
+	if !demoUser {
+		if err := s.checkSession(ctx, userID.String(), aud, claims.SessionId); err != nil {
+			return nil, err
+		}
 	}
 
 	subscription, err := s.subscriptionService.GetSubscriptionByCompanyID(ctx, user.CompanyID)
@@ -234,12 +260,33 @@ func (s *Service) RefreshToken(ctx context.Context, refreshToken string, userID 
 		return nil, err
 	}
 
+	if !demoUser {
+		if err := s.blacklist.TouchSession(ctx, userID.String(), aud, s.jwtManager.RefreshTTL()); err != nil {
+			log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao estender sessão")
+		}
+	}
+
 	return &domain.LoginResponse{
 		AccessToken:  tokenPair.AccessToken,
 		RefreshToken: tokenPair.RefreshToken,
 		ExpiresIn:    tokenPair.ExpireIn,
 		TokenType:    "Bearer",
 	}, nil
+}
+
+// checkSession confere se o sid do token ainda é a sessão ativa do usuário na aplicação
+func (s *Service) checkSession(ctx context.Context, userID, aud, sessionID string) error {
+	if sessionID == "" {
+		return ErrSessionReplaced
+	}
+	active, err := s.blacklist.GetSession(ctx, userID, aud)
+	if err != nil {
+		return err
+	}
+	if active != sessionID {
+		return ErrSessionReplaced
+	}
+	return nil
 }
 
 /* func (s *Service) Logout(ctx context.Context, token string) error {
@@ -502,7 +549,7 @@ func (s *Service) ConfirmPasswordReset(ctx context.Context, token, newPassword s
 		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao invalidar token de reset após uso")
 	}
 
-	if err = s.blacklist.ClearUserTokens(ctx, userID.String()); err != nil {
+	if err = s.blacklist.RevokeUserSessions(ctx, userID.String(), jwt.AudienceWeb, jwt.AudienceApp); err != nil {
 		log.Error().Err(err).Str("user_id", userID.String()).Msg("Falha ao revogar sessões ativas após reset de senha")
 	}
 

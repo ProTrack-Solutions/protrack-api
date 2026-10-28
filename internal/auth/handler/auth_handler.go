@@ -2,7 +2,6 @@ package handler
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -188,16 +187,30 @@ func (h *Handler) RefreshToken(c *gin.Context) {
 		return
 	}
 
-	tokenID := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
-	expiresIn := time.Until(claims.ExpiresAt.Time)
-	if expiresIn > 0 {
-		_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
+	// Refresh token é de uso único: o já usado não renova de novo
+	tokenID := claims.TokenKey()
+	used, err := h.blacklist.IsRefreshBlacklisted(c.Request.Context(), tokenID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		return
+	}
+	if used {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
 	}
 
 	response, err := h.service.RefreshToken(c.Request.Context(), req.RefreshToken, userID)
+	if errors.Is(err, service.ErrSessionReplaced) {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error(), "code": "SESSION_REPLACED"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
 		return
+	}
+
+	if expiresIn := time.Until(claims.ExpiresAt.Time); expiresIn > 0 {
+		_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
 	}
 
 	c.SetCookie(
@@ -281,10 +294,12 @@ func (h *Handler) Logout(c *gin.Context) {
 	if accessToken != "" {
 		claims, err := h.jwtManager.ValidateToken(accessToken)
 		if err == nil {
-			tokenID := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
-			expiresIn := time.Until(claims.ExpiresAt.Time)
-			if expiresIn > 0 {
-				_ = h.blacklist.AddToken(c.Request.Context(), tokenID, expiresIn)
+			if expiresIn := time.Until(claims.ExpiresAt.Time); expiresIn > 0 {
+				_ = h.blacklist.AddToken(c.Request.Context(), claims.TokenKey(), expiresIn)
+			}
+			// Encerra a sessão desta aplicação (se ainda for a ativa)
+			if claims.SessionId != "" {
+				_ = h.blacklist.EndSession(c.Request.Context(), claims.Subject, claims.AudienceValue(), claims.SessionId)
 			}
 		}
 	}
@@ -293,10 +308,8 @@ func (h *Handler) Logout(c *gin.Context) {
 	if refreshToken != "" {
 		claims, err := h.jwtManager.ValidateToken(refreshToken)
 		if err == nil {
-			tokenID := fmt.Sprintf("%s:%d", claims.Subject, claims.ExpiresAt.Unix())
-			expiresIn := time.Until(claims.ExpiresAt.Time)
-			if expiresIn > 0 {
-				_ = h.blacklist.AddRefreshToken(c.Request.Context(), tokenID, expiresIn)
+			if expiresIn := time.Until(claims.ExpiresAt.Time); expiresIn > 0 {
+				_ = h.blacklist.AddRefreshToken(c.Request.Context(), claims.TokenKey(), expiresIn)
 			}
 		}
 	}
