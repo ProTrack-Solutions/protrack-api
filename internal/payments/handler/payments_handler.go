@@ -75,7 +75,9 @@ func (h *Handler) NewPayment(c *gin.Context) {
 	}
 
 	if err := h.service.NewPayment(c.Request.Context(), companyId, userId, req); err != nil {
-		if errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired) {
+		if errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired) ||
+			errors.Is(err, cashRegisterDomain.ErrCashRegisterNotSelected) ||
+			errors.Is(err, cashRegisterDomain.ErrCashRegisterNotFound) {
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 			return
 		}

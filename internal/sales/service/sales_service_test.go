@@ -525,6 +525,10 @@ func TestListSalesWithDetailsPaginate_Success(t *testing.T) {
 		Return(int64(2), nil)
 
 	repo.EXPECT().
+		GetCompanyTimezone(gomock.Any(), gomock.Any()).
+		Return("America/Sao_Paulo", nil)
+
+	repo.EXPECT().
 		CountSalesDeletedByCompany(gomock.Any(), gomock.Any()).
 		Return(int64(0), nil)
 
@@ -550,6 +554,7 @@ func TestListSalesWithDetailsPaginate_Success(t *testing.T) {
 			SaleEndDate:      pgtype.Date{},
 			SortBy:           "",
 			OrderBy:          "",
+			Tz:               "America/Sao_Paulo",
 		}).
 		Return([]db.ListSalesWithDetailsPaginateRow{}, nil)
 
@@ -601,6 +606,10 @@ func TestListSalesWithDetailsPaginate_SecondPage(t *testing.T) {
 		Return(int64(20), nil)
 
 	repo.EXPECT().
+		GetCompanyTimezone(gomock.Any(), gomock.Any()).
+		Return("America/Sao_Paulo", nil)
+
+	repo.EXPECT().
 		CountSalesDeletedByCompany(gomock.Any(), gomock.Any()).
 		Return(int64(2), nil)
 
@@ -626,8 +635,10 @@ func TestListSalesWithDetailsPaginate_SecondPage(t *testing.T) {
 			SaleEndDate:      pgtype.Date{},
 			SortBy:           "",
 			OrderBy:          "",
+			Tz:               "America/Sao_Paulo",
 		}).
-		Return([]db.ListSalesWithDetailsPaginateRow{}, nil)
+		// total_count vem da própria consulta, já com os filtros
+		Return([]db.ListSalesWithDetailsPaginateRow{{SaleID: pgconv.ParseUUIDToPgType(uuid.New()), TotalCount: 20}}, nil)
 
 	resp, err := svc.ListSalesWithDetailsPaginate(context.Background(), companyID, pagination)
 	if err != nil {
