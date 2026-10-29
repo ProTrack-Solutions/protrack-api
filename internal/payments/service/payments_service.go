@@ -48,7 +48,7 @@ func (s *Service) NewPayment(ctx context.Context, companyId, userId uuid.UUID, r
 	}
 	defer tx.Rollback(ctx)
 
-	if err := cashRegisterService.RequireOpenSession(ctx, tx, companyId, userId); err != nil {
+	if err := cashRegisterService.BindOpenSession(ctx, tx, companyId); err != nil {
 		return err
 	}
 

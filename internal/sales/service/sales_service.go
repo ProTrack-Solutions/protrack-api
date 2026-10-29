@@ -131,7 +131,7 @@ func (s *Service) CreateSale(ctx context.Context, userId, companyId uuid.UUID, r
 	}
 	defer tx.Rollback(ctx)
 
-	if err := cashRegisterService.RequireOpenSession(ctx, tx, companyId, userId); err != nil {
+	if err := cashRegisterService.BindOpenSession(ctx, tx, companyId); err != nil {
 		return uuid.Nil, err
 	}
 

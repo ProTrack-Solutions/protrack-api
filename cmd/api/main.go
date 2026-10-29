@@ -183,6 +183,7 @@ func main() {
 			"StartScheduledDate", "EndScheduledDate",
 			"StartPaymentDate", "EndPaymentDate",
 			"SaleId", "Status",
+			"CashRegisterId",
 		},
 		ExposeHeaders: []string{
 			"Content-Length",
@@ -205,6 +206,8 @@ func main() {
 	// terminaram em panic (já convertidas em 500).
 	r.Use(middleware.GinDiscordRequestLogMiddleware(discord.NewDiscordLoggerWithURL(cfg.APILogURLDiscord)))
 	r.Use(middleware.GinDiscordErrorMiddleware(discordLogger))
+	// Caixa em que o computador trabalha, para vendas e recebimentos acharem o turno
+	r.Use(cashRegisterHandler.RegisterContext())
 
 	if cfg.AppEnv != "production" {
 		r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

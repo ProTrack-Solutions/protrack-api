@@ -48,7 +48,7 @@ func (q *Queries) CreatePaymentHistory(ctx context.Context, arg CreatePaymentHis
 }
 
 const getPaymentsByCustomer = `-- name: GetPaymentsByCustomer :many
-SELECT id, company_id, customer_id, sale_id, payment_method_id, user_id, amount_paid, payment_date, notes
+SELECT id, company_id, customer_id, sale_id, payment_method_id, user_id, amount_paid, payment_date, notes, cash_session_id
 FROM payment_history
 WHERE company_id = $1
     AND customer_id = $2
@@ -79,6 +79,7 @@ func (q *Queries) GetPaymentsByCustomer(ctx context.Context, arg GetPaymentsByCu
 			&i.AmountPaid,
 			&i.PaymentDate,
 			&i.Notes,
+			&i.CashSessionID,
 		); err != nil {
 			return nil, err
 		}
@@ -91,7 +92,7 @@ func (q *Queries) GetPaymentsByCustomer(ctx context.Context, arg GetPaymentsByCu
 }
 
 const getPaymentsBySale = `-- name: GetPaymentsBySale :many
-SELECT id, company_id, customer_id, sale_id, payment_method_id, user_id, amount_paid, payment_date, notes
+SELECT id, company_id, customer_id, sale_id, payment_method_id, user_id, amount_paid, payment_date, notes, cash_session_id
 FROM payment_history
 WHERE company_id = $1
     AND sale_id = $2
@@ -122,6 +123,7 @@ func (q *Queries) GetPaymentsBySale(ctx context.Context, arg GetPaymentsBySalePa
 			&i.AmountPaid,
 			&i.PaymentDate,
 			&i.Notes,
+			&i.CashSessionID,
 		); err != nil {
 			return nil, err
 		}

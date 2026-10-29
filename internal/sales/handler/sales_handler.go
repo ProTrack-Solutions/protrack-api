@@ -101,7 +101,9 @@ func respondSaleError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrInsufficientCredit),
 		errors.Is(err, domain.ErrSaleHasReturns),
 		errors.Is(err, domain.ErrExchangeSale),
-		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired):
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired),
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotSelected),
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotFound):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	default:
 		log.Error().Err(err).Str("path", c.FullPath()).Msg("erro inesperado em vendas")

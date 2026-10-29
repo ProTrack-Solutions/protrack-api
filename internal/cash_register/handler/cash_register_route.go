@@ -16,5 +16,16 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		cashRegister.POST("/close", h.Close)
 		cashRegister.GET("/sessions", h.List)
 		cashRegister.GET("/sessions/:id", h.GetById)
+		cashRegister.GET("/registers", h.ListRegisters)
+		cashRegister.POST("/transfers", h.CreateTransfer)
+		cashRegister.POST("/transfers/:id/:action", h.ResolveTransfer)
+
+		// cadastro dos caixas físicos -> ADMIN
+		admin := cashRegister.Group("")
+		admin.Use(middleware.RequireRole("ADMIN"))
+		{
+			admin.POST("/registers", h.CreateRegister)
+			admin.PUT("/registers/:id", h.UpdateRegister)
+		}
 	}
 }
