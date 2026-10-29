@@ -772,3 +772,44 @@ func (h *Handler) GetInventoryTurnover(c *gin.Context) {
 
 	c.JSON(http.StatusOK, stockTurnover)
 }
+
+// GetSalesOverview godoc
+// @Summary      Visão geral das vendas
+// @Description  Totais do período comparados ao período anterior e série de vendas. Sem start_date o período começa na primeira venda da empresa
+// @Tags         sales
+// @Produce      json
+// @Security     BearerAuth
+// @Param        query query domain.GetSalesOverviewParams false "Período"
+// @Success      200 {object} domain.GetSalesOverviewResponse
+// @Failure      400 {object} map[string]string "Erro de validação"
+// @Failure      401 {object} map[string]string "Não autorizado"
+// @Failure      500 {object} map[string]string "Erro interno"
+// @Router       /sales/overview [get]
+func (h *Handler) GetSalesOverview(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	var params domain.GetSalesOverviewParams
+
+	if err := c.ShouldBindQuery(&params); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	overview, err := h.service.GetSalesOverview(c.Request.Context(), companyId, params)
+	if err != nil {
+		if errors.Is(err, domain.ErrInvalidOverviewParams) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, overview)
+}

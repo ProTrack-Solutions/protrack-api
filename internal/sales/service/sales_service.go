@@ -68,6 +68,10 @@ type RepositoryInterface interface {
 	GetTotalAmountPending(ctx context.Context, companyId pgtype.UUID) (float64, error)
 	GetTotalAmountPaid(ctx context.Context, companyId pgtype.UUID) (float64, error)
 	GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error)
+	GetCompanyTimezone(ctx context.Context, companyId pgtype.UUID) (string, error)
+	GetSalesOverviewTotals(ctx context.Context, arg db.GetSalesOverviewTotalsParams) (db.GetSalesOverviewTotalsRow, error)
+	GetSalesOverviewSeries(ctx context.Context, arg db.GetSalesOverviewSeriesParams) ([]db.GetSalesOverviewSeriesRow, error)
+	GetFirstSaleDate(ctx context.Context, arg db.GetFirstSaleDateParams) (pgtype.Date, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -1328,7 +1332,12 @@ func (s *Service) GetPendingSalesDetailedReport(ctx context.Context, companyId u
 }
 
 func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uuid.UUID, pagination domain.PaginationParams) (domain.SaleResponsePaginate, error) {
-	total, err := s.repo.CountSalesByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	salesCount, err := s.repo.CountSalesByCompany(ctx, pgconv.ParseUUIDToPgType(companyId))
+	if err != nil {
+		return domain.SaleResponsePaginate{}, err
+	}
+
+	tz, _, err := s.companyLocation(ctx, companyId)
 	if err != nil {
 		return domain.SaleResponsePaginate{}, err
 	}
@@ -1371,9 +1380,16 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 		SaleEndDate:      pgconv.StringToPgDate(pagination.SaleEndDate),
 		SortBy:           pagination.SortBy,
 		OrderBy:          pagination.OrderBy,
+		Tz:               tz,
 	})
 	if err != nil {
 		return domain.SaleResponsePaginate{}, err
+	}
+
+	// Total já com os filtros aplicados, para a paginação bater com a busca
+	var total int64
+	if len(rows) > 0 {
+		total = rows[0].TotalCount
 	}
 
 	var response []domain.ListSalesWithInstallmentsResponse
@@ -1465,7 +1481,7 @@ func (s *Service) ListSalesWithDetailsPaginate(ctx context.Context, companyId uu
 
 	return domain.SaleResponsePaginate{
 		PaginatedResponse: paginationResponse,
-		SalesCount:        total,
+		SalesCount:        salesCount,
 		TotalInvoiced:     totalPaid,
 		TotalPending:      totalPending,
 		SalesCanceled:     contSaleCancel,

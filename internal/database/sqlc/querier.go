@@ -186,6 +186,8 @@ type Querier interface {
 	// Usado pelo serviço de disparo pra validar se um template pode ser usado
 	// no WABA compartilhado antes de chamar a Graph API.
 	GetEligibleTemplateByName(ctx context.Context, arg GetEligibleTemplateByNameParams) (WhatsappTemplate, error)
+	// Data local da primeira venda da empresa (canceladas incluídas); NULL sem vendas
+	GetFirstSaleDate(ctx context.Context, arg GetFirstSaleDateParams) (pgtype.Date, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
@@ -235,6 +237,11 @@ type Querier interface {
 	GetSaleReturn(ctx context.Context, arg GetSaleReturnParams) (GetSaleReturnRow, error)
 	// Dados da venda mostrados na tela de devolução
 	GetSaleReturnHeader(ctx context.Context, arg GetSaleReturnHeaderParams) (GetSaleReturnHeaderRow, error)
+	// Vendas por dia/semana/mês; generate_series garante um ponto por período, mesmo sem venda.
+	GetSalesOverviewSeries(ctx context.Context, arg GetSalesOverviewSeriesParams) ([]GetSalesOverviewSeriesRow, error)
+	// Totais das vendas feitas em [start_date, end_date) no fuso da empresa.
+	// Venda cancelada tem deleted_at preenchido: entra só nos campos canceled_*.
+	GetSalesOverviewTotals(ctx context.Context, arg GetSalesOverviewTotalsParams) (GetSalesOverviewTotalsRow, error)
 	GetSalesPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetSalesPerformanceSummaryRow, error)
 	GetSubscriptionByCompanyID(ctx context.Context, companyID pgtype.UUID) (Subscription, error)
 	GetSubscriptionByExternalSubscriptionId(ctx context.Context, externalSubscriptionID pgtype.Text) (Subscription, error)

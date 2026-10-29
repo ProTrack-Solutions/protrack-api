@@ -364,10 +364,15 @@ WITH filtered_sales AS (
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
     WHERE s.company_id = $1
-        AND s.deleted_at IS NULL
-        -- Busca livre: nome do cliente ou nome do produto
+        -- Venda cancelada recebe deleted_at: só aparece filtrando por "canceled"
+        AND (
+            s.deleted_at IS NULL OR
+            sqlc.narg(sale_status)::account_status_enum = 'canceled'
+        )
+        -- Busca livre: nome do cliente, nome do produto ou começo do código da venda
         AND (
             sqlc.arg(search)::text = '' OR
+            s.id::text ILIKE sqlc.arg(search)::text || '%' OR
             to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
                 @@ plainto_tsquery('portuguese_unaccent', sqlc.arg(search)::text)
             OR to_tsvector(
@@ -388,9 +393,9 @@ WITH filtered_sales AS (
         -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
         AND (sqlc.narg(payment_start_date)::date IS NULL OR ar.due_date >= sqlc.narg(payment_start_date)::date)
         AND (sqlc.narg(payment_end_date)::date IS NULL OR ar.due_date < (sqlc.narg(payment_end_date)::date + INTERVAL '1 day'))
-        -- Data da venda (sales.sale_at)
-        AND (sqlc.narg(sale_start_date)::date IS NULL OR s.sale_at >= sqlc.narg(sale_start_date)::date)
-        AND (sqlc.narg(sale_end_date)::date IS NULL OR s.sale_at < (sqlc.narg(sale_end_date)::date + INTERVAL '1 day'))
+        -- Data da venda (sales.sale_at) no fuso da empresa
+        AND (sqlc.narg(sale_start_date)::date IS NULL OR s.sale_at >= (sqlc.narg(sale_start_date)::date)::timestamp AT TIME ZONE sqlc.arg(tz)::text)
+        AND (sqlc.narg(sale_end_date)::date IS NULL OR s.sale_at < (sqlc.narg(sale_end_date)::date + 1)::timestamp AT TIME ZONE sqlc.arg(tz)::text)
 ),
 paginated_sales AS (
     -- Pagina por venda (não por linha), preservando o total antes do LIMIT/OFFSET.
@@ -503,3 +508,91 @@ FROM sale_items si
 WHERE si.sale_id = $1
 ORDER BY si.created_at,
     p.name;
+
+-- name: GetSalesOverviewTotals :one
+-- Totais das vendas feitas em [start_date, end_date) no fuso da empresa.
+-- Venda cancelada tem deleted_at preenchido: entra só nos campos canceled_*.
+SELECT COUNT(*) FILTER (WHERE s.deleted_at IS NULL)::INT AS sales_count,
+    COALESCE(SUM(s.total_amount) FILTER (WHERE s.deleted_at IS NULL), 0)::FLOAT AS revenue,
+    COALESCE(SUM(s.discount_amount) FILTER (WHERE s.deleted_at IS NULL), 0)::FLOAT AS discounts,
+    COUNT(DISTINCT s.customer_id) FILTER (WHERE s.deleted_at IS NULL)::INT AS customers_count,
+    COUNT(*) FILTER (WHERE s.deleted_at IS NOT NULL)::INT AS canceled_count,
+    COALESCE(SUM(s.total_amount) FILTER (WHERE s.deleted_at IS NOT NULL), 0)::FLOAT AS canceled_amount,
+    COALESCE((
+        SELECT SUM(si.quantity)
+        FROM sale_items si
+            INNER JOIN sales s2 ON s2.id = si.sale_id
+        WHERE s2.company_id = @company_id
+            AND s2.deleted_at IS NULL
+            AND s2.sale_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND s2.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    ), 0)::INT AS items_sold,
+    -- Devoluções registradas no período (de vendas de qualquer data)
+    COALESCE((
+        SELECT SUM(sr.returned_total)
+        FROM sale_returns sr
+        WHERE sr.company_id = @company_id
+            AND sr.created_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND sr.created_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    ), 0)::FLOAT AS returned_amount,
+    -- Quanto das vendas do período ainda falta receber nas parcelas
+    COALESCE((
+        SELECT SUM(ar.balance)
+        FROM accounts_receivable ar
+            INNER JOIN sales s3 ON s3.id = ar.sale_id
+        WHERE s3.company_id = @company_id
+            AND s3.deleted_at IS NULL
+            AND ar.deleted_at IS NULL
+            AND ar.status IN ('pending', 'partial', 'overdue')
+            AND s3.sale_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND s3.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    ), 0)::FLOAT AS open_receivable,
+    COALESCE((
+        SELECT SUM(ar.balance)
+        FROM accounts_receivable ar
+            INNER JOIN sales s3 ON s3.id = ar.sale_id
+        WHERE s3.company_id = @company_id
+            AND s3.deleted_at IS NULL
+            AND ar.deleted_at IS NULL
+            AND ar.status = 'overdue'
+            AND s3.sale_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+            AND s3.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    ), 0)::FLOAT AS overdue_receivable
+FROM sales s
+WHERE s.company_id = @company_id
+    AND s.sale_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+    AND s.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text;
+
+-- name: GetSalesOverviewSeries :many
+-- Vendas por dia/semana/mês; generate_series garante um ponto por período, mesmo sem venda.
+WITH buckets AS (
+    SELECT gs::date AS bucket
+    FROM generate_series(
+            (@first_bucket::date)::timestamp,
+            (@last_bucket::date)::timestamp,
+            (@step::text)::interval
+        ) AS gs
+),
+totals AS (
+    SELECT date_trunc(@unit::text, s.sale_at AT TIME ZONE @tz::text)::date AS bucket,
+        COUNT(*)::INT AS sales_count,
+        SUM(s.total_amount)::FLOAT AS revenue
+    FROM sales s
+    WHERE s.company_id = @company_id
+        AND s.deleted_at IS NULL
+        AND s.sale_at >= (@start_date::date)::timestamp AT TIME ZONE @tz::text
+        AND s.sale_at < (@end_date::date)::timestamp AT TIME ZONE @tz::text
+    GROUP BY 1
+)
+SELECT b.bucket,
+    COALESCE(t.sales_count, 0)::INT AS sales_count,
+    COALESCE(t.revenue, 0)::FLOAT AS revenue
+FROM buckets b
+    LEFT JOIN totals t ON t.bucket = b.bucket
+ORDER BY b.bucket;
+
+-- name: GetFirstSaleDate :one
+-- Data local da primeira venda da empresa (canceladas incluídas); NULL sem vendas
+SELECT (MIN(s.sale_at) AT TIME ZONE @tz::text)::date AS first_date
+FROM sales s
+WHERE s.company_id = @company_id;

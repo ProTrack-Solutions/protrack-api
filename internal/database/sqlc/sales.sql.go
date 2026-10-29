@@ -170,6 +170,25 @@ func (q *Queries) DeleteSale(ctx context.Context, arg DeleteSaleParams) error {
 	return err
 }
 
+const getFirstSaleDate = `-- name: GetFirstSaleDate :one
+SELECT (MIN(s.sale_at) AT TIME ZONE $1::text)::date AS first_date
+FROM sales s
+WHERE s.company_id = $2
+`
+
+type GetFirstSaleDateParams struct {
+	Tz        string      `json:"tz"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+// Data local da primeira venda da empresa (canceladas incluídas); NULL sem vendas
+func (q *Queries) GetFirstSaleDate(ctx context.Context, arg GetFirstSaleDateParams) (pgtype.Date, error) {
+	row := q.db.QueryRow(ctx, getFirstSaleDate, arg.Tz, arg.CompanyID)
+	var first_date pgtype.Date
+	err := row.Scan(&first_date)
+	return first_date, err
+}
+
 const getPendingSalesDetailedReport = `-- name: GetPendingSalesDetailedReport :many
 SELECT -- Dados da venda
     s.id AS sale_id,
@@ -648,6 +667,179 @@ func (q *Queries) GetSaleReceipt(ctx context.Context, arg GetSaleReceiptParams) 
 	return i, err
 }
 
+const getSalesOverviewSeries = `-- name: GetSalesOverviewSeries :many
+WITH buckets AS (
+    SELECT gs::date AS bucket
+    FROM generate_series(
+            ($1::date)::timestamp,
+            ($2::date)::timestamp,
+            ($3::text)::interval
+        ) AS gs
+),
+totals AS (
+    SELECT date_trunc($4::text, s.sale_at AT TIME ZONE $5::text)::date AS bucket,
+        COUNT(*)::INT AS sales_count,
+        SUM(s.total_amount)::FLOAT AS revenue
+    FROM sales s
+    WHERE s.company_id = $6
+        AND s.deleted_at IS NULL
+        AND s.sale_at >= ($7::date)::timestamp AT TIME ZONE $5::text
+        AND s.sale_at < ($8::date)::timestamp AT TIME ZONE $5::text
+    GROUP BY 1
+)
+SELECT b.bucket,
+    COALESCE(t.sales_count, 0)::INT AS sales_count,
+    COALESCE(t.revenue, 0)::FLOAT AS revenue
+FROM buckets b
+    LEFT JOIN totals t ON t.bucket = b.bucket
+ORDER BY b.bucket
+`
+
+type GetSalesOverviewSeriesParams struct {
+	FirstBucket pgtype.Date `json:"first_bucket"`
+	LastBucket  pgtype.Date `json:"last_bucket"`
+	Step        string      `json:"step"`
+	Unit        string      `json:"unit"`
+	Tz          string      `json:"tz"`
+	CompanyID   pgtype.UUID `json:"company_id"`
+	StartDate   pgtype.Date `json:"start_date"`
+	EndDate     pgtype.Date `json:"end_date"`
+}
+
+type GetSalesOverviewSeriesRow struct {
+	Bucket     pgtype.Date `json:"bucket"`
+	SalesCount int32       `json:"sales_count"`
+	Revenue    float64     `json:"revenue"`
+}
+
+// Vendas por dia/semana/mês; generate_series garante um ponto por período, mesmo sem venda.
+func (q *Queries) GetSalesOverviewSeries(ctx context.Context, arg GetSalesOverviewSeriesParams) ([]GetSalesOverviewSeriesRow, error) {
+	rows, err := q.db.Query(ctx, getSalesOverviewSeries,
+		arg.FirstBucket,
+		arg.LastBucket,
+		arg.Step,
+		arg.Unit,
+		arg.Tz,
+		arg.CompanyID,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetSalesOverviewSeriesRow{}
+	for rows.Next() {
+		var i GetSalesOverviewSeriesRow
+		if err := rows.Scan(&i.Bucket, &i.SalesCount, &i.Revenue); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSalesOverviewTotals = `-- name: GetSalesOverviewTotals :one
+SELECT COUNT(*) FILTER (WHERE s.deleted_at IS NULL)::INT AS sales_count,
+    COALESCE(SUM(s.total_amount) FILTER (WHERE s.deleted_at IS NULL), 0)::FLOAT AS revenue,
+    COALESCE(SUM(s.discount_amount) FILTER (WHERE s.deleted_at IS NULL), 0)::FLOAT AS discounts,
+    COUNT(DISTINCT s.customer_id) FILTER (WHERE s.deleted_at IS NULL)::INT AS customers_count,
+    COUNT(*) FILTER (WHERE s.deleted_at IS NOT NULL)::INT AS canceled_count,
+    COALESCE(SUM(s.total_amount) FILTER (WHERE s.deleted_at IS NOT NULL), 0)::FLOAT AS canceled_amount,
+    COALESCE((
+        SELECT SUM(si.quantity)
+        FROM sale_items si
+            INNER JOIN sales s2 ON s2.id = si.sale_id
+        WHERE s2.company_id = $1
+            AND s2.deleted_at IS NULL
+            AND s2.sale_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND s2.sale_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    ), 0)::INT AS items_sold,
+    -- Devoluções registradas no período (de vendas de qualquer data)
+    COALESCE((
+        SELECT SUM(sr.returned_total)
+        FROM sale_returns sr
+        WHERE sr.company_id = $1
+            AND sr.created_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND sr.created_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    ), 0)::FLOAT AS returned_amount,
+    -- Quanto das vendas do período ainda falta receber nas parcelas
+    COALESCE((
+        SELECT SUM(ar.balance)
+        FROM accounts_receivable ar
+            INNER JOIN sales s3 ON s3.id = ar.sale_id
+        WHERE s3.company_id = $1
+            AND s3.deleted_at IS NULL
+            AND ar.deleted_at IS NULL
+            AND ar.status IN ('pending', 'partial', 'overdue')
+            AND s3.sale_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND s3.sale_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    ), 0)::FLOAT AS open_receivable,
+    COALESCE((
+        SELECT SUM(ar.balance)
+        FROM accounts_receivable ar
+            INNER JOIN sales s3 ON s3.id = ar.sale_id
+        WHERE s3.company_id = $1
+            AND s3.deleted_at IS NULL
+            AND ar.deleted_at IS NULL
+            AND ar.status = 'overdue'
+            AND s3.sale_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+            AND s3.sale_at < ($4::date)::timestamp AT TIME ZONE $2::text
+    ), 0)::FLOAT AS overdue_receivable
+FROM sales s
+WHERE s.company_id = $1
+    AND s.sale_at >= ($3::date)::timestamp AT TIME ZONE $2::text
+    AND s.sale_at < ($4::date)::timestamp AT TIME ZONE $2::text
+`
+
+type GetSalesOverviewTotalsParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Tz        string      `json:"tz"`
+	StartDate pgtype.Date `json:"start_date"`
+	EndDate   pgtype.Date `json:"end_date"`
+}
+
+type GetSalesOverviewTotalsRow struct {
+	SalesCount        int32   `json:"sales_count"`
+	Revenue           float64 `json:"revenue"`
+	Discounts         float64 `json:"discounts"`
+	CustomersCount    int32   `json:"customers_count"`
+	CanceledCount     int32   `json:"canceled_count"`
+	CanceledAmount    float64 `json:"canceled_amount"`
+	ItemsSold         int32   `json:"items_sold"`
+	ReturnedAmount    float64 `json:"returned_amount"`
+	OpenReceivable    float64 `json:"open_receivable"`
+	OverdueReceivable float64 `json:"overdue_receivable"`
+}
+
+// Totais das vendas feitas em [start_date, end_date) no fuso da empresa.
+// Venda cancelada tem deleted_at preenchido: entra só nos campos canceled_*.
+func (q *Queries) GetSalesOverviewTotals(ctx context.Context, arg GetSalesOverviewTotalsParams) (GetSalesOverviewTotalsRow, error) {
+	row := q.db.QueryRow(ctx, getSalesOverviewTotals,
+		arg.CompanyID,
+		arg.Tz,
+		arg.StartDate,
+		arg.EndDate,
+	)
+	var i GetSalesOverviewTotalsRow
+	err := row.Scan(
+		&i.SalesCount,
+		&i.Revenue,
+		&i.Discounts,
+		&i.CustomersCount,
+		&i.CanceledCount,
+		&i.CanceledAmount,
+		&i.ItemsSold,
+		&i.ReturnedAmount,
+		&i.OpenReceivable,
+		&i.OverdueReceivable,
+	)
+	return i, err
+}
+
 const getSalesPerformanceSummary = `-- name: GetSalesPerformanceSummary :one
 SELECT COUNT(*) FILTER (
         WHERE date_trunc('month', sale_at) = date_trunc('month', CURRENT_DATE)
@@ -1079,21 +1271,26 @@ WITH filtered_sales AS (
         INNER JOIN products p ON si.product_id = p.id
         LEFT JOIN accounts_receivable ar ON s.id = ar.sale_id
     WHERE s.company_id = $1
-        AND s.deleted_at IS NULL
-        -- Busca livre: nome do cliente ou nome do produto
+        -- Venda cancelada recebe deleted_at: só aparece filtrando por "canceled"
         AND (
-            $6::text = '' OR
+            s.deleted_at IS NULL OR
+            $6::account_status_enum = 'canceled'
+        )
+        -- Busca livre: nome do cliente, nome do produto ou começo do código da venda
+        AND (
+            $7::text = '' OR
+            s.id::text ILIKE $7::text || '%' OR
             to_tsvector('portuguese_unaccent', coalesce(c.full_name, ''))
-                @@ plainto_tsquery('portuguese_unaccent', $6::text)
+                @@ plainto_tsquery('portuguese_unaccent', $7::text)
             OR to_tsvector(
                 'portuguese_unaccent',
                 coalesce(p.name, '') || ' ' || coalesce(p.description, '')
-            ) @@ plainto_tsquery('portuguese_unaccent', $6::text)
+            ) @@ plainto_tsquery('portuguese_unaccent', $7::text)
         )
         -- Status da venda (paid, pending, overdue, scheduled, canceled, partial). NULL = todos.
         AND (
-            $7::account_status_enum IS NULL OR
-            s.status = $7::account_status_enum
+            $6::account_status_enum IS NULL OR
+            s.status = $6::account_status_enum
         )
         -- Forma de pagamento (cash, credit_card, pix, etc). NULL = todas.
         AND (
@@ -1103,9 +1300,9 @@ WITH filtered_sales AS (
         -- Data de pagamento/vencimento da parcela (accounts_receivable.due_date)
         AND ($9::date IS NULL OR ar.due_date >= $9::date)
         AND ($10::date IS NULL OR ar.due_date < ($10::date + INTERVAL '1 day'))
-        -- Data da venda (sales.sale_at)
-        AND ($11::date IS NULL OR s.sale_at >= $11::date)
-        AND ($12::date IS NULL OR s.sale_at < ($12::date + INTERVAL '1 day'))
+        -- Data da venda (sales.sale_at) no fuso da empresa
+        AND ($11::date IS NULL OR s.sale_at >= ($11::date)::timestamp AT TIME ZONE $12::text)
+        AND ($13::date IS NULL OR s.sale_at < ($13::date + 1)::timestamp AT TIME ZONE $12::text)
 ),
 paginated_sales AS (
     -- Pagina por venda (não por linha), preservando o total antes do LIMIT/OFFSET.
@@ -1172,12 +1369,13 @@ type ListSalesWithDetailsPaginateParams struct {
 	Offset           int32       `json:"offset"`
 	SortBy           string      `json:"sort_by"`
 	OrderBy          string      `json:"order_by"`
-	Search           string      `json:"search"`
 	SaleStatus       interface{} `json:"sale_status"`
+	Search           string      `json:"search"`
 	PaymentMethod    interface{} `json:"payment_method"`
 	PaymentStartDate pgtype.Date `json:"payment_start_date"`
 	PaymentEndDate   pgtype.Date `json:"payment_end_date"`
 	SaleStartDate    pgtype.Date `json:"sale_start_date"`
+	Tz               string      `json:"tz"`
 	SaleEndDate      pgtype.Date `json:"sale_end_date"`
 }
 
@@ -1218,12 +1416,13 @@ func (q *Queries) ListSalesWithDetailsPaginate(ctx context.Context, arg ListSale
 		arg.Offset,
 		arg.SortBy,
 		arg.OrderBy,
-		arg.Search,
 		arg.SaleStatus,
+		arg.Search,
 		arg.PaymentMethod,
 		arg.PaymentStartDate,
 		arg.PaymentEndDate,
 		arg.SaleStartDate,
+		arg.Tz,
 		arg.SaleEndDate,
 	)
 	if err != nil {

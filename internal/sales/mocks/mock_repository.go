@@ -408,3 +408,59 @@ func (mr *MockRepositoryInterfaceMockRecorder) WithTx(tx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTx", reflect.TypeOf((*MockRepositoryInterface)(nil).WithTx), tx)
 }
+
+// GetCompanyTimezone mocks o método GetCompanyTimezone.
+func (m *MockRepositoryInterface) GetCompanyTimezone(ctx context.Context, companyId pgtype.UUID) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCompanyTimezone", ctx, companyId)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetCompanyTimezone(ctx, companyId any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCompanyTimezone", reflect.TypeOf((*MockRepositoryInterface)(nil).GetCompanyTimezone), ctx, companyId)
+}
+
+// GetSalesOverviewTotals mocks o método GetSalesOverviewTotals.
+func (m *MockRepositoryInterface) GetSalesOverviewTotals(ctx context.Context, arg db.GetSalesOverviewTotalsParams) (db.GetSalesOverviewTotalsRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSalesOverviewTotals", ctx, arg)
+	ret0, _ := ret[0].(db.GetSalesOverviewTotalsRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetSalesOverviewTotals(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSalesOverviewTotals", reflect.TypeOf((*MockRepositoryInterface)(nil).GetSalesOverviewTotals), ctx, arg)
+}
+
+// GetSalesOverviewSeries mocks o método GetSalesOverviewSeries.
+func (m *MockRepositoryInterface) GetSalesOverviewSeries(ctx context.Context, arg db.GetSalesOverviewSeriesParams) ([]db.GetSalesOverviewSeriesRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSalesOverviewSeries", ctx, arg)
+	ret0, _ := ret[0].([]db.GetSalesOverviewSeriesRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetSalesOverviewSeries(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSalesOverviewSeries", reflect.TypeOf((*MockRepositoryInterface)(nil).GetSalesOverviewSeries), ctx, arg)
+}
+
+// GetFirstSaleDate mocks o método GetFirstSaleDate.
+func (m *MockRepositoryInterface) GetFirstSaleDate(ctx context.Context, arg db.GetFirstSaleDateParams) (pgtype.Date, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetFirstSaleDate", ctx, arg)
+	ret0, _ := ret[0].(pgtype.Date)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) GetFirstSaleDate(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetFirstSaleDate", reflect.TypeOf((*MockRepositoryInterface)(nil).GetFirstSaleDate), ctx, arg)
+}
