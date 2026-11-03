@@ -487,16 +487,3 @@ SELECT (
         FROM sale_returns sr
         WHERE sr.exchange_sale_id = sqlc.arg(sale_id)
     ) AS is_exchange_sale;
-
--- name: GetCashSessionRefundsByMethod :many
--- Dinheiro devolvido ao cliente pelo operador no turno
-SELECT COALESCE(sr.refund_method, 'other')::text AS payment_method,
-    COUNT(*)::int AS refunds_count,
-    COALESCE(SUM(sr.refund_amount), 0)::float8 AS refunded
-FROM sale_returns sr
-WHERE sr.company_id = @company_id
-    AND sr.created_by = @user_id
-    AND sr.created_at >= @start_at
-    AND sr.created_at < @end_at
-    AND sr.refund_amount > 0
-GROUP BY sr.refund_method;

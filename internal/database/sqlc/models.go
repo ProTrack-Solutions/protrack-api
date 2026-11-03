@@ -139,6 +139,50 @@ func (ns NullCashSessionStatus) Value() (driver.Value, error) {
 	return string(ns.CashSessionStatus), nil
 }
 
+type CashTransferStatus string
+
+const (
+	CashTransferStatusPending  CashTransferStatus = "pending"
+	CashTransferStatusAccepted CashTransferStatus = "accepted"
+	CashTransferStatusRejected CashTransferStatus = "rejected"
+	CashTransferStatusCanceled CashTransferStatus = "canceled"
+)
+
+func (e *CashTransferStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CashTransferStatus(s)
+	case string:
+		*e = CashTransferStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CashTransferStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCashTransferStatus struct {
+	CashTransferStatus CashTransferStatus `json:"cash_transfer_status"`
+	Valid              bool               `json:"valid"` // Valid is true if CashTransferStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCashTransferStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CashTransferStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CashTransferStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCashTransferStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CashTransferStatus), nil
+}
+
 type PurchaseOrderStatus string
 
 const (
@@ -557,6 +601,15 @@ type BillsPayable struct {
 	PurchaseReceiptID pgtype.UUID        `json:"purchase_receipt_id"`
 }
 
+type CashRegister struct {
+	ID        pgtype.UUID        `json:"id"`
+	CompanyID pgtype.UUID        `json:"company_id"`
+	Name      string             `json:"name"`
+	Active    bool               `json:"active"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CashSession struct {
 	ID               pgtype.UUID        `json:"id"`
 	CompanyID        pgtype.UUID        `json:"company_id"`
@@ -578,17 +631,33 @@ type CashSession struct {
 	Difference       pgtype.Numeric     `json:"difference"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	RegisterID       pgtype.UUID        `json:"register_id"`
 }
 
 type CashSessionMovement struct {
-	ID        pgtype.UUID        `json:"id"`
-	SessionID pgtype.UUID        `json:"session_id"`
-	CompanyID pgtype.UUID        `json:"company_id"`
-	Type      CashMovementType   `json:"type"`
-	Amount    pgtype.Numeric     `json:"amount"`
-	Reason    pgtype.Text        `json:"reason"`
-	CreatedBy pgtype.UUID        `json:"created_by"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ID         pgtype.UUID        `json:"id"`
+	SessionID  pgtype.UUID        `json:"session_id"`
+	CompanyID  pgtype.UUID        `json:"company_id"`
+	Type       CashMovementType   `json:"type"`
+	Amount     pgtype.Numeric     `json:"amount"`
+	Reason     pgtype.Text        `json:"reason"`
+	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	TransferID pgtype.UUID        `json:"transfer_id"`
+}
+
+type CashTransfer struct {
+	ID            pgtype.UUID        `json:"id"`
+	CompanyID     pgtype.UUID        `json:"company_id"`
+	FromSessionID pgtype.UUID        `json:"from_session_id"`
+	ToSessionID   pgtype.UUID        `json:"to_session_id"`
+	Amount        pgtype.Numeric     `json:"amount"`
+	Reason        pgtype.Text        `json:"reason"`
+	Status        CashTransferStatus `json:"status"`
+	CreatedBy     pgtype.UUID        `json:"created_by"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ResolvedBy    pgtype.UUID        `json:"resolved_by"`
+	ResolvedAt    pgtype.Timestamptz `json:"resolved_at"`
 }
 
 type Company struct {
@@ -788,6 +857,7 @@ type PaymentHistory struct {
 	AmountPaid      pgtype.Numeric     `json:"amount_paid"`
 	PaymentDate     pgtype.Timestamptz `json:"payment_date"`
 	Notes           pgtype.Text        `json:"notes"`
+	CashSessionID   pgtype.UUID        `json:"cash_session_id"`
 }
 
 type PaymentMethod struct {
@@ -990,6 +1060,7 @@ type Sale struct {
 	AmountReceived    pgtype.Numeric     `json:"amount_received"`
 	ChangeAmount      pgtype.Numeric     `json:"change_amount"`
 	CreditAmount      pgtype.Numeric     `json:"credit_amount"`
+	CashSessionID     pgtype.UUID        `json:"cash_session_id"`
 }
 
 type SaleItem struct {
@@ -1026,6 +1097,7 @@ type SaleReturn struct {
 	OverrideReason   pgtype.Text        `json:"override_reason"`
 	CreatedBy        pgtype.UUID        `json:"created_by"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	CashSessionID    pgtype.UUID        `json:"cash_session_id"`
 }
 
 type SaleReturnItem struct {

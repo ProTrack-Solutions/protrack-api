@@ -1,12 +1,11 @@
 package domain
 
 import (
-	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/big"
 	"strings"
 
+	"github.com/ProTrack-Solutions/protrack-api/internal/shared/variation"
 	"github.com/google/uuid"
 )
 
@@ -16,9 +15,6 @@ var (
 	ErrVariationsExist         = errors.New("já existem produtos cadastrados com estas variações")
 	ErrBarcodeGenerationFailed = errors.New("não foi possível gerar um código de barras único")
 )
-
-// Separador do nome gerado: "Camiseta Básica – Preta – M"
-const nameSeparator = " – "
 
 type CatalogSearchParams struct {
 	Search  string `form:"search" binding:"max=100"`
@@ -77,20 +73,10 @@ type CreateVariationsRequest struct {
 }
 
 // VariationName monta o nome do produto pulando cor/tamanho vazios
-func VariationName(model, color, size string) string {
-	parts := []string{strings.TrimSpace(model)}
-	for _, p := range []string{color, size} {
-		if p = strings.TrimSpace(p); p != "" {
-			parts = append(parts, p)
-		}
-	}
-	return strings.Join(parts, nameSeparator)
-}
+func VariationName(model, color, size string) string { return variation.Name(model, color, size) }
 
 // VariationKey identifica a combinação sem diferenciar maiúsculas (mesma regra do índice único)
-func VariationKey(color, size string) string {
-	return strings.ToLower(strings.TrimSpace(color)) + "|" + strings.ToLower(strings.TrimSpace(size))
-}
+func VariationKey(color, size string) string { return variation.Key(color, size) }
 
 // NormalizeVariations limpa espaços e recusa combinações repetidas na mesma requisição
 func NormalizeVariations(variations []VariationRequest) ([]VariationRequest, error) {
@@ -109,28 +95,5 @@ func NormalizeVariations(variations []VariationRequest) ([]VariationRequest, err
 	return out, nil
 }
 
-// InternalEAN13 gera um EAN-13 de circulação interna: o prefixo 2 é a faixa
-// que o GS1 reserva para uso dentro da loja, então não colide com o código de
-// fábrica de nenhum produto.
-func InternalEAN13() (string, error) {
-	digits := make([]byte, 12)
-	digits[0] = '2'
-	for i := 1; i < 12; i++ {
-		n, err := rand.Int(rand.Reader, big.NewInt(10))
-		if err != nil {
-			return "", err
-		}
-		digits[i] = byte('0' + n.Int64())
-	}
-
-	sum := 0
-	for i, d := range digits {
-		weight := 1
-		if i%2 == 1 {
-			weight = 3
-		}
-		sum += int(d-'0') * weight
-	}
-	check := (10 - sum%10) % 10
-	return string(digits) + string(rune('0'+check)), nil
-}
+// InternalEAN13 gera um EAN-13 de circulação interna (prefixo 2)
+func InternalEAN13() (string, error) { return variation.InternalEAN13() }

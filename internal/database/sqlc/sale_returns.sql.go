@@ -398,58 +398,6 @@ func (q *Queries) DecrementStockForExchange(ctx context.Context, arg DecrementSt
 	return result.RowsAffected(), nil
 }
 
-const getCashSessionRefundsByMethod = `-- name: GetCashSessionRefundsByMethod :many
-SELECT COALESCE(sr.refund_method, 'other')::text AS payment_method,
-    COUNT(*)::int AS refunds_count,
-    COALESCE(SUM(sr.refund_amount), 0)::float8 AS refunded
-FROM sale_returns sr
-WHERE sr.company_id = $1
-    AND sr.created_by = $2
-    AND sr.created_at >= $3
-    AND sr.created_at < $4
-    AND sr.refund_amount > 0
-GROUP BY sr.refund_method
-`
-
-type GetCashSessionRefundsByMethodParams struct {
-	CompanyID pgtype.UUID        `json:"company_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	StartAt   pgtype.Timestamptz `json:"start_at"`
-	EndAt     pgtype.Timestamptz `json:"end_at"`
-}
-
-type GetCashSessionRefundsByMethodRow struct {
-	PaymentMethod string  `json:"payment_method"`
-	RefundsCount  int32   `json:"refunds_count"`
-	Refunded      float64 `json:"refunded"`
-}
-
-// Dinheiro devolvido ao cliente pelo operador no turno
-func (q *Queries) GetCashSessionRefundsByMethod(ctx context.Context, arg GetCashSessionRefundsByMethodParams) ([]GetCashSessionRefundsByMethodRow, error) {
-	rows, err := q.db.Query(ctx, getCashSessionRefundsByMethod,
-		arg.CompanyID,
-		arg.UserID,
-		arg.StartAt,
-		arg.EndAt,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []GetCashSessionRefundsByMethodRow{}
-	for rows.Next() {
-		var i GetCashSessionRefundsByMethodRow
-		if err := rows.Scan(&i.PaymentMethod, &i.RefundsCount, &i.Refunded); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const getCustomerCredit = `-- name: GetCustomerCredit :one
 SELECT id,
     full_name::text AS full_name,
@@ -583,7 +531,7 @@ func (q *Queries) GetSaleForReturn(ctx context.Context, arg GetSaleForReturnPara
 }
 
 const getSaleReturn = `-- name: GetSaleReturn :one
-SELECT sr.id, sr.company_id, sr.number, sr.kind, sr.sale_id, sr.exchange_sale_id, sr.customer_id, sr.returned_total, sr.exchange_total, sr.exchange_credit, sr.debt_reduction, sr.credit_amount, sr.refund_amount, sr.refund_method, sr.difference_paid, sr.difference_method, sr.reason, sr.notes, sr.out_of_window, sr.override_reason, sr.created_by, sr.created_at,
+SELECT sr.id, sr.company_id, sr.number, sr.kind, sr.sale_id, sr.exchange_sale_id, sr.customer_id, sr.returned_total, sr.exchange_total, sr.exchange_credit, sr.debt_reduction, sr.credit_amount, sr.refund_amount, sr.refund_method, sr.difference_paid, sr.difference_method, sr.reason, sr.notes, sr.out_of_window, sr.override_reason, sr.created_by, sr.created_at, sr.cash_session_id,
     COALESCE(c.full_name, sc.full_name, '')::text AS customer_name,
     COALESCE(u.name, '')::text AS created_by_name,
     s.created_at AS sale_created_at,
@@ -625,6 +573,7 @@ type GetSaleReturnRow struct {
 	OverrideReason   pgtype.Text        `json:"override_reason"`
 	CreatedBy        pgtype.UUID        `json:"created_by"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	CashSessionID    pgtype.UUID        `json:"cash_session_id"`
 	CustomerName     string             `json:"customer_name"`
 	CreatedByName    string             `json:"created_by_name"`
 	SaleCreatedAt    pgtype.Timestamptz `json:"sale_created_at"`
@@ -657,6 +606,7 @@ func (q *Queries) GetSaleReturn(ctx context.Context, arg GetSaleReturnParams) (G
 		&i.OverrideReason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.CashSessionID,
 		&i.CustomerName,
 		&i.CreatedByName,
 		&i.SaleCreatedAt,

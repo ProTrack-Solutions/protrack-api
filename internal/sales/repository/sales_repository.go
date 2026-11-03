@@ -145,3 +145,19 @@ func (r *Repository) GetTotalAmountPaid(ctx context.Context, companyId pgtype.UU
 func (r *Repository) GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error) {
 	return r.queries().GetTotalAmountIsPending(ctx, companyID)
 }
+
+func (r *Repository) GetCompanyTimezone(ctx context.Context, companyId pgtype.UUID) (string, error) {
+	return r.queries().GetCompanyTimezone(ctx, companyId)
+}
+
+func (r *Repository) GetSalesOverviewTotals(ctx context.Context, arg db.GetSalesOverviewTotalsParams) (db.GetSalesOverviewTotalsRow, error) {
+	return r.queries().GetSalesOverviewTotals(ctx, arg)
+}
+
+func (r *Repository) GetSalesOverviewSeries(ctx context.Context, arg db.GetSalesOverviewSeriesParams) ([]db.GetSalesOverviewSeriesRow, error) {
+	return r.queries().GetSalesOverviewSeries(ctx, arg)
+}
+
+func (r *Repository) GetFirstSaleDate(ctx context.Context, arg db.GetFirstSaleDateParams) (pgtype.Date, error) {
+	return r.queries().GetFirstSaleDate(ctx, arg)
+}

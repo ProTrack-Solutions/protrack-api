@@ -186,7 +186,7 @@ func (s *Service) Create(ctx context.Context, companyId, userId uuid.UUID, role 
 	defer tx.Rollback(ctx)
 
 	// Reembolso e diferença da troca passam pelo caixa, como uma venda
-	if err := cashRegisterService.RequireOpenSession(ctx, tx, companyId, userId); err != nil {
+	if err := cashRegisterService.BindOpenSession(ctx, tx, companyId); err != nil {
 		return domain.ReturnDetail{}, err
 	}
 

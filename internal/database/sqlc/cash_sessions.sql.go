@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const bindCashSession = `-- name: BindCashSession :exec
+SELECT set_config('app.cash_session_id', $1::text, true)
+`
+
+// Grava o turno na variável da transação: é o valor padrão de cash_session_id
+// em sales, payment_history e sale_returns (ver migração 000066)
+func (q *Queries) BindCashSession(ctx context.Context, sessionID string) error {
+	_, err := q.db.Exec(ctx, bindCashSession, sessionID)
+	return err
+}
+
 const closeCashSession = `-- name: CloseCashSession :one
 UPDATE cash_sessions
 SET status = 'closed',
@@ -28,7 +39,7 @@ SET status = 'closed',
     updated_at = CURRENT_TIMESTAMP
 WHERE id = $11
     AND status = 'open'
-RETURNING id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at
+RETURNING id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at, register_id
 `
 
 type CloseCashSessionParams struct {
@@ -81,26 +92,72 @@ func (q *Queries) CloseCashSession(ctx context.Context, arg CloseCashSessionPara
 		&i.Difference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegisterID,
+	)
+	return i, err
+}
+
+const countPendingCashTransfers = `-- name: CountPendingCashTransfers :one
+SELECT COUNT(*)::int
+FROM cash_transfers
+WHERE status = 'pending'
+    AND (from_session_id = $1 OR to_session_id = $1)
+`
+
+func (q *Queries) CountPendingCashTransfers(ctx context.Context, sessionID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, countPendingCashTransfers, sessionID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const createCashRegister = `-- name: CreateCashRegister :one
+INSERT INTO cash_registers (company_id, name)
+VALUES ($1, $2)
+RETURNING id, company_id, name, active, created_at, updated_at
+`
+
+type CreateCashRegisterParams struct {
+	CompanyID pgtype.UUID `json:"company_id"`
+	Name      string      `json:"name"`
+}
+
+func (q *Queries) CreateCashRegister(ctx context.Context, arg CreateCashRegisterParams) (CashRegister, error) {
+	row := q.db.QueryRow(ctx, createCashRegister, arg.CompanyID, arg.Name)
+	var i CashRegister
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.Name,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const createCashSession = `-- name: CreateCashSession :one
-INSERT INTO cash_sessions (company_id, user_id, opening_amount, opening_notes)
-VALUES ($1, $2, $3, $4)
-RETURNING id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at
+
+INSERT INTO cash_sessions (company_id, register_id, user_id, opening_amount, opening_notes)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at, register_id
 `
 
 type CreateCashSessionParams struct {
 	CompanyID     pgtype.UUID    `json:"company_id"`
+	RegisterID    pgtype.UUID    `json:"register_id"`
 	UserID        pgtype.UUID    `json:"user_id"`
 	OpeningAmount pgtype.Numeric `json:"opening_amount"`
 	OpeningNotes  pgtype.Text    `json:"opening_notes"`
 }
 
+// ---------------------------------------------------------------------------
+// Turnos
+// ---------------------------------------------------------------------------
 func (q *Queries) CreateCashSession(ctx context.Context, arg CreateCashSessionParams) (CashSession, error) {
 	row := q.db.QueryRow(ctx, createCashSession,
 		arg.CompanyID,
+		arg.RegisterID,
 		arg.UserID,
 		arg.OpeningAmount,
 		arg.OpeningNotes,
@@ -127,23 +184,25 @@ func (q *Queries) CreateCashSession(ctx context.Context, arg CreateCashSessionPa
 		&i.Difference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegisterID,
 	)
 	return i, err
 }
 
 const createCashSessionMovement = `-- name: CreateCashSessionMovement :one
-INSERT INTO cash_session_movements (session_id, company_id, type, amount, reason, created_by)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, session_id, company_id, type, amount, reason, created_by, created_at
+INSERT INTO cash_session_movements (session_id, company_id, type, amount, reason, created_by, transfer_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, session_id, company_id, type, amount, reason, created_by, created_at, transfer_id
 `
 
 type CreateCashSessionMovementParams struct {
-	SessionID pgtype.UUID      `json:"session_id"`
-	CompanyID pgtype.UUID      `json:"company_id"`
-	Type      CashMovementType `json:"type"`
-	Amount    pgtype.Numeric   `json:"amount"`
-	Reason    pgtype.Text      `json:"reason"`
-	CreatedBy pgtype.UUID      `json:"created_by"`
+	SessionID  pgtype.UUID      `json:"session_id"`
+	CompanyID  pgtype.UUID      `json:"company_id"`
+	Type       CashMovementType `json:"type"`
+	Amount     pgtype.Numeric   `json:"amount"`
+	Reason     pgtype.Text      `json:"reason"`
+	CreatedBy  pgtype.UUID      `json:"created_by"`
+	TransferID pgtype.UUID      `json:"transfer_id"`
 }
 
 func (q *Queries) CreateCashSessionMovement(ctx context.Context, arg CreateCashSessionMovementParams) (CashSessionMovement, error) {
@@ -154,6 +213,7 @@ func (q *Queries) CreateCashSessionMovement(ctx context.Context, arg CreateCashS
 		arg.Amount,
 		arg.Reason,
 		arg.CreatedBy,
+		arg.TransferID,
 	)
 	var i CashSessionMovement
 	err := row.Scan(
@@ -165,15 +225,103 @@ func (q *Queries) CreateCashSessionMovement(ctx context.Context, arg CreateCashS
 		&i.Reason,
 		&i.CreatedBy,
 		&i.CreatedAt,
+		&i.TransferID,
+	)
+	return i, err
+}
+
+const createCashTransfer = `-- name: CreateCashTransfer :one
+INSERT INTO cash_transfers (company_id, from_session_id, to_session_id, amount, reason, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, company_id, from_session_id, to_session_id, amount, reason, status, created_by, created_at, resolved_by, resolved_at
+`
+
+type CreateCashTransferParams struct {
+	CompanyID     pgtype.UUID    `json:"company_id"`
+	FromSessionID pgtype.UUID    `json:"from_session_id"`
+	ToSessionID   pgtype.UUID    `json:"to_session_id"`
+	Amount        pgtype.Numeric `json:"amount"`
+	Reason        pgtype.Text    `json:"reason"`
+	CreatedBy     pgtype.UUID    `json:"created_by"`
+}
+
+func (q *Queries) CreateCashTransfer(ctx context.Context, arg CreateCashTransferParams) (CashTransfer, error) {
+	row := q.db.QueryRow(ctx, createCashTransfer,
+		arg.CompanyID,
+		arg.FromSessionID,
+		arg.ToSessionID,
+		arg.Amount,
+		arg.Reason,
+		arg.CreatedBy,
+	)
+	var i CashTransfer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FromSessionID,
+		&i.ToSessionID,
+		&i.Amount,
+		&i.Reason,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.ResolvedBy,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
+const ensureDefaultCashRegister = `-- name: EnsureDefaultCashRegister :exec
+INSERT INTO cash_registers (company_id, name)
+SELECT $1, 'Caixa principal'
+WHERE NOT EXISTS (
+        SELECT 1
+        FROM cash_registers
+        WHERE company_id = $1
+    )
+`
+
+// Empresa nova (sem nenhum caixa) ganha o "Caixa principal"
+func (q *Queries) EnsureDefaultCashRegister(ctx context.Context, companyID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, ensureDefaultCashRegister, companyID)
+	return err
+}
+
+const getCashRegisterById = `-- name: GetCashRegisterById :one
+SELECT id, company_id, name, active, created_at, updated_at
+FROM cash_registers
+WHERE id = $1
+    AND company_id = $2
+`
+
+type GetCashRegisterByIdParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetCashRegisterById(ctx context.Context, arg GetCashRegisterByIdParams) (CashRegister, error) {
+	row := q.db.QueryRow(ctx, getCashRegisterById, arg.ID, arg.CompanyID)
+	var i CashRegister
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.Name,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const getCashSessionById = `-- name: GetCashSessionById :one
-SELECT cs.id, cs.company_id, cs.user_id, cs.status, cs.opening_amount, cs.opening_notes, cs.opened_at, cs.closed_at, cs.closed_by, cs.closing_notes, cs.sales_total, cs.sales_count, cs.received_total, cs.supplies_total, cs.withdrawals_total, cs.expected_cash, cs.counted_cash, cs.difference, cs.created_at, cs.updated_at,
-    u.name::text AS user_name
+SELECT cs.id, cs.company_id, cs.user_id, cs.status, cs.opening_amount, cs.opening_notes, cs.opened_at, cs.closed_at, cs.closed_by, cs.closing_notes, cs.sales_total, cs.sales_count, cs.received_total, cs.supplies_total, cs.withdrawals_total, cs.expected_cash, cs.counted_cash, cs.difference, cs.created_at, cs.updated_at, cs.register_id,
+    u.name::text AS user_name,
+    cr.name::text AS register_name,
+    COALESCE(cu.name, '')::text AS closed_by_name
 FROM cash_sessions cs
     INNER JOIN users u ON u.id = cs.user_id
+    INNER JOIN cash_registers cr ON cr.id = cs.register_id
+    LEFT JOIN users cu ON cu.id = cs.closed_by
 WHERE cs.id = $1
     AND cs.company_id = $2
 `
@@ -204,7 +352,10 @@ type GetCashSessionByIdRow struct {
 	Difference       pgtype.Numeric     `json:"difference"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	RegisterID       pgtype.UUID        `json:"register_id"`
 	UserName         string             `json:"user_name"`
+	RegisterName     string             `json:"register_name"`
+	ClosedByName     string             `json:"closed_by_name"`
 }
 
 func (q *Queries) GetCashSessionById(ctx context.Context, arg GetCashSessionByIdParams) (GetCashSessionByIdRow, error) {
@@ -231,9 +382,76 @@ func (q *Queries) GetCashSessionById(ctx context.Context, arg GetCashSessionById
 		&i.Difference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegisterID,
 		&i.UserName,
+		&i.RegisterName,
+		&i.ClosedByName,
 	)
 	return i, err
+}
+
+const getCashSessionByOperator = `-- name: GetCashSessionByOperator :many
+WITH ops AS (
+    SELECT s.created_by AS user_id,
+        1 AS sales_count,
+        s.total_amount AS sales_total,
+        0::numeric AS receipts_total
+    FROM sales s
+    WHERE s.cash_session_id = $1
+        AND s.deleted_at IS NULL
+        AND s.status <> 'canceled'
+    UNION ALL
+    SELECT ph.user_id,
+        0,
+        0,
+        ph.amount_paid
+    FROM payment_history ph
+    WHERE ph.cash_session_id = $1
+)
+SELECT o.user_id,
+    u.name::text AS user_name,
+    SUM(o.sales_count)::int AS sales_count,
+    COALESCE(SUM(o.sales_total), 0)::float8 AS sales_total,
+    COALESCE(SUM(o.receipts_total), 0)::float8 AS receipts_total
+FROM ops o
+    INNER JOIN users u ON u.id = o.user_id
+GROUP BY o.user_id, u.name
+ORDER BY sales_total DESC
+`
+
+type GetCashSessionByOperatorRow struct {
+	UserID        pgtype.UUID `json:"user_id"`
+	UserName      string      `json:"user_name"`
+	SalesCount    int32       `json:"sales_count"`
+	SalesTotal    float64     `json:"sales_total"`
+	ReceiptsTotal float64     `json:"receipts_total"`
+}
+
+// Quanto cada operador vendeu e recebeu no turno
+func (q *Queries) GetCashSessionByOperator(ctx context.Context, sessionID pgtype.UUID) ([]GetCashSessionByOperatorRow, error) {
+	rows, err := q.db.Query(ctx, getCashSessionByOperator, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashSessionByOperatorRow{}
+	for rows.Next() {
+		var i GetCashSessionByOperatorRow
+		if err := rows.Scan(
+			&i.UserID,
+			&i.UserName,
+			&i.SalesCount,
+			&i.SalesTotal,
+			&i.ReceiptsTotal,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getCashSessionReceiptsByMethod = `-- name: GetCashSessionReceiptsByMethod :many
@@ -242,19 +460,9 @@ SELECT COALESCE(pm.type::text, 'other')::text AS payment_method,
     COALESCE(SUM(ph.amount_paid), 0)::float8 AS received
 FROM payment_history ph
     LEFT JOIN payment_methods pm ON pm.id = ph.payment_method_id
-WHERE ph.company_id = $1
-    AND ph.user_id = $2
-    AND ph.payment_date >= $3
-    AND ph.payment_date < $4
+WHERE ph.cash_session_id = $1
 GROUP BY COALESCE(pm.type::text, 'other')
 `
-
-type GetCashSessionReceiptsByMethodParams struct {
-	CompanyID pgtype.UUID        `json:"company_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	StartAt   pgtype.Timestamptz `json:"start_at"`
-	EndAt     pgtype.Timestamptz `json:"end_at"`
-}
 
 type GetCashSessionReceiptsByMethodRow struct {
 	PaymentMethod string  `json:"payment_method"`
@@ -262,14 +470,9 @@ type GetCashSessionReceiptsByMethodRow struct {
 	Received      float64 `json:"received"`
 }
 
-// Parcelas de vendas a prazo recebidas pelo operador no turno
-func (q *Queries) GetCashSessionReceiptsByMethod(ctx context.Context, arg GetCashSessionReceiptsByMethodParams) ([]GetCashSessionReceiptsByMethodRow, error) {
-	rows, err := q.db.Query(ctx, getCashSessionReceiptsByMethod,
-		arg.CompanyID,
-		arg.UserID,
-		arg.StartAt,
-		arg.EndAt,
-	)
+// Parcelas de vendas a prazo recebidas no turno
+func (q *Queries) GetCashSessionReceiptsByMethod(ctx context.Context, sessionID pgtype.UUID) ([]GetCashSessionReceiptsByMethodRow, error) {
+	rows, err := q.db.Query(ctx, getCashSessionReceiptsByMethod, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +491,45 @@ func (q *Queries) GetCashSessionReceiptsByMethod(ctx context.Context, arg GetCas
 	return items, nil
 }
 
+const getCashSessionRefundsByMethod = `-- name: GetCashSessionRefundsByMethod :many
+SELECT COALESCE(sr.refund_method, 'other')::text AS payment_method,
+    COUNT(*)::int AS refunds_count,
+    COALESCE(SUM(sr.refund_amount), 0)::float8 AS refunded
+FROM sale_returns sr
+WHERE sr.cash_session_id = $1
+    AND sr.refund_amount > 0
+GROUP BY sr.refund_method
+`
+
+type GetCashSessionRefundsByMethodRow struct {
+	PaymentMethod string  `json:"payment_method"`
+	RefundsCount  int32   `json:"refunds_count"`
+	Refunded      float64 `json:"refunded"`
+}
+
+// Dinheiro devolvido a clientes em trocas/devoluções do turno
+func (q *Queries) GetCashSessionRefundsByMethod(ctx context.Context, sessionID pgtype.UUID) ([]GetCashSessionRefundsByMethodRow, error) {
+	rows, err := q.db.Query(ctx, getCashSessionRefundsByMethod, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetCashSessionRefundsByMethodRow{}
+	for rows.Next() {
+		var i GetCashSessionRefundsByMethodRow
+		if err := rows.Scan(&i.PaymentMethod, &i.RefundsCount, &i.Refunded); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCashSessionSalesByMethod = `-- name: GetCashSessionSalesByMethod :many
+
 SELECT s.payment_method::text AS payment_method,
     COUNT(*)::int AS sales_count,
     COALESCE(SUM(s.total_amount), 0)::float8 AS sales_total,
@@ -301,21 +542,11 @@ SELECT s.payment_method::text AS payment_method,
     COUNT(*) FILTER (WHERE s.change_amount > 0)::int AS change_count,
     COALESCE(SUM(s.change_amount), 0)::float8 AS change_total
 FROM sales s
-WHERE s.company_id = $1
-    AND s.created_by = $2
-    AND s.created_at >= $3
-    AND s.created_at < $4
+WHERE s.cash_session_id = $1
     AND s.deleted_at IS NULL
     AND s.status <> 'canceled'
 GROUP BY s.payment_method
 `
-
-type GetCashSessionSalesByMethodParams struct {
-	CompanyID pgtype.UUID        `json:"company_id"`
-	UserID    pgtype.UUID        `json:"user_id"`
-	StartAt   pgtype.Timestamptz `json:"start_at"`
-	EndAt     pgtype.Timestamptz `json:"end_at"`
-}
 
 type GetCashSessionSalesByMethodRow struct {
 	PaymentMethod string  `json:"payment_method"`
@@ -326,17 +557,15 @@ type GetCashSessionSalesByMethodRow struct {
 	ChangeTotal   float64 `json:"change_total"`
 }
 
-// Vendas do operador no turno, por forma de pagamento. Na venda a prazo só a
-// entrada (down_payment) é recebida no balcão; o resto vira contas a receber.
+// ---------------------------------------------------------------------------
+// Resumo do turno: tudo que foi gravado com o cash_session_id dele
+// ---------------------------------------------------------------------------
+// Vendas do turno, por forma de pagamento. Na venda a prazo só a entrada
+// (down_payment) é recebida no balcão; o resto vira contas a receber.
 // O troco já está descontado: received é o que fica na gaveta, não o que o
 // cliente entregou. A parte paga com vale-troca/troca (credit_amount) não entra.
-func (q *Queries) GetCashSessionSalesByMethod(ctx context.Context, arg GetCashSessionSalesByMethodParams) ([]GetCashSessionSalesByMethodRow, error) {
-	rows, err := q.db.Query(ctx, getCashSessionSalesByMethod,
-		arg.CompanyID,
-		arg.UserID,
-		arg.StartAt,
-		arg.EndAt,
-	)
+func (q *Queries) GetCashSessionSalesByMethod(ctx context.Context, sessionID pgtype.UUID) ([]GetCashSessionSalesByMethodRow, error) {
+	rows, err := q.db.Query(ctx, getCashSessionSalesByMethod, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -362,21 +591,47 @@ func (q *Queries) GetCashSessionSalesByMethod(ctx context.Context, arg GetCashSe
 	return items, nil
 }
 
-const getOpenCashSessionByUser = `-- name: GetOpenCashSessionByUser :one
-SELECT id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at
+const getCashTransferForUpdate = `-- name: GetCashTransferForUpdate :one
+SELECT id, company_id, from_session_id, to_session_id, amount, reason, status, created_by, created_at, resolved_by, resolved_at
+FROM cash_transfers
+WHERE id = $1
+    AND company_id = $2
+FOR UPDATE
+`
+
+type GetCashTransferForUpdateParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetCashTransferForUpdate(ctx context.Context, arg GetCashTransferForUpdateParams) (CashTransfer, error) {
+	row := q.db.QueryRow(ctx, getCashTransferForUpdate, arg.ID, arg.CompanyID)
+	var i CashTransfer
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FromSessionID,
+		&i.ToSessionID,
+		&i.Amount,
+		&i.Reason,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.ResolvedBy,
+		&i.ResolvedAt,
+	)
+	return i, err
+}
+
+const getOpenCashSessionByRegister = `-- name: GetOpenCashSessionByRegister :one
+SELECT id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at, register_id
 FROM cash_sessions
-WHERE company_id = $1
-    AND user_id = $2
+WHERE register_id = $1
     AND status = 'open'
 `
 
-type GetOpenCashSessionByUserParams struct {
-	CompanyID pgtype.UUID `json:"company_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-}
-
-func (q *Queries) GetOpenCashSessionByUser(ctx context.Context, arg GetOpenCashSessionByUserParams) (CashSession, error) {
-	row := q.db.QueryRow(ctx, getOpenCashSessionByUser, arg.CompanyID, arg.UserID)
+func (q *Queries) GetOpenCashSessionByRegister(ctx context.Context, registerID pgtype.UUID) (CashSession, error) {
+	row := q.db.QueryRow(ctx, getOpenCashSessionByRegister, registerID)
 	var i CashSession
 	err := row.Scan(
 		&i.ID,
@@ -399,27 +654,39 @@ func (q *Queries) GetOpenCashSessionByUser(ctx context.Context, arg GetOpenCashS
 		&i.Difference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegisterID,
 	)
 	return i, err
 }
 
-const getOpenCashSessionByUserForUpdate = `-- name: GetOpenCashSessionByUserForUpdate :one
-SELECT id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at
+const getOpenCashSessionByRegisterForShare = `-- name: GetOpenCashSessionByRegisterForShare :one
+SELECT id
 FROM cash_sessions
-WHERE company_id = $1
-    AND user_id = $2
+WHERE register_id = $1
+    AND status = 'open'
+FOR SHARE
+`
+
+// Venda, recebimento e devolução travam o turno só para leitura: várias rodam
+// juntas, mas o fechamento (FOR UPDATE) espera elas terminarem e vice-versa.
+func (q *Queries) GetOpenCashSessionByRegisterForShare(ctx context.Context, registerID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getOpenCashSessionByRegisterForShare, registerID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const getOpenCashSessionByRegisterForUpdate = `-- name: GetOpenCashSessionByRegisterForUpdate :one
+SELECT id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at, register_id
+FROM cash_sessions
+WHERE register_id = $1
     AND status = 'open'
 FOR UPDATE
 `
 
-type GetOpenCashSessionByUserForUpdateParams struct {
-	CompanyID pgtype.UUID `json:"company_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-}
-
 // Trava a linha para que movimentos e fechamento concorrentes não se cruzem
-func (q *Queries) GetOpenCashSessionByUserForUpdate(ctx context.Context, arg GetOpenCashSessionByUserForUpdateParams) (CashSession, error) {
-	row := q.db.QueryRow(ctx, getOpenCashSessionByUserForUpdate, arg.CompanyID, arg.UserID)
+func (q *Queries) GetOpenCashSessionByRegisterForUpdate(ctx context.Context, registerID pgtype.UUID) (CashSession, error) {
+	row := q.db.QueryRow(ctx, getOpenCashSessionByRegisterForUpdate, registerID)
 	var i CashSession
 	err := row.Scan(
 		&i.ID,
@@ -442,26 +709,164 @@ func (q *Queries) GetOpenCashSessionByUserForUpdate(ctx context.Context, arg Get
 		&i.Difference,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.RegisterID,
 	)
 	return i, err
 }
 
-const listCashSessionMovements = `-- name: ListCashSessionMovements :many
-SELECT id, session_id, company_id, type, amount, reason, created_by, created_at
-FROM cash_session_movements
-WHERE session_id = $1
-ORDER BY created_at DESC
+const listActiveCashRegisterIds = `-- name: ListActiveCashRegisterIds :many
+SELECT id
+FROM cash_registers
+WHERE company_id = $1
+    AND active
+ORDER BY created_at
 `
 
-func (q *Queries) ListCashSessionMovements(ctx context.Context, sessionID pgtype.UUID) ([]CashSessionMovement, error) {
+func (q *Queries) ListActiveCashRegisterIds(ctx context.Context, companyID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listActiveCashRegisterIds, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCashRegisters = `-- name: ListCashRegisters :many
+
+SELECT cr.id,
+    cr.name,
+    cr.active,
+    cs.id AS session_id,
+    cs.opened_at,
+    cs.opening_amount,
+    -- LEFT JOIN: caixa fechado não tem quem abriu
+    COALESCE(u.name, '')::text AS opened_by_name,
+    lc.closed_at AS last_closed_at,
+    lc.counted_cash AS last_counted_cash,
+    COALESCE(lc.closed_by_name, '')::text AS last_closed_by_name
+FROM cash_registers cr
+    LEFT JOIN cash_sessions cs ON cs.register_id = cr.id AND cs.status = 'open'
+    LEFT JOIN users u ON u.id = cs.user_id
+    LEFT JOIN LATERAL (
+        SELECT c.closed_at,
+            c.counted_cash,
+            cu.name AS closed_by_name
+        FROM cash_sessions c
+            LEFT JOIN users cu ON cu.id = c.closed_by
+        WHERE c.register_id = cr.id
+            AND c.status = 'closed'
+        ORDER BY c.closed_at DESC
+        LIMIT 1
+    ) lc ON TRUE
+WHERE cr.company_id = $1
+ORDER BY cr.active DESC, cr.created_at, cr.name
+`
+
+type ListCashRegistersRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Name             string             `json:"name"`
+	Active           bool               `json:"active"`
+	SessionID        pgtype.UUID        `json:"session_id"`
+	OpenedAt         pgtype.Timestamptz `json:"opened_at"`
+	OpeningAmount    pgtype.Numeric     `json:"opening_amount"`
+	OpenedByName     string             `json:"opened_by_name"`
+	LastClosedAt     pgtype.Timestamptz `json:"last_closed_at"`
+	LastCountedCash  pgtype.Numeric     `json:"last_counted_cash"`
+	LastClosedByName string             `json:"last_closed_by_name"`
+}
+
+// ---------------------------------------------------------------------------
+// Caixas cadastrados
+// ---------------------------------------------------------------------------
+// Caixas da empresa com o turno aberto de cada um (quando houver) e o último
+// fechamento, que serve de referência para o troco da próxima abertura
+func (q *Queries) ListCashRegisters(ctx context.Context, companyID pgtype.UUID) ([]ListCashRegistersRow, error) {
+	rows, err := q.db.Query(ctx, listCashRegisters, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCashRegistersRow{}
+	for rows.Next() {
+		var i ListCashRegistersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Active,
+			&i.SessionID,
+			&i.OpenedAt,
+			&i.OpeningAmount,
+			&i.OpenedByName,
+			&i.LastClosedAt,
+			&i.LastCountedCash,
+			&i.LastClosedByName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCashSessionMovements = `-- name: ListCashSessionMovements :many
+SELECT m.id, m.session_id, m.company_id, m.type, m.amount, m.reason, m.created_by, m.created_at, m.transfer_id,
+    u.name::text AS created_by_name,
+    (CASE
+        WHEN m.transfer_id IS NULL THEN ''
+        WHEN m.session_id = t.from_session_id AND m.type = 'withdrawal' THEN 'Transferência para ' || rto.name
+        WHEN m.session_id = t.to_session_id THEN 'Transferência do ' || rfrom.name
+        WHEN t.status = 'rejected' THEN 'Transferência devolvida (recusada pelo ' || rto.name || ')'
+        ELSE 'Transferência devolvida (cancelada)'
+    END)::text AS transfer_label
+FROM cash_session_movements m
+    INNER JOIN users u ON u.id = m.created_by
+    LEFT JOIN cash_transfers t ON t.id = m.transfer_id
+    LEFT JOIN cash_sessions sf ON sf.id = t.from_session_id
+    LEFT JOIN cash_registers rfrom ON rfrom.id = sf.register_id
+    LEFT JOIN cash_sessions st ON st.id = t.to_session_id
+    LEFT JOIN cash_registers rto ON rto.id = st.register_id
+WHERE m.session_id = $1
+ORDER BY m.created_at DESC
+`
+
+type ListCashSessionMovementsRow struct {
+	ID            pgtype.UUID        `json:"id"`
+	SessionID     pgtype.UUID        `json:"session_id"`
+	CompanyID     pgtype.UUID        `json:"company_id"`
+	Type          CashMovementType   `json:"type"`
+	Amount        pgtype.Numeric     `json:"amount"`
+	Reason        pgtype.Text        `json:"reason"`
+	CreatedBy     pgtype.UUID        `json:"created_by"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	TransferID    pgtype.UUID        `json:"transfer_id"`
+	CreatedByName string             `json:"created_by_name"`
+	TransferLabel string             `json:"transfer_label"`
+}
+
+// transfer_label descreve o movimento gerado por uma transferência entre caixas
+func (q *Queries) ListCashSessionMovements(ctx context.Context, sessionID pgtype.UUID) ([]ListCashSessionMovementsRow, error) {
 	rows, err := q.db.Query(ctx, listCashSessionMovements, sessionID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CashSessionMovement{}
+	items := []ListCashSessionMovementsRow{}
 	for rows.Next() {
-		var i CashSessionMovement
+		var i ListCashSessionMovementsRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SessionID,
@@ -471,6 +876,9 @@ func (q *Queries) ListCashSessionMovements(ctx context.Context, sessionID pgtype
 			&i.Reason,
 			&i.CreatedBy,
 			&i.CreatedAt,
+			&i.TransferID,
+			&i.CreatedByName,
+			&i.TransferLabel,
 		); err != nil {
 			return nil, err
 		}
@@ -483,22 +891,40 @@ func (q *Queries) ListCashSessionMovements(ctx context.Context, sessionID pgtype
 }
 
 const listCashSessions = `-- name: ListCashSessions :many
-SELECT cs.id, cs.company_id, cs.user_id, cs.status, cs.opening_amount, cs.opening_notes, cs.opened_at, cs.closed_at, cs.closed_by, cs.closing_notes, cs.sales_total, cs.sales_count, cs.received_total, cs.supplies_total, cs.withdrawals_total, cs.expected_cash, cs.counted_cash, cs.difference, cs.created_at, cs.updated_at,
+SELECT cs.id, cs.company_id, cs.user_id, cs.status, cs.opening_amount, cs.opening_notes, cs.opened_at, cs.closed_at, cs.closed_by, cs.closing_notes, cs.sales_total, cs.sales_count, cs.received_total, cs.supplies_total, cs.withdrawals_total, cs.expected_cash, cs.counted_cash, cs.difference, cs.created_at, cs.updated_at, cs.register_id,
     u.name::text AS user_name,
+    cr.name::text AS register_name,
+    COALESCE(cu.name, '')::text AS closed_by_name,
     COUNT(*) OVER () AS total_rows
 FROM cash_sessions cs
     INNER JOIN users u ON u.id = cs.user_id
+    INNER JOIN cash_registers cr ON cr.id = cs.register_id
+    LEFT JOIN users cu ON cu.id = cs.closed_by
 WHERE cs.company_id = $1
-    AND ($2::uuid IS NULL OR cs.user_id = $2::uuid)
+    AND ($2::uuid IS NULL OR cs.register_id = $2::uuid)
+    AND (
+        $3::uuid IS NULL
+        OR cs.user_id = $3::uuid
+        OR cs.closed_by = $3::uuid
+        OR EXISTS (
+            SELECT 1 FROM sales s
+            WHERE s.cash_session_id = cs.id AND s.created_by = $3::uuid
+        )
+        OR EXISTS (
+            SELECT 1 FROM payment_history ph
+            WHERE ph.cash_session_id = cs.id AND ph.user_id = $3::uuid
+        )
+    )
 ORDER BY cs.opened_at DESC
-LIMIT $4 OFFSET $3
+LIMIT $5 OFFSET $4
 `
 
 type ListCashSessionsParams struct {
-	CompanyID pgtype.UUID `json:"company_id"`
-	UserID    pgtype.UUID `json:"user_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
+	CompanyID  pgtype.UUID `json:"company_id"`
+	RegisterID pgtype.UUID `json:"register_id"`
+	UserID     pgtype.UUID `json:"user_id"`
+	RowOffset  int32       `json:"row_offset"`
+	RowLimit   int32       `json:"row_limit"`
 }
 
 type ListCashSessionsRow struct {
@@ -522,14 +948,19 @@ type ListCashSessionsRow struct {
 	Difference       pgtype.Numeric     `json:"difference"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	RegisterID       pgtype.UUID        `json:"register_id"`
 	UserName         string             `json:"user_name"`
+	RegisterName     string             `json:"register_name"`
+	ClosedByName     string             `json:"closed_by_name"`
 	TotalRows        int64              `json:"total_rows"`
 }
 
-// user_id nulo lista os caixas de todos os operadores (visão do administrador)
+// user_id nulo lista os turnos de todos (visão do administrador). Com user_id,
+// só os turnos de que o operador participou: abriu, fechou ou vendeu/recebeu.
 func (q *Queries) ListCashSessions(ctx context.Context, arg ListCashSessionsParams) ([]ListCashSessionsRow, error) {
 	rows, err := q.db.Query(ctx, listCashSessions,
 		arg.CompanyID,
+		arg.RegisterID,
 		arg.UserID,
 		arg.RowOffset,
 		arg.RowLimit,
@@ -562,7 +993,10 @@ func (q *Queries) ListCashSessions(ctx context.Context, arg ListCashSessionsPara
 			&i.Difference,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.RegisterID,
 			&i.UserName,
+			&i.RegisterName,
+			&i.ClosedByName,
 			&i.TotalRows,
 		); err != nil {
 			return nil, err
@@ -573,4 +1007,228 @@ func (q *Queries) ListCashSessions(ctx context.Context, arg ListCashSessionsPara
 		return nil, err
 	}
 	return items, nil
+}
+
+const listOpenCashSessionIdsForShare = `-- name: ListOpenCashSessionIdsForShare :many
+SELECT id
+FROM cash_sessions
+WHERE company_id = $1
+    AND status = 'open'
+FOR SHARE
+`
+
+func (q *Queries) ListOpenCashSessionIdsForShare(ctx context.Context, companyID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listOpenCashSessionIdsForShare, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listPendingCashTransfers = `-- name: ListPendingCashTransfers :many
+SELECT t.id,
+    t.amount,
+    t.reason,
+    t.created_at,
+    (t.to_session_id = $1)::bool AS incoming,
+    rfrom.name::text AS from_register_name,
+    rto.name::text AS to_register_name,
+    u.name::text AS created_by_name
+FROM cash_transfers t
+    INNER JOIN cash_sessions sf ON sf.id = t.from_session_id
+    INNER JOIN cash_registers rfrom ON rfrom.id = sf.register_id
+    INNER JOIN cash_sessions st ON st.id = t.to_session_id
+    INNER JOIN cash_registers rto ON rto.id = st.register_id
+    INNER JOIN users u ON u.id = t.created_by
+WHERE t.status = 'pending'
+    AND (t.from_session_id = $1 OR t.to_session_id = $1)
+ORDER BY t.created_at
+`
+
+type ListPendingCashTransfersRow struct {
+	ID               pgtype.UUID        `json:"id"`
+	Amount           pgtype.Numeric     `json:"amount"`
+	Reason           pgtype.Text        `json:"reason"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	Incoming         bool               `json:"incoming"`
+	FromRegisterName string             `json:"from_register_name"`
+	ToRegisterName   string             `json:"to_register_name"`
+	CreatedByName    string             `json:"created_by_name"`
+}
+
+// Transferências pendentes que saem ou chegam no turno
+func (q *Queries) ListPendingCashTransfers(ctx context.Context, sessionID pgtype.UUID) ([]ListPendingCashTransfersRow, error) {
+	rows, err := q.db.Query(ctx, listPendingCashTransfers, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPendingCashTransfersRow{}
+	for rows.Next() {
+		var i ListPendingCashTransfersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Amount,
+			&i.Reason,
+			&i.CreatedAt,
+			&i.Incoming,
+			&i.FromRegisterName,
+			&i.ToRegisterName,
+			&i.CreatedByName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockCashSessions = `-- name: LockCashSessions :many
+
+SELECT id, company_id, user_id, status, opening_amount, opening_notes, opened_at, closed_at, closed_by, closing_notes, sales_total, sales_count, received_total, supplies_total, withdrawals_total, expected_cash, counted_cash, difference, created_at, updated_at, register_id
+FROM cash_sessions
+WHERE id = ANY($1::uuid[])
+ORDER BY id
+FOR UPDATE
+`
+
+// ---------------------------------------------------------------------------
+// Transferência de troco entre caixas
+// ---------------------------------------------------------------------------
+// Trava os turnos sempre na mesma ordem (por id): duas transferências cruzadas
+// ao mesmo tempo não se travam uma à outra
+func (q *Queries) LockCashSessions(ctx context.Context, ids []pgtype.UUID) ([]CashSession, error) {
+	rows, err := q.db.Query(ctx, lockCashSessions, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CashSession{}
+	for rows.Next() {
+		var i CashSession
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.UserID,
+			&i.Status,
+			&i.OpeningAmount,
+			&i.OpeningNotes,
+			&i.OpenedAt,
+			&i.ClosedAt,
+			&i.ClosedBy,
+			&i.ClosingNotes,
+			&i.SalesTotal,
+			&i.SalesCount,
+			&i.ReceivedTotal,
+			&i.SuppliesTotal,
+			&i.WithdrawalsTotal,
+			&i.ExpectedCash,
+			&i.CountedCash,
+			&i.Difference,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RegisterID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const resolveCashTransfer = `-- name: ResolveCashTransfer :exec
+UPDATE cash_transfers
+SET status = $1,
+    resolved_by = $2,
+    resolved_at = CURRENT_TIMESTAMP
+WHERE id = $3
+    AND status = 'pending'
+`
+
+type ResolveCashTransferParams struct {
+	Status     CashTransferStatus `json:"status"`
+	ResolvedBy pgtype.UUID        `json:"resolved_by"`
+	ID         pgtype.UUID        `json:"id"`
+}
+
+func (q *Queries) ResolveCashTransfer(ctx context.Context, arg ResolveCashTransferParams) error {
+	_, err := q.db.Exec(ctx, resolveCashTransfer, arg.Status, arg.ResolvedBy, arg.ID)
+	return err
+}
+
+const updateCashRegister = `-- name: UpdateCashRegister :one
+UPDATE cash_registers
+SET name = $1,
+    active = $2,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $3
+    AND company_id = $4
+RETURNING id, company_id, name, active, created_at, updated_at
+`
+
+type UpdateCashRegisterParams struct {
+	Name      string      `json:"name"`
+	Active    bool        `json:"active"`
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) UpdateCashRegister(ctx context.Context, arg UpdateCashRegisterParams) (CashRegister, error) {
+	row := q.db.QueryRow(ctx, updateCashRegister,
+		arg.Name,
+		arg.Active,
+		arg.ID,
+		arg.CompanyID,
+	)
+	var i CashRegister
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.Name,
+		&i.Active,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const userTookPartInCashSession = `-- name: UserTookPartInCashSession :one
+SELECT (
+        cs.user_id = $1
+        OR cs.closed_by = $1
+        OR EXISTS (SELECT 1 FROM sales s WHERE s.cash_session_id = cs.id AND s.created_by = $1)
+        OR EXISTS (SELECT 1 FROM payment_history ph WHERE ph.cash_session_id = cs.id AND ph.user_id = $1)
+    )::bool AS took_part
+FROM cash_sessions cs
+WHERE cs.id = $2
+`
+
+type UserTookPartInCashSessionParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	SessionID pgtype.UUID `json:"session_id"`
+}
+
+func (q *Queries) UserTookPartInCashSession(ctx context.Context, arg UserTookPartInCashSessionParams) (bool, error) {
+	row := q.db.QueryRow(ctx, userTookPartInCashSession, arg.UserID, arg.SessionID)
+	var took_part bool
+	err := row.Scan(&took_part)
+	return took_part, err
 }

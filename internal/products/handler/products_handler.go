@@ -108,19 +108,23 @@ func (h *Handler) CreateProduct(c *gin.Context) {
 // @Success      204
 // @Router       /product/{id} [delete]
 func (h *Handler) DeleteProduct(c *gin.Context) {
-	idStr := c.Param("id")
-
-	id, err := uuid.Parse(idStr)
+	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	companyId, userId, ok := gridAuth(c)
+	if !ok {
+		return
+	}
+
 	if err := h.service.DeleteProduct(c.Request.Context(), domain.DeleteProductRequest{
 		ID:        id,
-		DeletedBy: uuid.Nil,
+		DeletedBy: userId,
+		CompanyID: companyId,
 	}); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondProductError(c, err)
 		return
 	}
 
@@ -136,13 +140,17 @@ func (h *Handler) DeleteProduct(c *gin.Context) {
 // @Success      200 {object} domain.ProductResponse
 // @Router       /product/barcode/{barcode} [get]
 func (h *Handler) GetProductByBarcode(c *gin.Context) {
-	barcode := c.Param("barcode")
-
-	product, err := h.service.GetProductByBarcode(c.Request.Context(), barcode)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	companyId, _, ok := gridAuth(c)
+	if !ok {
 		return
 	}
+
+	product, err := h.service.GetProductByBarcode(c.Request.Context(), companyId, c.Param("barcode"))
+	if err != nil {
+		respondProductError(c, err)
+		return
+	}
+	hideCostInProduct(c, &product)
 
 	c.JSON(http.StatusOK, gin.H{"product": product})
 }
@@ -164,9 +172,14 @@ func (h *Handler) GetProductById(c *gin.Context) {
 		return
 	}
 
-	product, err := h.service.GetProductById(c.Request.Context(), id)
+	companyId, _, ok := gridAuth(c)
+	if !ok {
+		return
+	}
+
+	product, err := h.service.GetCompanyProductById(c.Request.Context(), companyId, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondProductError(c, err)
 		return
 	}
 
@@ -235,6 +248,7 @@ func (h *Handler) ListProductsByCompany(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	hideCostInList(c, &products)
 
 	c.JSON(http.StatusOK, products)
 }
@@ -265,7 +279,13 @@ func (h *Handler) UpdateProduct(c *gin.Context) {
 		return
 	}
 
-	product, err := h.service.UpdateProduct(c.Request.Context(), id, req)
+	companyId, userId, ok := gridAuth(c)
+	if !ok {
+		return
+	}
+	req.UpdatedBy = userId
+
+	product, err := h.service.UpdateProduct(c.Request.Context(), companyId, id, req)
 	if err != nil {
 		respondProductError(c, err)
 		return

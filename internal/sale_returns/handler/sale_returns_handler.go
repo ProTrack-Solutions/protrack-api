@@ -73,7 +73,9 @@ func writeError(c *gin.Context, err error) {
 	case errors.Is(err, domain.ErrOutOfWindow):
 		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 	case errors.Is(err, domain.ErrSaleCanceled), errors.Is(err, domain.ErrInsufficientStock),
-		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired):
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired),
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotSelected),
+		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotFound):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 	case errors.Is(err, domain.ErrInvalidReturn), errors.Is(err, domain.ErrQuantityExceeded),
 		errors.Is(err, domain.ErrOverrideReasonRequired), errors.Is(err, domain.ErrCustomerRequired),

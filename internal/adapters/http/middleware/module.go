@@ -65,3 +65,46 @@ func RequireModule(moduleCode string, queries domain.ServiceInterface) gin.Handl
 		c.Next()
 	}
 }
+
+// GrantedModuleKey guarda no contexto por qual módulo o acesso foi liberado
+// ("ADMIN" para administradores), para o handler ajustar o que expõe.
+const GrantedModuleKey = "granted_module"
+
+// RequireAnyModule libera se o departamento tiver qualquer um dos módulos, na
+// ordem informada, e grava em GrantedModuleKey o primeiro que liberou.
+// ADMIN sempre passa. Deve vir depois do AuthMiddleware.
+func RequireAnyModule(queries domain.ServiceInterface, moduleCodes ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, _ := c.Get("role")
+		if role == "ADMIN" {
+			c.Set(GrantedModuleKey, "ADMIN")
+			c.Next()
+			return
+		}
+
+		departmentID, ok := c.Get("department_id")
+		depID, okType := departmentID.(uuid.UUID)
+		if !ok || !okType || depID == uuid.Nil {
+			c.JSON(http.StatusForbidden, gin.H{"error": "user has no department assigned"})
+			c.Abort()
+			return
+		}
+
+		for _, code := range moduleCodes {
+			hasAccess, err := queries.DepartmentHasModule(c.Request.Context(), depID, code)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check module access"})
+				c.Abort()
+				return
+			}
+			if hasAccess {
+				c.Set(GrantedModuleKey, code)
+				c.Next()
+				return
+			}
+		}
+
+		c.JSON(http.StatusForbidden, gin.H{"error": "insufficient module permissions"})
+		c.Abort()
+	}
+}

@@ -48,6 +48,8 @@ type CreateProductRequest struct {
 type DeleteProductRequest struct {
 	ID        uuid.UUID `json:"id"`
 	DeletedBy uuid.UUID `json:"deleted_by"`
+	// Só apaga produto desta empresa
+	CompanyID uuid.UUID `json:"company_id"`
 }
 
 type ListProductsByCategoryIdRequest struct {
@@ -77,6 +79,8 @@ type ProductResponse struct {
 	Barcode     string    `json:"barcode"`
 	Quantity    int32     `json:"quantity"`
 	Size        string    `json:"size"`
+	ModelName   string    `json:"model_name"`
+	Color       string    `json:"color"`
 	CostPrice   float64   `json:"cost_price"`
 	SalePrice   float64   `json:"sale_price"`
 	CreatedBy   uuid.UUID `json:"created_by"`
@@ -107,6 +111,9 @@ type ListProductsByCompanyRow struct {
 	CategoryName string    `json:"category_name"`
 	SellInBulk   bool      `json:"sell_in_bulk"`
 	Unit         string    `json:"unit"`
+	// Grade: modelo e cor da variação (vazios em produto sem grade)
+	ModelName string `json:"model_name"`
+	Color     string `json:"color"`
 	// Total que já entrou no estoque (cadastro + reposições); o saldo atual é Quantity
 	TotalRegistered int32 `json:"total_registered"`
 	// Total vendido, já descontando as vendas canceladas

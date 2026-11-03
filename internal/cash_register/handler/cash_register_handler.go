@@ -53,13 +53,32 @@ func identity(c *gin.Context) (companyId, userId uuid.UUID, isAdmin bool, ok boo
 	return companyIdAny.(uuid.UUID), userId, role == "ADMIN", true
 }
 
+// RegisterContext lê o header CashRegisterId (caixa em que o computador
+// trabalha) e guarda no contexto da requisição. Vale para todas as rotas: venda,
+// recebimento e devolução usam para achar o turno aberto. Header inválido é
+// ignorado, como se não tivesse vindo.
+func RegisterContext() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if id, err := uuid.Parse(c.GetHeader(domain.RegisterHeader)); err == nil {
+			c.Request = c.Request.WithContext(domain.WithRegisterID(c.Request.Context(), id))
+		}
+		c.Next()
+	}
+}
+
 func writeError(c *gin.Context, err error) {
 	switch {
-	case errors.Is(err, domain.ErrCashSessionAlreadyOpen), errors.Is(err, domain.ErrNoOpenCashSession):
+	case errors.Is(err, domain.ErrCashSessionAlreadyOpen), errors.Is(err, domain.ErrNoOpenCashSession),
+		errors.Is(err, domain.ErrCashRegisterNotSelected), errors.Is(err, domain.ErrCashRegisterInUse),
+		errors.Is(err, domain.ErrTransferAlreadyResolved), errors.Is(err, domain.ErrTransferTargetClosed),
+		errors.Is(err, domain.ErrPendingTransfers):
 		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
-	case errors.Is(err, domain.ErrInsufficientCash):
+	case errors.Is(err, domain.ErrInsufficientCash), errors.Is(err, domain.ErrTransferSameRegister):
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": err.Error()})
-	case errors.Is(err, domain.ErrCashSessionNotFound):
+	case errors.Is(err, domain.ErrTransferWrongRegister):
+		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+	case errors.Is(err, domain.ErrCashSessionNotFound), errors.Is(err, domain.ErrCashRegisterNotFound),
+		errors.Is(err, domain.ErrTransferNotFound):
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -67,8 +86,8 @@ func writeError(c *gin.Context, err error) {
 }
 
 // Current godoc
-// @Summary      Caixa aberto do operador
-// @Description  Devolve o caixa aberto do usuário logado com o resumo do turno, ou session nulo quando o caixa está fechado
+// @Summary      Turno aberto do caixa
+// @Description  Devolve o turno aberto do caixa do computador (header CashRegisterId; sem header, o único caixa ativo) com o resumo, ou session nulo quando o caixa está fechado
 // @Tags         cash-register
 // @Produce      json
 // @Security     BearerAuth
@@ -189,7 +208,7 @@ func (h *Handler) Close(c *gin.Context) {
 
 // List godoc
 // @Summary      Histórico de caixas
-// @Description  O administrador vê os caixas de todos os operadores; os demais, só os próprios
+// @Description  O administrador vê todos os turnos; os demais, os turnos de que participaram (abriram, fecharam, venderam ou receberam)
 // @Tags         cash-register
 // @Produce      json
 // @Security     BearerAuth
@@ -239,6 +258,174 @@ func (h *Handler) GetById(c *gin.Context) {
 	}
 
 	detail, err := h.service.GetById(c.Request.Context(), companyId, userId, isAdmin, id)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, detail)
+}
+
+// ListRegisters godoc
+// @Summary      Caixas da empresa
+// @Description  Caixas cadastrados com o turno aberto de cada um
+// @Tags         cash-register
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {array} domain.CashRegister
+// @Router       /cash-register/registers [get]
+func (h *Handler) ListRegisters(c *gin.Context) {
+	companyId, _, _, ok := identity(c)
+	if !ok {
+		return
+	}
+
+	registers, err := h.service.ListRegisters(c.Request.Context(), companyId)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, registers)
+}
+
+// CreateRegister godoc
+// @Summary      Cadastrar caixa
+// @Tags         cash-register
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body domain.SaveCashRegisterRequest true "Caixa"
+// @Success      201 {object} domain.CashRegister
+// @Router       /cash-register/registers [post]
+func (h *Handler) CreateRegister(c *gin.Context) {
+	companyId, _, _, ok := identity(c)
+	if !ok {
+		return
+	}
+
+	var req domain.SaveCashRegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	register, err := h.service.CreateRegister(c.Request.Context(), companyId, req)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, register)
+}
+
+// UpdateRegister godoc
+// @Summary      Renomear, ativar ou desativar caixa
+// @Tags         cash-register
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do caixa"
+// @Param        body body domain.SaveCashRegisterRequest true "Caixa"
+// @Success      200 {object} domain.CashRegister
+// @Failure      409 {object} map[string]string "Caixa com turno aberto"
+// @Router       /cash-register/registers/{id} [put]
+func (h *Handler) UpdateRegister(c *gin.Context) {
+	companyId, _, _, ok := identity(c)
+	if !ok {
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+
+	var req domain.SaveCashRegisterRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	register, err := h.service.UpdateRegister(c.Request.Context(), companyId, id, req)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, register)
+}
+
+// CreateTransfer godoc
+// @Summary      Transferir troco para outro caixa
+// @Description  Tira o dinheiro da gaveta do caixa deste computador agora; o caixa de destino precisa aceitar para receber
+// @Tags         cash-register
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body domain.CreateTransferRequest true "Transferência"
+// @Success      201 {object} domain.CashSessionDetail
+// @Failure      409 {object} map[string]string "Caixa de destino fechado"
+// @Failure      422 {object} map[string]string "Valor maior que o dinheiro em caixa"
+// @Router       /cash-register/transfers [post]
+func (h *Handler) CreateTransfer(c *gin.Context) {
+	companyId, userId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+
+	var req domain.CreateTransferRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	detail, err := h.service.CreateTransfer(c.Request.Context(), companyId, userId, req)
+	if err != nil {
+		writeError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, detail)
+}
+
+// ResolveTransfer godoc
+// @Summary      Aceitar, recusar ou cancelar transferência de troco
+// @Description  accept e reject no computador do caixa de destino; cancel no do caixa de origem. Recusada ou cancelada, o dinheiro volta para a origem
+// @Tags         cash-register
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da transferência"
+// @Param        action path string true "accept, reject ou cancel"
+// @Success      200 {object} domain.CashSessionDetail
+// @Failure      403 {object} map[string]string "Transferência de outro caixa"
+// @Failure      409 {object} map[string]string "Já resolvida"
+// @Router       /cash-register/transfers/{id}/{action} [post]
+func (h *Handler) ResolveTransfer(c *gin.Context) {
+	companyId, userId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id inválido"})
+		return
+	}
+
+	var detail domain.CashSessionDetail
+	switch c.Param("action") {
+	case "accept":
+		detail, err = h.service.AcceptTransfer(c.Request.Context(), companyId, userId, id)
+	case "reject":
+		detail, err = h.service.RejectTransfer(c.Request.Context(), companyId, userId, id)
+	case "cancel":
+		detail, err = h.service.CancelTransfer(c.Request.Context(), companyId, userId, id)
+	default:
+		c.JSON(http.StatusNotFound, gin.H{"error": "ação inválida"})
+		return
+	}
 	if err != nil {
 		writeError(c, err)
 		return

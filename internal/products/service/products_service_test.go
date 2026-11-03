@@ -298,16 +298,20 @@ func TestDeleteProduct_Success(t *testing.T) {
 	productID := uuid.New()
 	deletedBy := uuid.New()
 
+	companyID := uuid.New()
+
 	repo.EXPECT().
 		DeleteProduct(gomock.Any(), db.DeleteProductParams{
 			ID:        pgconv.ParseUUIDToPgType(productID),
 			DeletedBy: pgconv.ParseUUIDToPgType(deletedBy),
+			CompanyID: pgconv.ParseUUIDToPgType(companyID),
 		}).
-		Return(nil)
+		Return(int64(1), nil)
 
 	err := svc.DeleteProduct(context.Background(), domain.DeleteProductRequest{
 		ID:        productID,
 		DeletedBy: deletedBy,
+		CompanyID: companyID,
 	})
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
@@ -323,7 +327,7 @@ func TestDeleteProduct_RepositoryError(t *testing.T) {
 
 	repo.EXPECT().
 		DeleteProduct(gomock.Any(), gomock.Any()).
-		Return(errDatabase)
+		Return(int64(0), errDatabase)
 
 	err := svc.DeleteProduct(context.Background(), domain.DeleteProductRequest{
 		ID:        uuid.New(),
@@ -332,6 +336,24 @@ func TestDeleteProduct_RepositoryError(t *testing.T) {
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório")
+	}
+}
+
+// Produto de outra empresa (ou já apagado): nenhuma linha afetada vira "não encontrado"
+func TestDeleteProduct_OtherCompanyIsNotFound(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	repo.EXPECT().
+		DeleteProduct(gomock.Any(), gomock.Any()).
+		Return(int64(0), nil)
+
+	err := svc.DeleteProduct(context.Background(), domain.DeleteProductRequest{ID: uuid.New(), CompanyID: uuid.New()})
+	if !errors.Is(err, domain.ErrProductNotFound) {
+		t.Fatalf("esperava ErrProductNotFound, obteve: %v", err)
 	}
 }
 
@@ -355,10 +377,13 @@ func TestGetProductByBarcode_Success(t *testing.T) {
 	barcode := "BAR0001"
 
 	repo.EXPECT().
-		GetProductByBarcode(gomock.Any(), pgconv.ParseStringToPgText(barcode)).
+		GetProductByBarcode(gomock.Any(), db.GetProductByBarcodeParams{
+			Barcode:   pgconv.ParseStringToPgText(barcode),
+			CompanyID: expectedProduct.CompanyID,
+		}).
 		Return(expectedProduct, nil)
 
-	resp, err := svc.GetProductByBarcode(context.Background(), barcode)
+	resp, err := svc.GetProductByBarcode(context.Background(), pgconv.PgUUIDToUUID(expectedProduct.CompanyID), barcode)
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -381,7 +406,7 @@ func TestGetProductByBarcode_NotFound(t *testing.T) {
 		GetProductByBarcode(gomock.Any(), gomock.Any()).
 		Return(db.Product{}, errors.New("no rows in result set"))
 
-	_, err := svc.GetProductByBarcode(context.Background(), "INEXISTENTE")
+	_, err := svc.GetProductByBarcode(context.Background(), uuid.New(), "INEXISTENTE")
 
 	if err == nil {
 		t.Fatal("esperava erro de produto não encontrado")
@@ -772,7 +797,7 @@ func TestUpdateProduct_Success(t *testing.T) {
 		UpdateProduct(gomock.Any(), gomock.Any()).
 		Return(updatedProduct, nil)
 
-	resp, err := svc.UpdateProduct(context.Background(), id, domain.UpdateProductRequest{
+	resp, err := svc.UpdateProduct(context.Background(), companyID, id, domain.UpdateProductRequest{
 		Name:      "Nome Atualizado",
 		UpdatedBy: updatedBy,
 	})
@@ -795,7 +820,7 @@ func TestUpdateProduct_GetByIdError(t *testing.T) {
 		GetProductById(gomock.Any(), gomock.Any()).
 		Return(db.Product{}, errors.New("not found"))
 
-	_, err := svc.UpdateProduct(context.Background(), uuid.New(), domain.UpdateProductRequest{
+	_, err := svc.UpdateProduct(context.Background(), uuid.New(), uuid.New(), domain.UpdateProductRequest{
 		Name: "Qualquer",
 	})
 
@@ -804,7 +829,8 @@ func TestUpdateProduct_GetByIdError(t *testing.T) {
 	}
 }
 
-func TestUpdateProduct_UpdateRepositoryError(t *testing.T) {
+// Produto de outra empresa não pode ser editado (nem chega ao UPDATE)
+func TestUpdateProduct_OtherCompanyIsNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
@@ -816,11 +842,30 @@ func TestUpdateProduct_UpdateRepositoryError(t *testing.T) {
 		GetProductById(gomock.Any(), gomock.Any()).
 		Return(buildDbProduct(id, uuid.New(), uuid.New(), uuid.New()), nil)
 
+	_, err := svc.UpdateProduct(context.Background(), uuid.New(), id, domain.UpdateProductRequest{Name: "Invasão"})
+	if !errors.Is(err, domain.ErrProductNotFound) {
+		t.Fatalf("esperava ErrProductNotFound, obteve: %v", err)
+	}
+}
+
+func TestUpdateProduct_UpdateRepositoryError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	repo := mocks.NewMockRepositoryInterface(ctrl)
+	svc := newService(t, repo)
+
+	id := uuid.New()
+	companyID := uuid.New()
+	repo.EXPECT().
+		GetProductById(gomock.Any(), gomock.Any()).
+		Return(buildDbProduct(id, companyID, uuid.New(), uuid.New()), nil)
+
 	repo.EXPECT().
 		UpdateProduct(gomock.Any(), gomock.Any()).
 		Return(db.Product{}, errDatabase)
 
-	_, err := svc.UpdateProduct(context.Background(), id, domain.UpdateProductRequest{Name: "Teste"})
+	_, err := svc.UpdateProduct(context.Background(), companyID, id, domain.UpdateProductRequest{Name: "Teste"})
 
 	if err == nil {
 		t.Fatal("esperava erro do repositório ao atualizar")

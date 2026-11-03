@@ -32,12 +32,12 @@ func (r *Repository) CreateProduct(ctx context.Context, arg db.CreateProductPara
 	return db.Product(product), err
 }
 
-func (r *Repository) DeleteProduct(ctx context.Context, arg db.DeleteProductParams) error {
+func (r *Repository) DeleteProduct(ctx context.Context, arg db.DeleteProductParams) (int64, error) {
 	return r.queries().DeleteProduct(ctx, arg)
 }
 
-func (r *Repository) GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (db.Product, error) {
-	return r.queries().GetProductByBarcode(ctx, barcode)
+func (r *Repository) GetProductByBarcode(ctx context.Context, arg db.GetProductByBarcodeParams) (db.Product, error) {
+	return r.queries().GetProductByBarcode(ctx, arg)
 }
 
 func (r *Repository) GetProductById(ctx context.Context, id pgtype.UUID) (db.Product, error) {
@@ -114,4 +114,46 @@ func (r *Repository) GetGeneralTotalStockValue(ctx context.Context, companyId pg
 
 func (r *Repository) GetGlobalTotalStockQuantity(ctx context.Context, companyId pgtype.UUID) (int32, error) {
 	return r.queries().GetGlobalTotalStockQuantity(ctx, companyId)
+}
+
+// Grade de produtos
+
+func (r *Repository) ListStockEntries(ctx context.Context, arg db.ListStockEntriesParams) ([]db.ListStockEntriesRow, error) {
+	return r.queries().ListStockEntries(ctx, arg)
+}
+
+func (r *Repository) ListGridVariations(ctx context.Context, arg db.ListGridVariationsParams) ([]db.ListGridVariationsRow, error) {
+	return r.queries().ListGridVariations(ctx, arg)
+}
+
+func (r *Repository) LockGridProducts(ctx context.Context, arg db.LockGridProductsParams) ([]db.LockGridProductsRow, error) {
+	return r.queries().LockGridProducts(ctx, arg)
+}
+
+func (r *Repository) CreateGridProduct(ctx context.Context, arg db.CreateGridProductParams) (pgtype.UUID, error) {
+	return r.queries().CreateGridProduct(ctx, arg)
+}
+
+func (r *Repository) UpdateGridVariation(ctx context.Context, arg db.UpdateGridVariationParams) error {
+	return r.queries().UpdateGridVariation(ctx, arg)
+}
+
+func (r *Repository) AssignProductToModel(ctx context.Context, arg db.AssignProductToModelParams) error {
+	return r.queries().AssignProductToModel(ctx, arg)
+}
+
+func (r *Repository) RemoveGridVariation(ctx context.Context, arg db.RemoveGridVariationParams) (int64, error) {
+	return r.queries().RemoveGridVariation(ctx, arg)
+}
+
+func (r *Repository) GridCategoryExists(ctx context.Context, arg db.GridCategoryExistsParams) (bool, error) {
+	return r.queries().GridCategoryExists(ctx, arg)
+}
+
+func (r *Repository) GridBarcodeExists(ctx context.Context, arg db.GridBarcodeExistsParams) (bool, error) {
+	return r.queries().GridBarcodeExists(ctx, arg)
+}
+
+func (r *Repository) CountActiveProducts(ctx context.Context, companyID pgtype.UUID) (int32, error) {
+	return r.queries().CountActiveProducts(ctx, companyID)
 }
