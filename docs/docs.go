@@ -3698,6 +3698,824 @@ const docTemplate = `{
                 }
             }
         },
+        "/fiscal/categories": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Categorias com o perfil tributário de cada uma",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CategoryFiscal"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/categories/{id}/tax-profile": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "tax_profile_id null: a categoria usa o perfil padrão da empresa.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Define o perfil tributário de uma categoria",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da categoria",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Perfil",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SetCategoryTaxProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/fiscal/certificate": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Situação do certificado A1",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "O arquivo vai direto para o serviço fiscal; o ERP não guarda o certificado nem a senha.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Envia o certificado A1",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Certificado .pfx/.p12",
+                        "name": "file",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Senha do certificado",
+                        "name": "password",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Última tentativa de cada venda. problems=true traz só rejeitadas, com falha ou pendentes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Notas fiscais (NFC-e) da empresa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Situação (AUTHORIZED, REJECTED, FAILED, PENDING, CANCELLED...)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Só as que precisam de atenção",
+                        "name": "problems",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Página",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Itens por página (máx. 100)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Cancela a NFC-e na SEFAZ",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da nota",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Justificativa (15 a 255 caracteres)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents/{id}/danfce": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "DANFC-e (PDF 80 mm) da nota",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da nota",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents/{id}/xml": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/xml"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "XML da nota",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da nota",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/go-live": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Copia A1 e perfil fiscal de homologação para produção, com o CSC de produção.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Passa a emitir NFC-e em produção",
+                "parameters": [
+                    {
+                        "description": "CSC de produção",
+                        "name": "csc",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.GoLiveInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/issuer": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Usa o CNPJ e a razão social do cadastro da empresa; cria o emitente em homologação e produção.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Cadastra a empresa como emitente de NFC-e",
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/models": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Grava os dados fiscais em todas as variações de um modelo de grade",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nome do modelo",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados fiscais",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/fiscal/products/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Dados fiscais de um produto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do produto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscal"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Grava NCM, CEST, unidade, origem e perfil de um produto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do produto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados fiscais",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
+        },
+        "/fiscal/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "O código do CSC nunca volta; csc_configured diz se já foi informado. null quando ainda não foi salvo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Perfil fiscal do emitente (IE, regime, endereço, CSC)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "CSC em branco mantém o atual.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Salva o perfil fiscal do emitente",
+                "parameters": [
+                    {
+                        "description": "Perfil fiscal",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/sales/{saleId}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Última tentativa de nota da venda; document null quando a venda não tem nota.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "NFC-e de uma venda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "saleId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/sales/{saleId}/nfce": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Se a venda já tem nota autorizada/em andamento, devolve essa. Rejeitada ou com falha: nova tentativa com os dados atuais dos produtos.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Emite (ou reemite) a NFC-e de uma venda",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "saleId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/sefaz-status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Testa a conexão com a SEFAZ usando o A1 da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SefazStatus"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/settings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Situação da NFC-e: ambiente, emitente, A1, regime, perfil padrão e produtos sem NCM.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Configuração fiscal da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Liga/desliga a NFC-e e define o perfil tributário padrão",
+                "parameters": [
+                    {
+                        "description": "Configuração",
+                        "name": "settings",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.UpdateSettingsInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/tax-profiles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Perfis tributários da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "O primeiro perfil da empresa vira o padrão.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Cria um perfil tributário",
+                "parameters": [
+                    {
+                        "description": "Perfil",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/tax-profiles/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Edita um perfil tributário",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do perfil",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Perfil",
+                        "name": "profile",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Categorias e produtos que usavam o perfil voltam a herdar o da categoria/empresa.",
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Exclui um perfil tributário",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do perfil",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/invoice-history/company": {
             "get": {
                 "security": [
@@ -8884,6 +9702,23 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhooks/fiscal": {
+            "post": {
+                "description": "Público; autenticado pela assinatura X-ProTrack-Signature (HMAC-SHA256).",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Webhook da protrack-fiscal-api (situação das NFC-e)",
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -11604,6 +12439,569 @@ const docTemplate = `{
                 "StatusDeleted"
             ]
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CategoryFiscal": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "tax_profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo": {
+            "type": "object",
+            "properties": {
+                "days_to_expire": {
+                    "type": "integer"
+                },
+                "expired": {
+                    "type": "boolean"
+                },
+                "expires_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CompanyFiscalData": {
+            "type": "object",
+            "properties": {
+                "city": {
+                    "type": "string"
+                },
+                "cnpj": {
+                    "type": "string"
+                },
+                "complement": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "state_registration": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "trade_name": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument": {
+            "type": "object",
+            "properties": {
+                "access_key": {
+                    "type": "string"
+                },
+                "attempt": {
+                    "type": "integer"
+                },
+                "authorized_at": {
+                    "type": "string"
+                },
+                "cancel_reason": {
+                    "type": "string"
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "contingency": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "reject_reason": {
+                    "type": "string"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList": {
+            "type": "object",
+            "properties": {
+                "documents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentListItem": {
+            "type": "object",
+            "properties": {
+                "access_key": {
+                    "type": "string"
+                },
+                "attempt": {
+                    "type": "integer"
+                },
+                "authorized_at": {
+                    "type": "string"
+                },
+                "cancel_reason": {
+                    "type": "string"
+                },
+                "cancelled_at": {
+                    "type": "string"
+                },
+                "contingency": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "protocol": {
+                    "type": "string"
+                },
+                "reject_reason": {
+                    "type": "string"
+                },
+                "sale_at": {
+                    "type": "string"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "sale_total": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile": {
+            "type": "object",
+            "properties": {
+                "city_code": {
+                    "type": "string"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "complement": {
+                    "type": "string"
+                },
+                "csc_configured": {
+                    "type": "boolean"
+                },
+                "csc_id": {
+                    "type": "string"
+                },
+                "csc_secret": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state_registration": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "tax_regime": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfileInput": {
+            "type": "object",
+            "properties": {
+                "city_code": {
+                    "type": "string"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "complement": {
+                    "type": "string"
+                },
+                "csc_id": {
+                    "type": "string"
+                },
+                "csc_secret": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state_registration": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "tax_regime": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings": {
+            "type": "object",
+            "properties": {
+                "certificate_expires_at": {
+                    "type": "string"
+                },
+                "company": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CompanyFiscalData"
+                },
+                "default_tax_profile_id": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "environment": {
+                    "type": "string"
+                },
+                "issuer_registered": {
+                    "type": "boolean"
+                },
+                "products_missing_ncm": {
+                    "description": "Produtos ativos sem NCM válido (não saem na NFC-e)",
+                    "type": "integer"
+                },
+                "server_configured": {
+                    "description": "O servidor tem chave da API fiscal para o ambiente atual",
+                    "type": "boolean"
+                },
+                "tax_regime": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.GoLiveInput": {
+            "type": "object",
+            "properties": {
+                "csc_id": {
+                    "type": "string"
+                },
+                "csc_secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscal": {
+            "type": "object",
+            "properties": {
+                "category_tax_profile_id": {
+                    "type": "string"
+                },
+                "cest": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ncm": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "tax_profile_id": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput": {
+            "type": "object",
+            "properties": {
+                "cest": {
+                    "type": "string"
+                },
+                "ncm": {
+                    "type": "string"
+                },
+                "origin": {
+                    "type": "integer"
+                },
+                "tax_profile_id": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SefazStatus": {
+            "type": "object",
+            "properties": {
+                "checked_at": {
+                    "type": "string"
+                },
+                "latency_ms": {
+                    "type": "integer"
+                },
+                "online": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SetCategoryTaxProfileInput": {
+            "type": "object",
+            "properties": {
+                "tax_profile_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile": {
+            "type": "object",
+            "properties": {
+                "benefit_code": {
+                    "type": "string"
+                },
+                "categories_count": {
+                    "type": "integer"
+                },
+                "cbs_rate": {
+                    "type": "number"
+                },
+                "cfop": {
+                    "type": "string"
+                },
+                "cofins_cst": {
+                    "type": "string"
+                },
+                "cofins_rate": {
+                    "type": "number"
+                },
+                "ibs_cbs_class_code": {
+                    "type": "string"
+                },
+                "ibs_cbs_cst": {
+                    "type": "string"
+                },
+                "ibs_city_rate": {
+                    "type": "number"
+                },
+                "ibs_state_rate": {
+                    "type": "number"
+                },
+                "icms_base_reduction": {
+                    "type": "number"
+                },
+                "icms_csosn": {
+                    "type": "string"
+                },
+                "icms_cst": {
+                    "type": "string"
+                },
+                "icms_fcp_rate": {
+                    "type": "number"
+                },
+                "icms_rate": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pis_cst": {
+                    "type": "string"
+                },
+                "pis_rate": {
+                    "type": "number"
+                },
+                "products_count": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput": {
+            "type": "object",
+            "properties": {
+                "benefit_code": {
+                    "type": "string"
+                },
+                "cbs_rate": {
+                    "type": "number"
+                },
+                "cfop": {
+                    "type": "string"
+                },
+                "cofins_cst": {
+                    "type": "string"
+                },
+                "cofins_rate": {
+                    "type": "number"
+                },
+                "ibs_cbs_class_code": {
+                    "type": "string"
+                },
+                "ibs_cbs_cst": {
+                    "type": "string"
+                },
+                "ibs_city_rate": {
+                    "type": "number"
+                },
+                "ibs_state_rate": {
+                    "type": "number"
+                },
+                "icms_base_reduction": {
+                    "type": "number"
+                },
+                "icms_csosn": {
+                    "type": "string"
+                },
+                "icms_cst": {
+                    "type": "string"
+                },
+                "icms_fcp_rate": {
+                    "type": "number"
+                },
+                "icms_rate": {
+                    "type": "number"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pis_cst": {
+                    "type": "string"
+                },
+                "pis_rate": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.UpdateSettingsInput": {
+            "type": "object",
+            "properties": {
+                "default_tax_profile_id": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest": {
             "type": "object",
             "properties": {
@@ -12482,6 +13880,7 @@ const docTemplate = `{
                     "minimum": 0
                 },
                 "quantity": {
+                    "description": "Estoque inicial; precisa ser maior que zero",
                     "type": "integer",
                     "minimum": 0
                 },

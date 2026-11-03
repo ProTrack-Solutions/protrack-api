@@ -1838,6 +1838,376 @@ definitions:
     - StatusActive
     - StatusInactive
     - StatusDeleted
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput:
+    properties:
+      reason:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CategoryFiscal:
+    properties:
+      color:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      tax_profile_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo:
+    properties:
+      days_to_expire:
+        type: integer
+      expired:
+        type: boolean
+      expires_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CompanyFiscalData:
+    properties:
+      city:
+        type: string
+      cnpj:
+        type: string
+      complement:
+        type: string
+      district:
+        type: string
+      name:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      state:
+        type: string
+      state_registration:
+        type: string
+      street:
+        type: string
+      trade_name:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument:
+    properties:
+      access_key:
+        type: string
+      attempt:
+        type: integer
+      authorized_at:
+        type: string
+      cancel_reason:
+        type: string
+      cancelled_at:
+        type: string
+      contingency:
+        type: boolean
+      created_at:
+        type: string
+      environment:
+        type: string
+      error_message:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      protocol:
+        type: string
+      reject_reason:
+        type: string
+      sale_id:
+        type: string
+      status:
+        type: string
+      status_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList:
+    properties:
+      documents:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentListItem'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentListItem:
+    properties:
+      access_key:
+        type: string
+      attempt:
+        type: integer
+      authorized_at:
+        type: string
+      cancel_reason:
+        type: string
+      cancelled_at:
+        type: string
+      contingency:
+        type: boolean
+      created_at:
+        type: string
+      customer_name:
+        type: string
+      environment:
+        type: string
+      error_message:
+        type: string
+      id:
+        type: string
+      number:
+        type: integer
+      protocol:
+        type: string
+      reject_reason:
+        type: string
+      sale_at:
+        type: string
+      sale_id:
+        type: string
+      sale_total:
+        type: number
+      status:
+        type: string
+      status_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile:
+    properties:
+      city_code:
+        type: string
+      city_name:
+        type: string
+      complement:
+        type: string
+      csc_configured:
+        type: boolean
+      csc_id:
+        type: string
+      csc_secret:
+        type: string
+      district:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      state_registration:
+        type: string
+      street:
+        type: string
+      tax_regime:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfileInput:
+    properties:
+      city_code:
+        type: string
+      city_name:
+        type: string
+      complement:
+        type: string
+      csc_id:
+        type: string
+      csc_secret:
+        type: string
+      district:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      state_registration:
+        type: string
+      street:
+        type: string
+      tax_regime:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings:
+    properties:
+      certificate_expires_at:
+        type: string
+      company:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CompanyFiscalData'
+      default_tax_profile_id:
+        type: string
+      enabled:
+        type: boolean
+      environment:
+        type: string
+      issuer_registered:
+        type: boolean
+      products_missing_ncm:
+        description: Produtos ativos sem NCM válido (não saem na NFC-e)
+        type: integer
+      server_configured:
+        description: O servidor tem chave da API fiscal para o ambiente atual
+        type: boolean
+      tax_regime:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.GoLiveInput:
+    properties:
+      csc_id:
+        type: string
+      csc_secret:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscal:
+    properties:
+      category_tax_profile_id:
+        type: string
+      cest:
+        type: string
+      model_name:
+        type: string
+      name:
+        type: string
+      ncm:
+        type: string
+      origin:
+        type: integer
+      product_id:
+        type: string
+      tax_profile_id:
+        type: string
+      unit:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput:
+    properties:
+      cest:
+        type: string
+      ncm:
+        type: string
+      origin:
+        type: integer
+      tax_profile_id:
+        type: string
+      unit:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SefazStatus:
+    properties:
+      checked_at:
+        type: string
+      latency_ms:
+        type: integer
+      online:
+        type: boolean
+      reason:
+        type: string
+      status_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SetCategoryTaxProfileInput:
+    properties:
+      tax_profile_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile:
+    properties:
+      benefit_code:
+        type: string
+      categories_count:
+        type: integer
+      cbs_rate:
+        type: number
+      cfop:
+        type: string
+      cofins_cst:
+        type: string
+      cofins_rate:
+        type: number
+      ibs_cbs_class_code:
+        type: string
+      ibs_cbs_cst:
+        type: string
+      ibs_city_rate:
+        type: number
+      ibs_state_rate:
+        type: number
+      icms_base_reduction:
+        type: number
+      icms_csosn:
+        type: string
+      icms_cst:
+        type: string
+      icms_fcp_rate:
+        type: number
+      icms_rate:
+        type: number
+      id:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      pis_cst:
+        type: string
+      pis_rate:
+        type: number
+      products_count:
+        type: integer
+      updated_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput:
+    properties:
+      benefit_code:
+        type: string
+      cbs_rate:
+        type: number
+      cfop:
+        type: string
+      cofins_cst:
+        type: string
+      cofins_rate:
+        type: number
+      ibs_cbs_class_code:
+        type: string
+      ibs_cbs_cst:
+        type: string
+      ibs_city_rate:
+        type: number
+      ibs_state_rate:
+        type: number
+      icms_base_reduction:
+        type: number
+      icms_csosn:
+        type: string
+      icms_cst:
+        type: string
+      icms_fcp_rate:
+        type: number
+      icms_rate:
+        type: number
+      name:
+        type: string
+      pis_cst:
+        type: string
+      pis_rate:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.UpdateSettingsInput:
+    properties:
+      default_tax_profile_id:
+        type: string
+      enabled:
+        type: boolean
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest:
     properties:
       product_id:
@@ -2435,6 +2805,7 @@ definitions:
         minimum: 0
         type: number
       quantity:
+        description: Estoque inicial; precisa ser maior que zero
         minimum: 0
         type: integer
       sale_price:
@@ -6655,6 +7026,517 @@ paths:
       summary: Altera o status de um departamento
       tags:
       - departments
+  /fiscal/categories:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CategoryFiscal'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Categorias com o perfil tributário de cada uma
+      tags:
+      - fiscal
+  /fiscal/categories/{id}/tax-profile:
+    put:
+      consumes:
+      - application/json
+      description: 'tax_profile_id null: a categoria usa o perfil padrão da empresa.'
+      parameters:
+      - description: ID da categoria
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Perfil
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SetCategoryTaxProfileInput'
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Define o perfil tributário de uma categoria
+      tags:
+      - fiscal
+  /fiscal/certificate:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo'
+      security:
+      - BearerAuth: []
+      summary: Situação do certificado A1
+      tags:
+      - fiscal
+    post:
+      consumes:
+      - multipart/form-data
+      description: O arquivo vai direto para o serviço fiscal; o ERP não guarda o
+        certificado nem a senha.
+      parameters:
+      - description: Certificado .pfx/.p12
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: Senha do certificado
+        in: formData
+        name: password
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CertificateInfo'
+      security:
+      - BearerAuth: []
+      summary: Envia o certificado A1
+      tags:
+      - fiscal
+  /fiscal/documents:
+    get:
+      description: Última tentativa de cada venda. problems=true traz só rejeitadas,
+        com falha ou pendentes.
+      parameters:
+      - description: Situação (AUTHORIZED, REJECTED, FAILED, PENDING, CANCELLED...)
+        in: query
+        name: status
+        type: string
+      - description: Só as que precisam de atenção
+        in: query
+        name: problems
+        type: boolean
+      - description: Página
+        in: query
+        name: page
+        type: integer
+      - description: Itens por página (máx. 100)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList'
+      security:
+      - BearerAuth: []
+      summary: Notas fiscais (NFC-e) da empresa
+      tags:
+      - fiscal
+  /fiscal/documents/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID da nota
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Justificativa (15 a 255 caracteres)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument'
+      security:
+      - BearerAuth: []
+      summary: Cancela a NFC-e na SEFAZ
+      tags:
+      - fiscal
+  /fiscal/documents/{id}/danfce:
+    get:
+      parameters:
+      - description: ID da nota
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: DANFC-e (PDF 80 mm) da nota
+      tags:
+      - fiscal
+  /fiscal/documents/{id}/xml:
+    get:
+      parameters:
+      - description: ID da nota
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/xml
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+      security:
+      - BearerAuth: []
+      summary: XML da nota
+      tags:
+      - fiscal
+  /fiscal/go-live:
+    post:
+      consumes:
+      - application/json
+      description: Copia A1 e perfil fiscal de homologação para produção, com o CSC
+        de produção.
+      parameters:
+      - description: CSC de produção
+        in: body
+        name: csc
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.GoLiveInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings'
+      security:
+      - BearerAuth: []
+      summary: Passa a emitir NFC-e em produção
+      tags:
+      - fiscal
+  /fiscal/issuer:
+    post:
+      description: Usa o CNPJ e a razão social do cadastro da empresa; cria o emitente
+        em homologação e produção.
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings'
+      security:
+      - BearerAuth: []
+      summary: Cadastra a empresa como emitente de NFC-e
+      tags:
+      - fiscal
+  /fiscal/models:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Dados fiscais
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput'
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Grava os dados fiscais em todas as variações de um modelo de grade
+      tags:
+      - fiscal
+  /fiscal/products/{id}:
+    get:
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscal'
+      security:
+      - BearerAuth: []
+      summary: Dados fiscais de um produto
+      tags:
+      - fiscal
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados fiscais
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscalInput'
+      responses:
+        "200":
+          description: OK
+      security:
+      - BearerAuth: []
+      summary: Grava NCM, CEST, unidade, origem e perfil de um produto
+      tags:
+      - fiscal
+  /fiscal/profile:
+    get:
+      description: O código do CSC nunca volta; csc_configured diz se já foi informado.
+        null quando ainda não foi salvo.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile'
+      security:
+      - BearerAuth: []
+      summary: Perfil fiscal do emitente (IE, regime, endereço, CSC)
+      tags:
+      - fiscal
+    put:
+      consumes:
+      - application/json
+      description: CSC em branco mantém o atual.
+      parameters:
+      - description: Perfil fiscal
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfileInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile'
+      security:
+      - BearerAuth: []
+      summary: Salva o perfil fiscal do emitente
+      tags:
+      - fiscal
+  /fiscal/sales/{saleId}:
+    get:
+      description: Última tentativa de nota da venda; document null quando a venda
+        não tem nota.
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument'
+      security:
+      - BearerAuth: []
+      summary: NFC-e de uma venda
+      tags:
+      - fiscal
+  /fiscal/sales/{saleId}/nfce:
+    post:
+      description: 'Se a venda já tem nota autorizada/em andamento, devolve essa.
+        Rejeitada ou com falha: nova tentativa com os dados atuais dos produtos.'
+      parameters:
+      - description: ID da venda
+        in: path
+        name: saleId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument'
+      security:
+      - BearerAuth: []
+      summary: Emite (ou reemite) a NFC-e de uma venda
+      tags:
+      - fiscal
+  /fiscal/sefaz-status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.SefazStatus'
+      security:
+      - BearerAuth: []
+      summary: Testa a conexão com a SEFAZ usando o A1 da empresa
+      tags:
+      - fiscal
+  /fiscal/settings:
+    get:
+      description: 'Situação da NFC-e: ambiente, emitente, A1, regime, perfil padrão
+        e produtos sem NCM.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings'
+      security:
+      - BearerAuth: []
+      summary: Configuração fiscal da empresa
+      tags:
+      - fiscal
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Configuração
+        in: body
+        name: settings
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.UpdateSettingsInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalSettings'
+      security:
+      - BearerAuth: []
+      summary: Liga/desliga a NFC-e e define o perfil tributário padrão
+      tags:
+      - fiscal
+  /fiscal/tax-profiles:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Perfis tributários da empresa
+      tags:
+      - fiscal
+    post:
+      consumes:
+      - application/json
+      description: O primeiro perfil da empresa vira o padrão.
+      parameters:
+      - description: Perfil
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile'
+      security:
+      - BearerAuth: []
+      summary: Cria um perfil tributário
+      tags:
+      - fiscal
+  /fiscal/tax-profiles/{id}:
+    delete:
+      description: Categorias e produtos que usavam o perfil voltam a herdar o da
+        categoria/empresa.
+      parameters:
+      - description: ID do perfil
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Exclui um perfil tributário
+      tags:
+      - fiscal
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do perfil
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Perfil
+        in: body
+        name: profile
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfileInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.TaxProfile'
+      security:
+      - BearerAuth: []
+      summary: Edita um perfil tributário
+      tags:
+      - fiscal
   /invoice-history/{id}:
     get:
       parameters:
@@ -9941,6 +10823,17 @@ paths:
       summary: Ativa ou desativa um fornecedor
       tags:
       - vendors
+  /webhooks/fiscal:
+    post:
+      consumes:
+      - application/json
+      description: Público; autenticado pela assinatura X-ProTrack-Signature (HMAC-SHA256).
+      responses:
+        "200":
+          description: OK
+      summary: Webhook da protrack-fiscal-api (situação das NFC-e)
+      tags:
+      - fiscal
 securityDefinitions:
   BearerAuth:
     in: header
