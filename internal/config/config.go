@@ -59,6 +59,13 @@ type Config struct {
 	MetaWebhookVerifyToken       string
 	MetaAppSecret                string
 	StripeWhatsappOveragePriceID string
+
+	// protrack-fiscal-api (NFC-e): o ERP é uma conta integradora
+	FiscalAPIURL           string
+	FiscalAPIKeyTest       string
+	FiscalAPIKeyLive       string
+	FiscalWebhookSecret    string
+	FiscalWebhookSecretAlt string
 }
 
 func LoadConfig() (*Config, error) {
@@ -103,6 +110,11 @@ func LoadConfig() (*Config, error) {
 		MetaWebhookVerifyToken:       getEnv("META_WEBHOOK_VERIFY_TOKEN"),
 		MetaAppSecret:                getEnv("META_APP_SECRET"),
 		StripeWhatsappOveragePriceID: getEnv("STRIPE_WHATSAPP_OVERAGE_PRICE_ID"),
+		FiscalAPIURL:                 getEnv("FISCAL_API_URL"),
+		FiscalAPIKeyTest:             getEnv("FISCAL_API_KEY_TEST"),
+		FiscalAPIKeyLive:             getEnv("FISCAL_API_KEY_LIVE"),
+		FiscalWebhookSecret:          getEnv("FISCAL_WEBHOOK_SECRET"),
+		FiscalWebhookSecretAlt:       getEnv("FISCAL_WEBHOOK_SECRET_ALT"),
 	}
 
 	return config, nil
