@@ -46,10 +46,14 @@ FROM products
 WHERE id = $1
     AND deleted_at IS NULL;
 -- name: GetProductByBarcode :one
+-- Por empresa: o mesmo código de fábrica (EAN) pode existir em várias empresas
 SELECT *
 FROM products
 WHERE barcode = $1
-    AND deleted_at IS NULL;
+    AND company_id = $2
+    AND deleted_at IS NULL
+ORDER BY created_at
+LIMIT 1;
 -- name: ListProductsByCompany :many
 SELECT p.*,
     c.name AS category_name
@@ -79,11 +83,14 @@ SET name = $2,
 WHERE id = $1
     AND deleted_at IS NULL
 RETURNING *;
--- name: DeleteProduct :exec
+-- name: DeleteProduct :execrows
+-- Só apaga produto da própria empresa; nenhuma linha = não encontrado
 UPDATE products
 SET deleted_by = $2,
     deleted_at = NOW()
-WHERE id = $1;
+WHERE id = $1
+    AND company_id = $3
+    AND deleted_at IS NULL;
 -- name: DecrementStock :exec
 UPDATE products
 SET quantity = quantity - $1
@@ -231,6 +238,8 @@ SELECT
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
     p.sell_in_bulk, p.unit,
+    COALESCE(p.model_name, '')::TEXT AS model_name,
+    COALESCE(p.color, '')::TEXT AS color,
     c.name AS category_name,
     COALESCE(sm.total_registered, 0)::INT AS total_registered,
     COALESCE(sm.total_sold, 0)::INT AS total_sold,

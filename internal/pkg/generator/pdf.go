@@ -58,6 +58,24 @@ func GenerateLabelSheetPDF(products []domain.GenetareTagProduct, layout domain.L
 		formattedPrice = strings.Replace(formattedPrice, ".", ",", 1)
 		pdf.CellFormat(layout.Width-3, 3, formattedPrice, "", 0, "L", false, 0, "")
 
+		// 3b. VARIAÇÃO DA GRADE: cor pequena em cima, tamanho grande ao lado do preço
+		if product.Color != "" || product.Size != "" {
+			variantX := posX + layout.Width/2
+			variantW := layout.Width/2 - 1.5
+			if product.Color != "" {
+				pdf.SetFont("Arial", "B", 5.5)
+				pdf.SetTextColor(50, 50, 50)
+				pdf.SetXY(variantX, posY+4.0)
+				pdf.CellFormat(variantW, 2, translate.PDFText(pdf, translate.PrepareLabelText(product.Color, 12)), "", 0, "R", false, 0, "")
+			}
+			if product.Size != "" {
+				pdf.SetFont("Arial", "B", 9)
+				pdf.SetTextColor(0, 0, 0)
+				pdf.SetXY(variantX, posY+6.0)
+				pdf.CellFormat(variantW, 3, translate.PDFText(pdf, translate.PrepareLabelText(product.Size, 6)), "", 0, "R", false, 0, "")
+			}
+		}
+
 		// 4. IMAGEM DO CÓDIGO DE BARRAS (Proporção ajustada para a altura de 21.2mm)
 		tempImgPath := fmt.Sprintf("%s%s.png", tempImgPrefix, product.Barcode)
 		err := generateBarcodePNG(product.Barcode, tempImgPath)

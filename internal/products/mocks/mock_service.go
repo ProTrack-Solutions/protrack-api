@@ -19,13 +19,13 @@ import (
 type ServiceInterface interface {
 	CreateProduct(ctx context.Context, req domain.CreateProductRequest) (domain.ProductResponse, error)
 	DeleteProduct(ctx context.Context, req domain.DeleteProductRequest) error
-	GetProductByBarcode(ctx context.Context, barcode string) (domain.ProductResponse, error)
+	GetProductByBarcode(ctx context.Context, companyId uuid.UUID, barcode string) (domain.ProductResponse, error)
 	GetProductById(ctx context.Context, id uuid.UUID) (domain.ProductResponse, error)
 	GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID) (domain.ProductResponse, error)
 	ListProductsByCategoryId(ctx context.Context, categoryId, companyID uuid.UUID) ([]domain.ProductResponse, error)
 	ListProductsByCompany(ctx context.Context, companyId uuid.UUID) ([]domain.ListProductsByCompanyRow, error)
 	ListProductsByCompanyPaginated(ctx context.Context, companyId uuid.UUID, pagination globalDomain.PaginationParams) (domain.ProductPaginatedResponse, error)
-	UpdateProduct(ctx context.Context, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error)
+	UpdateProduct(ctx context.Context, companyId, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error)
 	DecrementStock(ctx context.Context, req domain.DecrementStockRequest) error
 	CountProducts(ctx context.Context, companyId uuid.UUID) (int64, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyId uuid.UUID) (float64, error)
@@ -84,17 +84,17 @@ func (mr *MockServiceInterfaceMockRecorder) DeleteProduct(ctx, req any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProduct", reflect.TypeOf((*MockServiceInterface)(nil).DeleteProduct), ctx, req)
 }
 
-func (m *MockServiceInterface) GetProductByBarcode(ctx context.Context, barcode string) (domain.ProductResponse, error) {
+func (m *MockServiceInterface) GetProductByBarcode(ctx context.Context, companyId uuid.UUID, barcode string) (domain.ProductResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductByBarcode", ctx, barcode)
+	ret := m.ctrl.Call(m, "GetProductByBarcode", ctx, companyId, barcode)
 	ret0, _ := ret[0].(domain.ProductResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (mr *MockServiceInterfaceMockRecorder) GetProductByBarcode(ctx, barcode any) *gomock.Call {
+func (mr *MockServiceInterfaceMockRecorder) GetProductByBarcode(ctx, companyId, barcode any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductByBarcode", reflect.TypeOf((*MockServiceInterface)(nil).GetProductByBarcode), ctx, barcode)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductByBarcode", reflect.TypeOf((*MockServiceInterface)(nil).GetProductByBarcode), ctx, companyId, barcode)
 }
 
 func (m *MockServiceInterface) GetProductById(ctx context.Context, id uuid.UUID) (domain.ProductResponse, error) {
@@ -162,17 +162,17 @@ func (mr *MockServiceInterfaceMockRecorder) ListProductsByCompanyPaginated(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductsByCompanyPaginated", reflect.TypeOf((*MockServiceInterface)(nil).ListProductsByCompanyPaginated), ctx, companyId, pagination)
 }
 
-func (m *MockServiceInterface) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error) {
+func (m *MockServiceInterface) UpdateProduct(ctx context.Context, companyId, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateProduct", ctx, id, req)
+	ret := m.ctrl.Call(m, "UpdateProduct", ctx, companyId, id, req)
 	ret0, _ := ret[0].(domain.ProductResponse)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-func (mr *MockServiceInterfaceMockRecorder) UpdateProduct(ctx, id, req any) *gomock.Call {
+func (mr *MockServiceInterfaceMockRecorder) UpdateProduct(ctx, companyId, id, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProduct", reflect.TypeOf((*MockServiceInterface)(nil).UpdateProduct), ctx, id, req)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProduct", reflect.TypeOf((*MockServiceInterface)(nil).UpdateProduct), ctx, companyId, id, req)
 }
 
 func (m *MockServiceInterface) DecrementStock(ctx context.Context, req domain.DecrementStockRequest) error {
