@@ -1,0 +1,208 @@
+package handler
+
+import (
+	"errors"
+	"io"
+	"net/http"
+	"strconv"
+
+	"github.com/ProTrack-Solutions/protrack-api/internal/fiscal/domain"
+	"github.com/ProTrack-Solutions/protrack-api/internal/fiscal/service"
+	"github.com/gin-gonic/gin"
+	"github.com/rs/zerolog/log"
+)
+
+func respondDocumentError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, domain.ErrSaleNotFound), errors.Is(err, domain.ErrDocumentNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+	case errors.Is(err, domain.ErrSaleCanceled),
+		errors.Is(err, domain.ErrDocumentNotPrintable),
+		errors.Is(err, domain.ErrDocumentNotCancellable):
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+	case errors.Is(err, domain.ErrInvalidCancelReason):
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	default:
+		respondError(c, err)
+	}
+}
+
+// ListDocuments godoc
+// @Summary      Notas fiscais (NFC-e) da empresa
+// @Description  Última tentativa de cada venda. problems=true traz só rejeitadas, com falha ou pendentes.
+// @Tags         fiscal
+// @Produce      json
+// @Security     BearerAuth
+// @Param        status query string false "Situação (AUTHORIZED, REJECTED, FAILED, PENDING, CANCELLED...)"
+// @Param        problems query bool false "Só as que precisam de atenção"
+// @Param        page query int false "Página"
+// @Param        per_page query int false "Itens por página (máx. 100)"
+// @Success      200 {object} domain.FiscalDocumentList
+// @Router       /fiscal/documents [get]
+func (h *Handler) ListDocuments(c *gin.Context) {
+	companyId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+	page, _ := strconv.Atoi(c.Query("page"))
+	perPage, _ := strconv.Atoi(c.Query("per_page"))
+	problems, _ := strconv.ParseBool(c.Query("problems"))
+	out, err := h.service.ListDocuments(c.Request.Context(), companyId, c.Query("status"), problems, page, perPage)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// GetSaleDocument godoc
+// @Summary      NFC-e de uma venda
+// @Description  Última tentativa de nota da venda; document null quando a venda não tem nota.
+// @Tags         fiscal
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Success      200 {object} domain.FiscalDocument
+// @Router       /fiscal/sales/{saleId} [get]
+func (h *Handler) GetSaleDocument(c *gin.Context) {
+	companyId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+	saleId, ok := uuidParam(c, "saleId")
+	if !ok {
+		return
+	}
+	out, err := h.service.GetSaleDocument(c.Request.Context(), companyId, saleId)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"document": out})
+}
+
+// EmitSaleDocument godoc
+// @Summary      Emite (ou reemite) a NFC-e de uma venda
+// @Description  Se a venda já tem nota autorizada/em andamento, devolve essa. Rejeitada ou com falha: nova tentativa com os dados atuais dos produtos.
+// @Tags         fiscal
+// @Produce      json
+// @Security     BearerAuth
+// @Param        saleId path string true "ID da venda"
+// @Success      200 {object} domain.FiscalDocument
+// @Router       /fiscal/sales/{saleId}/nfce [post]
+func (h *Handler) EmitSaleDocument(c *gin.Context) {
+	companyId, userId, ok := identity(c)
+	if !ok {
+		return
+	}
+	saleId, ok := uuidParam(c, "saleId")
+	if !ok {
+		return
+	}
+	out, err := h.service.EmitForSale(c.Request.Context(), companyId, userId, saleId, false)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"document": out})
+}
+
+// Danfce godoc
+// @Summary      DANFC-e (PDF 80 mm) da nota
+// @Tags         fiscal
+// @Produce      application/pdf
+// @Security     BearerAuth
+// @Param        id path string true "ID da nota"
+// @Success      200 {file} binary
+// @Router       /fiscal/documents/{id}/danfce [get]
+func (h *Handler) Danfce(c *gin.Context) { h.printout(c, false) }
+
+// Xml godoc
+// @Summary      XML da nota
+// @Tags         fiscal
+// @Produce      application/xml
+// @Security     BearerAuth
+// @Param        id path string true "ID da nota"
+// @Success      200 {file} binary
+// @Router       /fiscal/documents/{id}/xml [get]
+func (h *Handler) Xml(c *gin.Context) { h.printout(c, true) }
+
+func (h *Handler) printout(c *gin.Context, xml bool) {
+	companyId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+	id, ok := uuidParam(c, "id")
+	if !ok {
+		return
+	}
+	data, filename, err := h.service.Printout(c.Request.Context(), companyId, id, xml)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	ctype, disposition := "application/pdf", "inline"
+	if xml {
+		ctype, disposition = "application/xml; charset=utf-8", "attachment"
+	}
+	c.Header("Content-Disposition", disposition+`; filename="`+filename+`"`)
+	c.Data(http.StatusOK, ctype, data)
+}
+
+// CancelDocument godoc
+// @Summary      Cancela a NFC-e na SEFAZ
+// @Tags         fiscal
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID da nota"
+// @Param        body body domain.CancelInput true "Justificativa (15 a 255 caracteres)"
+// @Success      200 {object} domain.FiscalDocument
+// @Router       /fiscal/documents/{id}/cancel [post]
+func (h *Handler) CancelDocument(c *gin.Context) {
+	companyId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+	id, ok := uuidParam(c, "id")
+	if !ok {
+		return
+	}
+	var in domain.CancelInput
+	if err := c.ShouldBindJSON(&in); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	out, err := h.service.CancelDocument(c.Request.Context(), companyId, id, in.Reason)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+// Webhook godoc
+// @Summary      Webhook da protrack-fiscal-api (situação das NFC-e)
+// @Description  Público; autenticado pela assinatura X-ProTrack-Signature (HMAC-SHA256).
+// @Tags         fiscal
+// @Accept       json
+// @Success      200
+// @Router       /webhooks/fiscal [post]
+func (h *Handler) Webhook(c *gin.Context) {
+	body, err := io.ReadAll(io.LimitReader(c.Request.Body, 1<<20))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "corpo inválido"})
+		return
+	}
+	err = h.service.HandleWebhook(c.Request.Context(), c.GetHeader("X-ProTrack-Signature"), body, h.webhookSecrets...)
+	switch {
+	case errors.Is(err, service.ErrInvalidSignature):
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+	case err != nil:
+		// 500: a API fiscal tenta de novo mais tarde
+		log.Error().Err(err).Str("event", c.GetHeader("X-ProTrack-Event")).Msg("webhook fiscal")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro ao processar o evento"})
+	default:
+		c.Status(http.StatusOK)
+	}
+}

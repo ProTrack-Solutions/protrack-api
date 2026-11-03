@@ -11,6 +11,146 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const applyFiscalDocumentResult = `-- name: ApplyFiscalDocumentResult :one
+UPDATE fiscal_documents SET
+    external_id = COALESCE($1, external_id),
+    status = $2,
+    number = COALESCE($3, number),
+    access_key = COALESCE($4, access_key),
+    protocol = COALESCE($5, protocol),
+    status_code = $6,
+    reject_reason = $7,
+    error_message = $8,
+    emission_type = COALESCE($9, emission_type),
+    authorized_at = COALESCE($10, authorized_at),
+    updated_at = NOW()
+WHERE id = $11
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+`
+
+type ApplyFiscalDocumentResultParams struct {
+	ExternalID   pgtype.UUID        `json:"external_id"`
+	Status       string             `json:"status"`
+	Number       pgtype.Int4        `json:"number"`
+	AccessKey    pgtype.Text        `json:"access_key"`
+	Protocol     pgtype.Text        `json:"protocol"`
+	StatusCode   pgtype.Text        `json:"status_code"`
+	RejectReason pgtype.Text        `json:"reject_reason"`
+	ErrorMessage pgtype.Text        `json:"error_message"`
+	EmissionType pgtype.Int2        `json:"emission_type"`
+	AuthorizedAt pgtype.Timestamptz `json:"authorized_at"`
+	ID           pgtype.UUID        `json:"id"`
+}
+
+// Situação vinda da API fiscal (emissão, consulta ou webhook)
+func (q *Queries) ApplyFiscalDocumentResult(ctx context.Context, arg ApplyFiscalDocumentResultParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, applyFiscalDocumentResult,
+		arg.ExternalID,
+		arg.Status,
+		arg.Number,
+		arg.AccessKey,
+		arg.Protocol,
+		arg.StatusCode,
+		arg.RejectReason,
+		arg.ErrorMessage,
+		arg.EmissionType,
+		arg.AuthorizedAt,
+		arg.ID,
+	)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const claimFiscalDocumentsToReconcile = `-- name: ClaimFiscalDocumentsToReconcile :many
+UPDATE fiscal_documents SET updated_at = NOW()
+WHERE id IN (
+    SELECT fd.id FROM fiscal_documents fd
+    WHERE fd.status IN ('PENDING', 'PROCESSING', 'CONTINGENCY')
+      AND fd.updated_at < NOW() - make_interval(secs => $1::int)
+    ORDER BY fd.updated_at
+    LIMIT $2::int
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+`
+
+type ClaimFiscalDocumentsToReconcileParams struct {
+	MinAgeSeconds int32 `json:"min_age_seconds"`
+	BatchSize     int32 `json:"batch_size"`
+}
+
+// Lease: marca updated_at para outra instância do worker não pegar o mesmo lote
+func (q *Queries) ClaimFiscalDocumentsToReconcile(ctx context.Context, arg ClaimFiscalDocumentsToReconcileParams) ([]FiscalDocument, error) {
+	rows, err := q.db.Query(ctx, claimFiscalDocumentsToReconcile, arg.MinAgeSeconds, arg.BatchSize)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FiscalDocument{}
+	for rows.Next() {
+		var i FiscalDocument
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.SaleID,
+			&i.Model,
+			&i.Environment,
+			&i.Attempt,
+			&i.IdempotencyKey,
+			&i.ExternalID,
+			&i.Status,
+			&i.Number,
+			&i.AccessKey,
+			&i.Protocol,
+			&i.StatusCode,
+			&i.RejectReason,
+			&i.ErrorMessage,
+			&i.EmissionType,
+			&i.AuthorizedAt,
+			&i.CancelReason,
+			&i.CancelledAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RequestPayload,
+			&i.Retries,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const countProductsMissingNcm = `-- name: CountProductsMissingNcm :one
 SELECT COUNT(*)::bigint FROM products
 WHERE company_id = $1 AND deleted_at IS NULL AND (ncm IS NULL OR ncm !~ '^\d{8}$')
@@ -21,6 +161,71 @@ func (q *Queries) CountProductsMissingNcm(ctx context.Context, companyID pgtype.
 	var column_1 int64
 	err := row.Scan(&column_1)
 	return column_1, err
+}
+
+const createFiscalDocument = `-- name: CreateFiscalDocument :one
+INSERT INTO fiscal_documents (
+    company_id, sale_id, model, environment, attempt, idempotency_key, status,
+    error_message, request_payload, created_by
+) VALUES (
+    $1, $2, 65, $3, $4, $5, $6,
+    $7, $8, $9
+)
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+`
+
+type CreateFiscalDocumentParams struct {
+	CompanyID      pgtype.UUID `json:"company_id"`
+	SaleID         pgtype.UUID `json:"sale_id"`
+	Environment    string      `json:"environment"`
+	Attempt        int32       `json:"attempt"`
+	IdempotencyKey string      `json:"idempotency_key"`
+	Status         string      `json:"status"`
+	ErrorMessage   pgtype.Text `json:"error_message"`
+	RequestPayload string      `json:"request_payload"`
+	CreatedBy      pgtype.UUID `json:"created_by"`
+}
+
+func (q *Queries) CreateFiscalDocument(ctx context.Context, arg CreateFiscalDocumentParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, createFiscalDocument,
+		arg.CompanyID,
+		arg.SaleID,
+		arg.Environment,
+		arg.Attempt,
+		arg.IdempotencyKey,
+		arg.Status,
+		arg.ErrorMessage,
+		arg.RequestPayload,
+		arg.CreatedBy,
+	)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
 }
 
 const createTaxProfile = `-- name: CreateTaxProfile :one
@@ -224,6 +429,164 @@ func (q *Queries) GetCompanyForFiscal(ctx context.Context, id pgtype.UUID) (GetC
 	return i, err
 }
 
+const getFiscalDocument = `-- name: GetFiscalDocument :one
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents WHERE id = $1 AND company_id = $2
+`
+
+type GetFiscalDocumentParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetFiscalDocument(ctx context.Context, arg GetFiscalDocumentParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, getFiscalDocument, arg.ID, arg.CompanyID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const getFiscalDocumentByExternalId = `-- name: GetFiscalDocumentByExternalId :one
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents WHERE external_id = $1
+`
+
+func (q *Queries) GetFiscalDocumentByExternalId(ctx context.Context, externalID pgtype.UUID) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, getFiscalDocumentByExternalId, externalID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const getLatestFiscalDocumentBySale = `-- name: GetLatestFiscalDocumentBySale :one
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents
+WHERE sale_id = $1 AND company_id = $2 AND model = 65
+ORDER BY attempt DESC
+LIMIT 1
+`
+
+type GetLatestFiscalDocumentBySaleParams struct {
+	SaleID    pgtype.UUID `json:"sale_id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+func (q *Queries) GetLatestFiscalDocumentBySale(ctx context.Context, arg GetLatestFiscalDocumentBySaleParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, getLatestFiscalDocumentBySale, arg.SaleID, arg.CompanyID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const getLiveFiscalDocumentBySale = `-- name: GetLiveFiscalDocumentBySale :one
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents
+WHERE sale_id = $1 AND model = 65 AND status NOT IN ('REJECTED', 'FAILED', 'ERROR')
+`
+
+func (q *Queries) GetLiveFiscalDocumentBySale(ctx context.Context, saleID pgtype.UUID) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, getLiveFiscalDocumentBySale, saleID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
 const getProductFiscal = `-- name: GetProductFiscal :one
 SELECT p.id, p.name, p.model_name, p.ncm, p.cest, p.unit, p.origem_mercadoria, p.tax_profile_id,
        p.category_id, pc.tax_profile_id AS category_tax_profile_id
@@ -264,6 +627,54 @@ func (q *Queries) GetProductFiscal(ctx context.Context, arg GetProductFiscalPara
 		&i.TaxProfileID,
 		&i.CategoryID,
 		&i.CategoryTaxProfileID,
+	)
+	return i, err
+}
+
+const getSaleForNfce = `-- name: GetSaleForNfce :one
+SELECT s.id, s.company_id, s.status::text AS status, s.payment_method::text AS payment_method,
+       s.subtotal, s.discount_amount, s.total_amount, s.down_payment, s.credit_amount,
+       s.buyer_document, s.deleted_at, s.sale_at
+FROM sales s
+WHERE s.id = $1 AND s.company_id = $2
+`
+
+type GetSaleForNfceParams struct {
+	ID        pgtype.UUID `json:"id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+type GetSaleForNfceRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	CompanyID      pgtype.UUID        `json:"company_id"`
+	Status         string             `json:"status"`
+	PaymentMethod  string             `json:"payment_method"`
+	Subtotal       pgtype.Numeric     `json:"subtotal"`
+	DiscountAmount pgtype.Numeric     `json:"discount_amount"`
+	TotalAmount    pgtype.Numeric     `json:"total_amount"`
+	DownPayment    pgtype.Numeric     `json:"down_payment"`
+	CreditAmount   pgtype.Numeric     `json:"credit_amount"`
+	BuyerDocument  pgtype.Text        `json:"buyer_document"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	SaleAt         pgtype.Timestamptz `json:"sale_at"`
+}
+
+func (q *Queries) GetSaleForNfce(ctx context.Context, arg GetSaleForNfceParams) (GetSaleForNfceRow, error) {
+	row := q.db.QueryRow(ctx, getSaleForNfce, arg.ID, arg.CompanyID)
+	var i GetSaleForNfceRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.Status,
+		&i.PaymentMethod,
+		&i.Subtotal,
+		&i.DiscountAmount,
+		&i.TotalAmount,
+		&i.DownPayment,
+		&i.CreditAmount,
+		&i.BuyerDocument,
+		&i.DeletedAt,
+		&i.SaleAt,
 	)
 	return i, err
 }
@@ -310,6 +721,23 @@ func (q *Queries) GetTaxProfile(ctx context.Context, arg GetTaxProfileParams) (T
 	return i, err
 }
 
+const insertFiscalWebhookEvent = `-- name: InsertFiscalWebhookEvent :execrows
+INSERT INTO fiscal_webhook_events (id, type) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING
+`
+
+type InsertFiscalWebhookEventParams struct {
+	ID   pgtype.UUID `json:"id"`
+	Type string      `json:"type"`
+}
+
+func (q *Queries) InsertFiscalWebhookEvent(ctx context.Context, arg InsertFiscalWebhookEventParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertFiscalWebhookEvent, arg.ID, arg.Type)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const listCategoriesFiscal = `-- name: ListCategoriesFiscal :many
 SELECT id, name, color, tax_profile_id
 FROM product_categories
@@ -337,6 +765,222 @@ func (q *Queries) ListCategoriesFiscal(ctx context.Context, companyID pgtype.UUI
 			&i.ID,
 			&i.Name,
 			&i.Color,
+			&i.TaxProfileID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFiscalDocuments = `-- name: ListFiscalDocuments :many
+SELECT fd.id, fd.company_id, fd.sale_id, fd.model, fd.environment, fd.attempt, fd.idempotency_key, fd.external_id, fd.status, fd.number, fd.access_key, fd.protocol, fd.status_code, fd.reject_reason, fd.error_message, fd.emission_type, fd.authorized_at, fd.cancel_reason, fd.cancelled_at, fd.created_by, fd.created_at, fd.updated_at, fd.request_payload, fd.retries, s.total_amount, s.sale_at, c.full_name AS customer_name, COUNT(*) OVER() AS total_count
+FROM fiscal_documents fd
+JOIN sales s ON s.id = fd.sale_id
+LEFT JOIN customers c ON c.id = s.customer_id
+WHERE fd.company_id = $1
+  AND ($2::text IS NULL OR fd.status = $2::text)
+  AND (NOT $3::bool OR fd.status IN ('REJECTED', 'FAILED', 'ERROR', 'PENDING'))
+  -- Por venda, só a última tentativa
+  AND fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+ORDER BY fd.created_at DESC
+LIMIT $5::int OFFSET $4::int
+`
+
+type ListFiscalDocumentsParams struct {
+	CompanyID    pgtype.UUID `json:"company_id"`
+	Status       pgtype.Text `json:"status"`
+	ProblemsOnly bool        `json:"problems_only"`
+	PageOffset   int32       `json:"page_offset"`
+	PageSize     int32       `json:"page_size"`
+}
+
+type ListFiscalDocumentsRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	CompanyID      pgtype.UUID        `json:"company_id"`
+	SaleID         pgtype.UUID        `json:"sale_id"`
+	Model          int16              `json:"model"`
+	Environment    string             `json:"environment"`
+	Attempt        int32              `json:"attempt"`
+	IdempotencyKey string             `json:"idempotency_key"`
+	ExternalID     pgtype.UUID        `json:"external_id"`
+	Status         string             `json:"status"`
+	Number         pgtype.Int4        `json:"number"`
+	AccessKey      pgtype.Text        `json:"access_key"`
+	Protocol       pgtype.Text        `json:"protocol"`
+	StatusCode     pgtype.Text        `json:"status_code"`
+	RejectReason   pgtype.Text        `json:"reject_reason"`
+	ErrorMessage   pgtype.Text        `json:"error_message"`
+	EmissionType   pgtype.Int2        `json:"emission_type"`
+	AuthorizedAt   pgtype.Timestamptz `json:"authorized_at"`
+	CancelReason   pgtype.Text        `json:"cancel_reason"`
+	CancelledAt    pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedBy      pgtype.UUID        `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RequestPayload string             `json:"request_payload"`
+	Retries        int32              `json:"retries"`
+	TotalAmount    pgtype.Numeric     `json:"total_amount"`
+	SaleAt         pgtype.Timestamptz `json:"sale_at"`
+	CustomerName   pgtype.Text        `json:"customer_name"`
+	TotalCount     int64              `json:"total_count"`
+}
+
+func (q *Queries) ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumentsParams) ([]ListFiscalDocumentsRow, error) {
+	rows, err := q.db.Query(ctx, listFiscalDocuments,
+		arg.CompanyID,
+		arg.Status,
+		arg.ProblemsOnly,
+		arg.PageOffset,
+		arg.PageSize,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFiscalDocumentsRow{}
+	for rows.Next() {
+		var i ListFiscalDocumentsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.SaleID,
+			&i.Model,
+			&i.Environment,
+			&i.Attempt,
+			&i.IdempotencyKey,
+			&i.ExternalID,
+			&i.Status,
+			&i.Number,
+			&i.AccessKey,
+			&i.Protocol,
+			&i.StatusCode,
+			&i.RejectReason,
+			&i.ErrorMessage,
+			&i.EmissionType,
+			&i.AuthorizedAt,
+			&i.CancelReason,
+			&i.CancelledAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RequestPayload,
+			&i.Retries,
+			&i.TotalAmount,
+			&i.SaleAt,
+			&i.CustomerName,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listFiscalSummaryBySales = `-- name: ListFiscalSummaryBySales :many
+SELECT DISTINCT ON (sale_id) sale_id, id, status, number, environment
+FROM fiscal_documents
+WHERE company_id = $1 AND sale_id = ANY($2::uuid[]) AND model = 65
+ORDER BY sale_id, attempt DESC
+`
+
+type ListFiscalSummaryBySalesParams struct {
+	CompanyID pgtype.UUID   `json:"company_id"`
+	SaleIds   []pgtype.UUID `json:"sale_ids"`
+}
+
+type ListFiscalSummaryBySalesRow struct {
+	SaleID      pgtype.UUID `json:"sale_id"`
+	ID          pgtype.UUID `json:"id"`
+	Status      string      `json:"status"`
+	Number      pgtype.Int4 `json:"number"`
+	Environment string      `json:"environment"`
+}
+
+// Situação da última nota de cada venda (lista de vendas)
+func (q *Queries) ListFiscalSummaryBySales(ctx context.Context, arg ListFiscalSummaryBySalesParams) ([]ListFiscalSummaryBySalesRow, error) {
+	rows, err := q.db.Query(ctx, listFiscalSummaryBySales, arg.CompanyID, arg.SaleIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListFiscalSummaryBySalesRow{}
+	for rows.Next() {
+		var i ListFiscalSummaryBySalesRow
+		if err := rows.Scan(
+			&i.SaleID,
+			&i.ID,
+			&i.Status,
+			&i.Number,
+			&i.Environment,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSaleItemsForNfce = `-- name: ListSaleItemsForNfce :many
+SELECT si.id, si.quantity, si.unit_price, COALESCE(si.discount, 0)::numeric AS discount,
+       p.id AS product_id, p.name, p.barcode, p.ncm, p.cest, p.unit, p.origem_mercadoria,
+       COALESCE(p.tax_profile_id, pc.tax_profile_id, cfs.default_tax_profile_id) AS tax_profile_id
+FROM sale_items si
+JOIN products p ON p.id = si.product_id
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+LEFT JOIN company_fiscal_settings cfs ON cfs.company_id = p.company_id
+WHERE si.sale_id = $1
+ORDER BY si.created_at, si.id
+`
+
+type ListSaleItemsForNfceRow struct {
+	ID               pgtype.UUID    `json:"id"`
+	Quantity         int32          `json:"quantity"`
+	UnitPrice        pgtype.Numeric `json:"unit_price"`
+	Discount         pgtype.Numeric `json:"discount"`
+	ProductID        pgtype.UUID    `json:"product_id"`
+	Name             string         `json:"name"`
+	Barcode          pgtype.Text    `json:"barcode"`
+	Ncm              pgtype.Text    `json:"ncm"`
+	Cest             pgtype.Text    `json:"cest"`
+	Unit             UnitOfMeasure  `json:"unit"`
+	OrigemMercadoria int16          `json:"origem_mercadoria"`
+	TaxProfileID     pgtype.UUID    `json:"tax_profile_id"`
+}
+
+// Cada item com o perfil tributário já resolvido: produto -> categoria -> padrão da empresa
+func (q *Queries) ListSaleItemsForNfce(ctx context.Context, saleID pgtype.UUID) ([]ListSaleItemsForNfceRow, error) {
+	rows, err := q.db.Query(ctx, listSaleItemsForNfce, saleID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSaleItemsForNfceRow{}
+	for rows.Next() {
+		var i ListSaleItemsForNfceRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Quantity,
+			&i.UnitPrice,
+			&i.Discount,
+			&i.ProductID,
+			&i.Name,
+			&i.Barcode,
+			&i.Ncm,
+			&i.Cest,
+			&i.Unit,
+			&i.OrigemMercadoria,
 			&i.TaxProfileID,
 		); err != nil {
 			return nil, err
@@ -436,6 +1080,62 @@ func (q *Queries) ListTaxProfiles(ctx context.Context, companyID pgtype.UUID) ([
 	return items, nil
 }
 
+const listTaxProfilesByIds = `-- name: ListTaxProfilesByIds :many
+SELECT id, company_id, name, icms_csosn, icms_cst, icms_rate, icms_base_reduction, icms_fcp_rate, cfop, benefit_code, pis_cst, pis_rate, cofins_cst, cofins_rate, ibs_cbs_cst, ibs_cbs_class_code, ibs_state_rate, ibs_city_rate, cbs_rate, created_by, updated_by, created_at, updated_at, deleted_at FROM tax_profiles
+WHERE company_id = $1 AND id = ANY($2::uuid[]) AND deleted_at IS NULL
+`
+
+type ListTaxProfilesByIdsParams struct {
+	CompanyID pgtype.UUID   `json:"company_id"`
+	Ids       []pgtype.UUID `json:"ids"`
+}
+
+// Inclui perfis excluídos depois da venda? Não: perfil excluído some (o item cai no padrão)
+func (q *Queries) ListTaxProfilesByIds(ctx context.Context, arg ListTaxProfilesByIdsParams) ([]TaxProfile, error) {
+	rows, err := q.db.Query(ctx, listTaxProfilesByIds, arg.CompanyID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []TaxProfile{}
+	for rows.Next() {
+		var i TaxProfile
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.Name,
+			&i.IcmsCsosn,
+			&i.IcmsCst,
+			&i.IcmsRate,
+			&i.IcmsBaseReduction,
+			&i.IcmsFcpRate,
+			&i.Cfop,
+			&i.BenefitCode,
+			&i.PisCst,
+			&i.PisRate,
+			&i.CofinsCst,
+			&i.CofinsRate,
+			&i.IbsCbsCst,
+			&i.IbsCbsClassCode,
+			&i.IbsStateRate,
+			&i.IbsCityRate,
+			&i.CbsRate,
+			&i.CreatedBy,
+			&i.UpdatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockCompanyFiscalSettings = `-- name: LockCompanyFiscalSettings :exec
 SELECT pg_advisory_xact_lock(hashtextextended('fiscal-settings:' || $1::text, 0))
 `
@@ -444,6 +1144,124 @@ SELECT pg_advisory_xact_lock(hashtextextended('fiscal-settings:' || $1::text, 0)
 func (q *Queries) LockCompanyFiscalSettings(ctx context.Context, companyID string) error {
 	_, err := q.db.Exec(ctx, lockCompanyFiscalSettings, companyID)
 	return err
+}
+
+const lockSaleFiscal = `-- name: LockSaleFiscal :exec
+
+SELECT pg_advisory_xact_lock(hashtextextended('fiscal-sale:' || $1::text, 0))
+`
+
+// ---------- Emissão da NFC-e ----------
+// Serializa emissões da mesma venda (duplo clique, PDV + worker)
+func (q *Queries) LockSaleFiscal(ctx context.Context, saleID string) error {
+	_, err := q.db.Exec(ctx, lockSaleFiscal, saleID)
+	return err
+}
+
+const markFiscalDocumentCancelled = `-- name: MarkFiscalDocumentCancelled :one
+UPDATE fiscal_documents SET
+    status = 'CANCELLED',
+    cancel_reason = COALESCE($1, cancel_reason),
+    cancelled_at = COALESCE(cancelled_at, NOW()),
+    error_message = NULL,
+    updated_at = NOW()
+WHERE id = $2
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+`
+
+type MarkFiscalDocumentCancelledParams struct {
+	CancelReason pgtype.Text `json:"cancel_reason"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) MarkFiscalDocumentCancelled(ctx context.Context, arg MarkFiscalDocumentCancelledParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, markFiscalDocumentCancelled, arg.CancelReason, arg.ID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const markFiscalDocumentRetry = `-- name: MarkFiscalDocumentRetry :one
+UPDATE fiscal_documents SET
+    error_message = $1,
+    retries = retries + 1,
+    updated_at = NOW()
+WHERE id = $2
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+`
+
+type MarkFiscalDocumentRetryParams struct {
+	ErrorMessage pgtype.Text `json:"error_message"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+// Falha transitória (API fiscal/SEFAZ fora): continua PENDING para o worker
+func (q *Queries) MarkFiscalDocumentRetry(ctx context.Context, arg MarkFiscalDocumentRetryParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, markFiscalDocumentRetry, arg.ErrorMessage, arg.ID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+	)
+	return i, err
+}
+
+const nextFiscalAttempt = `-- name: NextFiscalAttempt :one
+SELECT (COALESCE(MAX(attempt), 0) + 1)::int FROM fiscal_documents WHERE sale_id = $1 AND model = 65
+`
+
+func (q *Queries) NextFiscalAttempt(ctx context.Context, saleID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, nextFiscalAttempt, saleID)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
 }
 
 const setCategoryTaxProfile = `-- name: SetCategoryTaxProfile :execrows
@@ -465,6 +1283,21 @@ func (q *Queries) SetCategoryTaxProfile(ctx context.Context, arg SetCategoryTaxP
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setFiscalDocumentError = `-- name: SetFiscalDocumentError :exec
+UPDATE fiscal_documents SET error_message = $1, updated_at = NOW()
+WHERE id = $2
+`
+
+type SetFiscalDocumentErrorParams struct {
+	ErrorMessage pgtype.Text `json:"error_message"`
+	ID           pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) SetFiscalDocumentError(ctx context.Context, arg SetFiscalDocumentErrorParams) error {
+	_, err := q.db.Exec(ctx, setFiscalDocumentError, arg.ErrorMessage, arg.ID)
+	return err
 }
 
 const taxProfileNameExists = `-- name: TaxProfileNameExists :one

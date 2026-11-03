@@ -66,6 +66,8 @@ type Config struct {
 	FiscalAPIKeyLive       string
 	FiscalWebhookSecret    string
 	FiscalWebhookSecretAlt string
+	// Intervalo do worker de conferência das NFC-e (padrão 60s)
+	FiscalReconcileSeconds int
 }
 
 func LoadConfig() (*Config, error) {
@@ -115,6 +117,7 @@ func LoadConfig() (*Config, error) {
 		FiscalAPIKeyLive:             getEnv("FISCAL_API_KEY_LIVE"),
 		FiscalWebhookSecret:          getEnv("FISCAL_WEBHOOK_SECRET"),
 		FiscalWebhookSecretAlt:       getEnv("FISCAL_WEBHOOK_SECRET_ALT"),
+		FiscalReconcileSeconds:       getEnvInt("FISCAL_RECONCILE_SECONDS", 60),
 	}
 
 	return config, nil
@@ -147,4 +150,12 @@ func getEnvBool(key string) bool {
 	}
 
 	return b
+}
+
+func getEnvInt(key string, fallback int) int {
+	value, err := strconv.Atoi(strings.TrimSpace(os.Getenv(key)))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
 }

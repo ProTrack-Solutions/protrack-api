@@ -169,12 +169,20 @@ type NfceTax struct {
 	IBSCBS IBSCBS       `json:"ibsCbs"`
 }
 
-// ICMS da NFC-e: CSOSN (CRT 1/4) ou CST (CRT 2/3), nunca os dois.
+// ICMS da NFC-e: CSOSN (CRT 1/4) ou CST (CRT 2/3), nunca os dois. CST 90 e
+// CSOSN 900 mandam o ICMS próprio em Own; os demais CSTs tributados, nos campos soltos.
 type ICMS struct {
 	CSOSN         string   `json:"csosn,omitempty"`
 	CST           string   `json:"cst,omitempty"`
 	Origin        string   `json:"origin"`
 	Rate          *float64 `json:"rate,omitempty"`
+	BaseReduction *float64 `json:"baseReduction,omitempty"`
+	FCPRate       *float64 `json:"fcpRate,omitempty"`
+	Own           *OwnICMS `json:"own,omitempty"`
+}
+
+type OwnICMS struct {
+	Rate          float64  `json:"rate"`
 	BaseReduction *float64 `json:"baseReduction,omitempty"`
 	FCPRate       *float64 `json:"fcpRate,omitempty"`
 }

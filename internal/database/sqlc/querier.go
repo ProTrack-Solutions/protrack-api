@@ -20,6 +20,8 @@ type Querier interface {
 	// Incremento relativo + trava da linha pelo UPDATE evitam perder vendas concorrentes.
 	// Nenhuma linha retornada = produto inexistente, a granel ou sem saldo suficiente.
 	AdjustStock(ctx context.Context, arg AdjustStockParams) (AdjustStockRow, error)
+	// Situação vinda da API fiscal (emissão, consulta ou webhook)
+	ApplyFiscalDocumentResult(ctx context.Context, arg ApplyFiscalDocumentResultParams) (FiscalDocument, error)
 	// Soma (ou subtrai, no estorno) o saldo e grava o novo custo; preço de venda só quando informado
 	ApplyPurchaseToProduct(ctx context.Context, arg ApplyPurchaseToProductParams) error
 	// Agrupa um produto já existente num modelo; saldo, histórico e vendas continuam no mesmo produto
@@ -35,6 +37,8 @@ type Querier interface {
 	CancelAccountsReceivableBySaleId(ctx context.Context, arg CancelAccountsReceivableBySaleIdParams) error
 	CancelPurchaseBills(ctx context.Context, arg CancelPurchaseBillsParams) error
 	CancelSubscription(ctx context.Context, id pgtype.UUID) error
+	// Lease: marca updated_at para outra instância do worker não pegar o mesmo lote
+	ClaimFiscalDocumentsToReconcile(ctx context.Context, arg ClaimFiscalDocumentsToReconcileParams) ([]FiscalDocument, error)
 	CloseCashSession(ctx context.Context, arg CloseCashSessionParams) (CashSession, error)
 	ClosePurchaseOrder(ctx context.Context, arg ClosePurchaseOrderParams) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
@@ -84,6 +88,7 @@ type Querier interface {
 	// valor dos itens devolvidos; o resto (diferença) na forma informada.
 	CreateExchangeSale(ctx context.Context, arg CreateExchangeSaleParams) (pgtype.UUID, error)
 	CreateExchangeSaleItem(ctx context.Context, arg CreateExchangeSaleItemParams) (pgtype.UUID, error)
+	CreateFiscalDocument(ctx context.Context, arg CreateFiscalDocumentParams) (FiscalDocument, error)
 	// Variação nova com a entrada inicial de estoque na mesma instrução
 	CreateGridProduct(ctx context.Context, arg CreateGridProductParams) (pgtype.UUID, error)
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
@@ -220,12 +225,16 @@ type Querier interface {
 	GetEligibleTemplateByName(ctx context.Context, arg GetEligibleTemplateByNameParams) (WhatsappTemplate, error)
 	// Data local da primeira venda da empresa (canceladas incluídas); NULL sem vendas
 	GetFirstSaleDate(ctx context.Context, arg GetFirstSaleDateParams) (pgtype.Date, error)
+	GetFiscalDocument(ctx context.Context, arg GetFiscalDocumentParams) (FiscalDocument, error)
+	GetFiscalDocumentByExternalId(ctx context.Context, externalID pgtype.UUID) (FiscalDocument, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
 	GetInvoiceById(ctx context.Context, id pgtype.UUID) (InvoiceHistory, error)
 	GetInvoiceByMpPaymentId(ctx context.Context, externalPaymentID string) (InvoiceHistory, error)
 	GetLastReceivableReminder(ctx context.Context, accountReceivableID pgtype.UUID) (pgtype.Timestamptz, error)
+	GetLatestFiscalDocumentBySale(ctx context.Context, arg GetLatestFiscalDocumentBySaleParams) (FiscalDocument, error)
+	GetLiveFiscalDocumentBySale(ctx context.Context, saleID pgtype.UUID) (FiscalDocument, error)
 	GetMessageByMetaID(ctx context.Context, metaMessageID pgtype.Text) (WhatsappMessage, error)
 	GetModule(ctx context.Context, code string) (Module, error)
 	GetOpenBalanceBySale(ctx context.Context, arg GetOpenBalanceBySaleParams) (pgtype.Numeric, error)
@@ -267,6 +276,7 @@ type Querier interface {
 	GetSaleByIdForUpdate(ctx context.Context, arg GetSaleByIdForUpdateParams) (Sale, error)
 	GetSaleByIdJust(ctx context.Context, id pgtype.UUID) (GetSaleByIdJustRow, error)
 	GetSaleByIdWhatsapp(ctx context.Context, id pgtype.UUID) (GetSaleByIdWhatsappRow, error)
+	GetSaleForNfce(ctx context.Context, arg GetSaleForNfceParams) (GetSaleForNfceRow, error)
 	// Trava a venda: duas devoluções simultâneas não devolvem o mesmo item duas vezes
 	GetSaleForReturn(ctx context.Context, arg GetSaleForReturnParams) (GetSaleForReturnRow, error)
 	// Cabeçalho do recibo de venda: dados da venda, da empresa, do cliente e do vendedor
@@ -304,6 +314,7 @@ type Querier interface {
 	GridCategoryExists(ctx context.Context, arg GridCategoryExistsParams) (bool, error)
 	IncrementStock(ctx context.Context, arg IncrementStockParams) error
 	IncrementStockForReturn(ctx context.Context, arg IncrementStockForReturnParams) error
+	InsertFiscalWebhookEvent(ctx context.Context, arg InsertFiscalWebhookEventParams) (int64, error)
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
 	ListActiveCashRegisterIds(ctx context.Context, companyID pgtype.UUID) ([]pgtype.UUID, error)
 	ListAnnoucements(ctx context.Context, arg ListAnnoucementsParams) ([]ListAnnoucementsRow, error)
@@ -340,6 +351,9 @@ type Querier interface {
 	ListExchangeSaleItems(ctx context.Context, saleID pgtype.UUID) ([]ListExchangeSaleItemsRow, error)
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
+	ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumentsParams) ([]ListFiscalDocumentsRow, error)
+	// Situação da última nota de cada venda (lista de vendas)
+	ListFiscalSummaryBySales(ctx context.Context, arg ListFiscalSummaryBySalesParams) ([]ListFiscalSummaryBySalesRow, error)
 	// Todas as variações de um modelo, na ordem em que foram cadastradas
 	ListGridVariations(ctx context.Context, arg ListGridVariationsParams) ([]ListGridVariationsRow, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
@@ -384,6 +398,8 @@ type Querier interface {
 	// Itens da venda com o que já foi devolvido. net_total é o valor pago pela
 	// linha (preço menos o desconto rateado da venda).
 	ListReturnableItems(ctx context.Context, saleID pgtype.UUID) ([]ListReturnableItemsRow, error)
+	// Cada item com o perfil tributário já resolvido: produto -> categoria -> padrão da empresa
+	ListSaleItemsForNfce(ctx context.Context, saleID pgtype.UUID) ([]ListSaleItemsForNfceRow, error)
 	ListSaleReceiptItems(ctx context.Context, saleID pgtype.UUID) ([]ListSaleReceiptItemsRow, error)
 	ListSaleReturnItems(ctx context.Context, returnID pgtype.UUID) ([]ListSaleReturnItemsRow, error)
 	ListSaleReturns(ctx context.Context, arg ListSaleReturnsParams) ([]ListSaleReturnsRow, error)
@@ -403,6 +419,8 @@ type Querier interface {
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	// ---------- Perfis tributários ----------
 	ListTaxProfiles(ctx context.Context, companyID pgtype.UUID) ([]ListTaxProfilesRow, error)
+	// Inclui perfis excluídos depois da venda? Não: perfil excluído some (o item cai no padrão)
+	ListTaxProfilesByIds(ctx context.Context, arg ListTaxProfilesByIdsParams) ([]TaxProfile, error)
 	// Avisos vigentes agora, do mais importante (manutenção) ao menos importante (sucesso)
 	ListTopAnnouncementsOfDay(ctx context.Context, companyID pgtype.UUID) ([]ListTopAnnouncementsOfDayRow, error)
 	ListUsers(ctx context.Context) ([]User, error)
@@ -428,8 +446,15 @@ type Querier interface {
 	LockPurchaseReceipt(ctx context.Context, arg LockPurchaseReceiptParams) (LockPurchaseReceiptRow, error)
 	// Trava a parcela: dois cliques simultâneos não mandam dois lembretes
 	LockReceivableForReminder(ctx context.Context, arg LockReceivableForReminderParams) (LockReceivableForReminderRow, error)
+	// ---------- Emissão da NFC-e ----------
+	// Serializa emissões da mesma venda (duplo clique, PDV + worker)
+	LockSaleFiscal(ctx context.Context, saleID string) error
+	MarkFiscalDocumentCancelled(ctx context.Context, arg MarkFiscalDocumentCancelledParams) (FiscalDocument, error)
+	// Falha transitória (API fiscal/SEFAZ fora): continua PENDING para o worker
+	MarkFiscalDocumentRetry(ctx context.Context, arg MarkFiscalDocumentRetryParams) (FiscalDocument, error)
 	MarkPurchaseReceiptReversed(ctx context.Context, arg MarkPurchaseReceiptReversedParams) error
 	MarkUsageSyncedWithStripe(ctx context.Context, arg MarkUsageSyncedWithStripeParams) error
+	NextFiscalAttempt(ctx context.Context, saleID pgtype.UUID) (int32, error)
 	NextPurchaseOrderNumber(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	NextSaleReturnNumber(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	PayBill(ctx context.Context, arg PayBillParams) error
@@ -481,6 +506,7 @@ type Querier interface {
 	// Inativar mantém o histórico; reativar volta o cliente para as listas
 	SetCustomerActive(ctx context.Context, arg SetCustomerActiveParams) (int64, error)
 	SetDefaultSubscriptionPaymentMethod(ctx context.Context, arg SetDefaultSubscriptionPaymentMethodParams) error
+	SetFiscalDocumentError(ctx context.Context, arg SetFiscalDocumentErrorParams) error
 	SetProductCategoryStatus(ctx context.Context, arg SetProductCategoryStatusParams) (int64, error)
 	SetSaleStatusForReturn(ctx context.Context, arg SetSaleStatusForReturnParams) error
 	SetStatusDepartment(ctx context.Context, arg SetStatusDepartmentParams) (int64, error)

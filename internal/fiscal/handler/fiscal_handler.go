@@ -20,14 +20,23 @@ import (
 const maxCertificateBytes = 64 << 10
 
 type Handler struct {
-	service    *service.Service
-	jwtManager *jwt.JWTManager
-	blacklist  *cache.TokenBlacklist
-	queries    departmentModulesDomain.ServiceInterface
+	service        *service.Service
+	jwtManager     *jwt.JWTManager
+	blacklist      *cache.TokenBlacklist
+	queries        departmentModulesDomain.ServiceInterface
+	webhookSecrets []string
 }
 
-func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface) *Handler {
-	return &Handler{service: service, jwtManager: jwtManager, blacklist: blacklist, queries: queries}
+// NewHandler: webhookSecrets são os segredos whsec_ aceitos (o atual e, durante a
+// troca, o anterior); vazio recusa todo webhook.
+func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface, webhookSecrets ...string) *Handler {
+	var secrets []string
+	for _, s := range webhookSecrets {
+		if s != "" {
+			secrets = append(secrets, s)
+		}
+	}
+	return &Handler{service: service, jwtManager: jwtManager, blacklist: blacklist, queries: queries, webhookSecrets: secrets}
 }
 
 func identity(c *gin.Context) (companyId, userId uuid.UUID, ok bool) {

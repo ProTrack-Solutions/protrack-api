@@ -6,6 +6,9 @@ import (
 )
 
 func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
+	// Público: a API fiscal avisa a mudança de situação das notas (assinatura HMAC)
+	r.POST("/webhooks/fiscal", h.Webhook)
+
 	fiscal := r.Group("/fiscal")
 	fiscal.Use(middleware.AuthMiddleware(h.jwtManager, h.blacklist))
 
@@ -14,6 +17,18 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 	read.Use(middleware.RequireAnyModule(h.queries, "sales", "inventory"))
 	{
 		read.GET("/settings", h.GetSettings)
+	}
+
+	// Notas das vendas: PDV e lista de vendas
+	sales := fiscal.Group("")
+	sales.Use(middleware.RequireModule("sales", h.queries))
+	{
+		sales.GET("/documents", h.ListDocuments)
+		sales.GET("/documents/:id/danfce", h.Danfce)
+		sales.GET("/documents/:id/xml", h.Xml)
+		sales.POST("/documents/:id/cancel", h.CancelDocument)
+		sales.GET("/sales/:saleId", h.GetSaleDocument)
+		sales.POST("/sales/:saleId/nfce", h.EmitSaleDocument)
 	}
 
 	// Tributação de produtos e categorias: quem cuida do estoque

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"github.com/ProTrack-Solutions/protrack-api/internal/auth/adapters/jwt"
 	cashRegisterDomain "github.com/ProTrack-Solutions/protrack-api/internal/cash_register/domain"
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
+	fiscalDomain "github.com/ProTrack-Solutions/protrack-api/internal/fiscal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/sales/service"
 	"github.com/gin-gonic/gin"
@@ -21,7 +23,17 @@ type Handler struct {
 	jwtManager *jwt.JWTManager
 	blacklist  *cache.TokenBlacklist
 	queries    departmentModulesDomain.ServiceInterface
+	fiscal     FiscalHook
 }
+
+// FiscalHook emite a NFC-e depois da venda gravada. Nunca falha a venda: devolve
+// a nota (autorizada, pendente, com falha...) ou nil quando a emissão está desligada.
+type FiscalHook interface {
+	AfterSale(ctx context.Context, companyId, userId, saleId uuid.UUID) *fiscalDomain.FiscalDocument
+}
+
+// SetFiscal liga a emissão de NFC-e no PDV.
+func (h *Handler) SetFiscal(f FiscalHook) { h.fiscal = f }
 
 func NewHandler(service *service.Service, jwtManager *jwt.JWTManager, blacklist *cache.TokenBlacklist, queries departmentModulesDomain.ServiceInterface) *Handler {
 	return &Handler{
@@ -80,7 +92,13 @@ func (h *Handler) CreateSale(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"id": id})
+	// NFC-e depois do commit da venda: SEFAZ lenta ou fora não desfaz a venda
+	var fiscalDocument *fiscalDomain.FiscalDocument
+	if h.fiscal != nil {
+		fiscalDocument = h.fiscal.AfterSale(c.Request.Context(), companyId, userId, id)
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"id": id, "fiscal_document": fiscalDocument})
 }
 
 // respondSaleError converte os erros de negócio de venda no status HTTP correspondente.

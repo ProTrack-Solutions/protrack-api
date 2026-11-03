@@ -815,6 +815,8 @@ type FiscalDocument struct {
 	CreatedBy      pgtype.UUID        `json:"created_by"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	RequestPayload string             `json:"request_payload"`
+	Retries        int32              `json:"retries"`
 }
 
 type FiscalWebhookEvent struct {

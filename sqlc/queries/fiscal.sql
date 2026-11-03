@@ -147,3 +147,138 @@ WHERE p.id = $1 AND p.company_id = $2 AND p.deleted_at IS NULL;
 -- name: CountProductsMissingNcm :one
 SELECT COUNT(*)::bigint FROM products
 WHERE company_id = $1 AND deleted_at IS NULL AND (ncm IS NULL OR ncm !~ '^\d{8}$');
+
+-- ---------- Emissão da NFC-e ----------
+
+-- name: LockSaleFiscal :exec
+-- Serializa emissões da mesma venda (duplo clique, PDV + worker)
+SELECT pg_advisory_xact_lock(hashtextextended('fiscal-sale:' || @sale_id::text, 0));
+
+-- name: GetSaleForNfce :one
+SELECT s.id, s.company_id, s.status::text AS status, s.payment_method::text AS payment_method,
+       s.subtotal, s.discount_amount, s.total_amount, s.down_payment, s.credit_amount,
+       s.buyer_document, s.deleted_at, s.sale_at
+FROM sales s
+WHERE s.id = $1 AND s.company_id = $2;
+
+-- name: ListSaleItemsForNfce :many
+-- Cada item com o perfil tributário já resolvido: produto -> categoria -> padrão da empresa
+SELECT si.id, si.quantity, si.unit_price, COALESCE(si.discount, 0)::numeric AS discount,
+       p.id AS product_id, p.name, p.barcode, p.ncm, p.cest, p.unit, p.origem_mercadoria,
+       COALESCE(p.tax_profile_id, pc.tax_profile_id, cfs.default_tax_profile_id) AS tax_profile_id
+FROM sale_items si
+JOIN products p ON p.id = si.product_id
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+LEFT JOIN company_fiscal_settings cfs ON cfs.company_id = p.company_id
+WHERE si.sale_id = $1
+ORDER BY si.created_at, si.id;
+
+-- name: ListTaxProfilesByIds :many
+-- Inclui perfis excluídos depois da venda? Não: perfil excluído some (o item cai no padrão)
+SELECT * FROM tax_profiles
+WHERE company_id = @company_id AND id = ANY(@ids::uuid[]) AND deleted_at IS NULL;
+
+-- name: GetLiveFiscalDocumentBySale :one
+SELECT * FROM fiscal_documents
+WHERE sale_id = $1 AND model = 65 AND status NOT IN ('REJECTED', 'FAILED', 'ERROR');
+
+-- name: GetLatestFiscalDocumentBySale :one
+SELECT * FROM fiscal_documents
+WHERE sale_id = $1 AND company_id = $2 AND model = 65
+ORDER BY attempt DESC
+LIMIT 1;
+
+-- name: NextFiscalAttempt :one
+SELECT (COALESCE(MAX(attempt), 0) + 1)::int FROM fiscal_documents WHERE sale_id = $1 AND model = 65;
+
+-- name: CreateFiscalDocument :one
+INSERT INTO fiscal_documents (
+    company_id, sale_id, model, environment, attempt, idempotency_key, status,
+    error_message, request_payload, created_by
+) VALUES (
+    @company_id, @sale_id, 65, @environment, @attempt, @idempotency_key, @status,
+    sqlc.narg(error_message), @request_payload, @created_by
+)
+RETURNING *;
+
+-- name: ApplyFiscalDocumentResult :one
+-- Situação vinda da API fiscal (emissão, consulta ou webhook)
+UPDATE fiscal_documents SET
+    external_id = COALESCE(sqlc.narg(external_id), external_id),
+    status = @status,
+    number = COALESCE(sqlc.narg(number), number),
+    access_key = COALESCE(sqlc.narg(access_key), access_key),
+    protocol = COALESCE(sqlc.narg(protocol), protocol),
+    status_code = sqlc.narg(status_code),
+    reject_reason = sqlc.narg(reject_reason),
+    error_message = sqlc.narg(error_message),
+    emission_type = COALESCE(sqlc.narg(emission_type), emission_type),
+    authorized_at = COALESCE(sqlc.narg(authorized_at), authorized_at),
+    updated_at = NOW()
+WHERE id = @id
+RETURNING *;
+
+-- name: MarkFiscalDocumentRetry :one
+-- Falha transitória (API fiscal/SEFAZ fora): continua PENDING para o worker
+UPDATE fiscal_documents SET
+    error_message = @error_message,
+    retries = retries + 1,
+    updated_at = NOW()
+WHERE id = @id
+RETURNING *;
+
+-- name: MarkFiscalDocumentCancelled :one
+UPDATE fiscal_documents SET
+    status = 'CANCELLED',
+    cancel_reason = COALESCE(sqlc.narg(cancel_reason), cancel_reason),
+    cancelled_at = COALESCE(cancelled_at, NOW()),
+    error_message = NULL,
+    updated_at = NOW()
+WHERE id = @id
+RETURNING *;
+
+-- name: SetFiscalDocumentError :exec
+UPDATE fiscal_documents SET error_message = sqlc.narg(error_message), updated_at = NOW()
+WHERE id = @id;
+
+-- name: GetFiscalDocument :one
+SELECT * FROM fiscal_documents WHERE id = $1 AND company_id = $2;
+
+-- name: GetFiscalDocumentByExternalId :one
+SELECT * FROM fiscal_documents WHERE external_id = $1;
+
+-- name: ClaimFiscalDocumentsToReconcile :many
+-- Lease: marca updated_at para outra instância do worker não pegar o mesmo lote
+UPDATE fiscal_documents SET updated_at = NOW()
+WHERE id IN (
+    SELECT fd.id FROM fiscal_documents fd
+    WHERE fd.status IN ('PENDING', 'PROCESSING', 'CONTINGENCY')
+      AND fd.updated_at < NOW() - make_interval(secs => @min_age_seconds::int)
+    ORDER BY fd.updated_at
+    LIMIT @batch_size::int
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING *;
+
+-- name: ListFiscalDocuments :many
+SELECT fd.*, s.total_amount, s.sale_at, c.full_name AS customer_name, COUNT(*) OVER() AS total_count
+FROM fiscal_documents fd
+JOIN sales s ON s.id = fd.sale_id
+LEFT JOIN customers c ON c.id = s.customer_id
+WHERE fd.company_id = @company_id
+  AND (sqlc.narg(status)::text IS NULL OR fd.status = sqlc.narg(status)::text)
+  AND (NOT @problems_only::bool OR fd.status IN ('REJECTED', 'FAILED', 'ERROR', 'PENDING'))
+  -- Por venda, só a última tentativa
+  AND fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+ORDER BY fd.created_at DESC
+LIMIT @page_size::int OFFSET @page_offset::int;
+
+-- name: ListFiscalSummaryBySales :many
+-- Situação da última nota de cada venda (lista de vendas)
+SELECT DISTINCT ON (sale_id) sale_id, id, status, number, environment
+FROM fiscal_documents
+WHERE company_id = @company_id AND sale_id = ANY(@sale_ids::uuid[]) AND model = 65
+ORDER BY sale_id, attempt DESC;
+
+-- name: InsertFiscalWebhookEvent :execrows
+INSERT INTO fiscal_webhook_events (id, type) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING;

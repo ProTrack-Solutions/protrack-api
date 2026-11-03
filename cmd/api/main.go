@@ -379,6 +379,7 @@ func main() {
 	authHandler := authHandler.NewHandler(authService, jwtManager, blacklist, cfg, rateLimiter, discordLogger)
 	customersHandler := customersHandler.NewHandler(customersService, jwtManager, blacklist, departmentModulesService)
 	salesHandler := salesHandler.NewHandler(salesService, jwtManager, blacklist, departmentModulesService)
+	salesHandler.SetFiscal(fiscalService)
 	saleItemsHandler := saleItemsHandler.NewHandler(saleItemsService, jwtManager, blacklist, departmentModulesService)
 	paymentMethodsHandler := paymentMethodsHandler.NewHandler(paymentMethodsService, jwtManager, blacklist, departmentModulesService)
 	vendorsHandler := vendorsHandler.NewHandler(vendorsService, jwtManager, blacklist, departmentModulesService)
@@ -402,7 +403,7 @@ func main() {
 	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist, departmentModulesService)
 	modulesHandler := modulesHandler.NewHandler(modulesService, jwtManager, blacklist)
 	departmentModulesHandler := departmentModulesHandler.NewHandler(departmentModulesService, jwtManager, blacklist)
-	fiscalHandler := fiscalHandler.NewHandler(fiscalService, jwtManager, blacklist, departmentModulesService)
+	fiscalHandler := fiscalHandler.NewHandler(fiscalService, jwtManager, blacklist, departmentModulesService, cfg.FiscalWebhookSecret, cfg.FiscalWebhookSecretAlt)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -448,6 +449,8 @@ func main() {
 	})
 
 	worker.StartOverdueMonitor(salesService, ch, discordLogger)
+	// NFC-e: reenvia as pendentes e consulta as que aguardam a SEFAZ
+	fiscalService.StartReconciler(context.Background(), time.Duration(cfg.FiscalReconcileSeconds)*time.Second)
 	worker.StartBillPayableOverdueMonitor(billsPayableService, discordLogger)
 	worker.StartWhatsAppUsageSyncWorker(subscriptionsService, metaWhatsappService, plansService, discordLogger)
 	consumers.StartWhatsAppConsumer(ch, metaWhatsappService)

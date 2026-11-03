@@ -22,3 +22,6 @@ sql:
           # normal, que o Postgres consegue converter pra jsonb sem problema.
           - column: "company_settings.value"
             go_type: "string"
+          # Mesmo motivo: corpo do pedido de NFC-e guardado em jsonb
+          - column: "fiscal_documents.request_payload"
+            go_type: "string"
