@@ -305,7 +305,7 @@ func (q *Queries) ListGridVariations(ctx context.Context, arg ListGridVariations
 const listStockEntries = `-- name: ListStockEntries :many
 
 WITH base AS (
-    SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at, p.unit, p.sell_in_bulk, p.ncm, p.cest, p.csosn, p.cfop_saida_dentro_estado, p.cfop_saida_fora_estado, p.origem_mercadoria, p.model_name, p.color,
+    SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at, p.unit, p.sell_in_bulk, p.ncm, p.cest, p.origem_mercadoria, p.model_name, p.color, p.tax_profile_id,
         CASE
             WHEN p.model_name IS NULL THEN 'p:' || p.id::TEXT
             ELSE 'm:' || lower(p.model_name)

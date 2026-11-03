@@ -24,7 +24,7 @@ VALUES (
         $3,
         $4
     )
-RETURNING id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+RETURNING id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, tax_profile_id
 `
 
 type CreateProductCategoryParams struct {
@@ -54,6 +54,7 @@ func (q *Queries) CreateProductCategory(ctx context.Context, arg CreateProductCa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.TaxProfileID,
 	)
 	return i, err
 }
@@ -76,7 +77,7 @@ func (q *Queries) DeleteProductCategory(ctx context.Context, arg DeleteProductCa
 }
 
 const getProductCategoryById = `-- name: GetProductCategoryById :one
-SELECT id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, tax_profile_id
 FROM product_categories
 WHERE id = $1
     AND deleted_at IS NULL
@@ -97,12 +98,13 @@ func (q *Queries) GetProductCategoryById(ctx context.Context, id pgtype.UUID) (P
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.TaxProfileID,
 	)
 	return i, err
 }
 
 const listProductCategoryByCompanyId = `-- name: ListProductCategoryByCompanyId :many
-SELECT id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+SELECT id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, tax_profile_id
 FROM product_categories
 WHERE company_id = $1
     AND deleted_at IS NULL
@@ -129,6 +131,7 @@ func (q *Queries) ListProductCategoryByCompanyId(ctx context.Context, companyID 
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.TaxProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -167,7 +170,7 @@ SET name = $2,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
-RETURNING id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at
+RETURNING id, company_id, name, color, status, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, tax_profile_id
 `
 
 type UpdateProductCategoryParams struct {
@@ -197,6 +200,7 @@ func (q *Queries) UpdateProductCategory(ctx context.Context, arg UpdateProductCa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.TaxProfileID,
 	)
 	return i, err
 }

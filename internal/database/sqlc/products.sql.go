@@ -175,7 +175,7 @@ WITH new_product AS (
             $11,
             $12
         )
-    RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+    RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 ),
 initial_stock AS (
     INSERT INTO stock_movements (company_id, product_id, type, quantity, reason, created_by)
@@ -184,7 +184,7 @@ initial_stock AS (
     WHERE np.sell_in_bulk = FALSE
         AND np.quantity <> 0
 )
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 FROM new_product
 `
 
@@ -204,32 +204,30 @@ type CreateProductParams struct {
 }
 
 type CreateProductRow struct {
-	ID                    pgtype.UUID        `json:"id"`
-	CompanyID             pgtype.UUID        `json:"company_id"`
-	CategoryID            pgtype.UUID        `json:"category_id"`
-	Name                  string             `json:"name"`
-	Description           pgtype.Text        `json:"description"`
-	Barcode               pgtype.Text        `json:"barcode"`
-	Quantity              pgtype.Int4        `json:"quantity"`
-	Size                  pgtype.Text        `json:"size"`
-	CostPrice             pgtype.Numeric     `json:"cost_price"`
-	SalePrice             pgtype.Numeric     `json:"sale_price"`
-	CreatedBy             pgtype.UUID        `json:"created_by"`
-	UpdatedBy             pgtype.UUID        `json:"updated_by"`
-	DeletedBy             pgtype.UUID        `json:"deleted_by"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt             pgtype.Timestamptz `json:"deleted_at"`
-	Unit                  UnitOfMeasure      `json:"unit"`
-	SellInBulk            bool               `json:"sell_in_bulk"`
-	Ncm                   pgtype.Text        `json:"ncm"`
-	Cest                  pgtype.Text        `json:"cest"`
-	Csosn                 pgtype.Text        `json:"csosn"`
-	CfopSaidaDentroEstado pgtype.Text        `json:"cfop_saida_dentro_estado"`
-	CfopSaidaForaEstado   pgtype.Text        `json:"cfop_saida_fora_estado"`
-	OrigemMercadoria      int16              `json:"origem_mercadoria"`
-	ModelName             pgtype.Text        `json:"model_name"`
-	Color                 pgtype.Text        `json:"color"`
+	ID               pgtype.UUID        `json:"id"`
+	CompanyID        pgtype.UUID        `json:"company_id"`
+	CategoryID       pgtype.UUID        `json:"category_id"`
+	Name             string             `json:"name"`
+	Description      pgtype.Text        `json:"description"`
+	Barcode          pgtype.Text        `json:"barcode"`
+	Quantity         pgtype.Int4        `json:"quantity"`
+	Size             pgtype.Text        `json:"size"`
+	CostPrice        pgtype.Numeric     `json:"cost_price"`
+	SalePrice        pgtype.Numeric     `json:"sale_price"`
+	CreatedBy        pgtype.UUID        `json:"created_by"`
+	UpdatedBy        pgtype.UUID        `json:"updated_by"`
+	DeletedBy        pgtype.UUID        `json:"deleted_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	Unit             UnitOfMeasure      `json:"unit"`
+	SellInBulk       bool               `json:"sell_in_bulk"`
+	Ncm              pgtype.Text        `json:"ncm"`
+	Cest             pgtype.Text        `json:"cest"`
+	OrigemMercadoria int16              `json:"origem_mercadoria"`
+	ModelName        pgtype.Text        `json:"model_name"`
+	Color            pgtype.Text        `json:"color"`
+	TaxProfileID     pgtype.UUID        `json:"tax_profile_id"`
 }
 
 // Registra a entrada inicial em stock_movements na mesma instrução (produtos a granel não controlam estoque)
@@ -270,12 +268,10 @@ func (q *Queries) CreateProduct(ctx context.Context, arg CreateProductParams) (C
 		&i.SellInBulk,
 		&i.Ncm,
 		&i.Cest,
-		&i.Csosn,
-		&i.CfopSaidaDentroEstado,
-		&i.CfopSaidaForaEstado,
 		&i.OrigemMercadoria,
 		&i.ModelName,
 		&i.Color,
+		&i.TaxProfileID,
 	)
 	return i, err
 }
@@ -429,7 +425,7 @@ func (q *Queries) GetInventoryReport(ctx context.Context, arg GetInventoryReport
 }
 
 const getProductByBarcode = `-- name: GetProductByBarcode :one
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 FROM products
 WHERE barcode = $1
     AND company_id = $2
@@ -468,18 +464,16 @@ func (q *Queries) GetProductByBarcode(ctx context.Context, arg GetProductByBarco
 		&i.SellInBulk,
 		&i.Ncm,
 		&i.Cest,
-		&i.Csosn,
-		&i.CfopSaidaDentroEstado,
-		&i.CfopSaidaForaEstado,
 		&i.OrigemMercadoria,
 		&i.ModelName,
 		&i.Color,
+		&i.TaxProfileID,
 	)
 	return i, err
 }
 
 const getProductById = `-- name: GetProductById :one
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 FROM products
 WHERE id = $1
     AND deleted_at IS NULL
@@ -509,12 +503,10 @@ func (q *Queries) GetProductById(ctx context.Context, id pgtype.UUID) (Product, 
 		&i.SellInBulk,
 		&i.Ncm,
 		&i.Cest,
-		&i.Csosn,
-		&i.CfopSaidaDentroEstado,
-		&i.CfopSaidaForaEstado,
 		&i.OrigemMercadoria,
 		&i.ModelName,
 		&i.Color,
+		&i.TaxProfileID,
 	)
 	return i, err
 }
@@ -668,7 +660,7 @@ func (q *Queries) ListProductsByCategoryAndDate(ctx context.Context, arg ListPro
 }
 
 const listProductsByCategoryId = `-- name: ListProductsByCategoryId :many
-SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 FROM products
 WHERE category_id = $1
     AND company_id = $2
@@ -710,12 +702,10 @@ func (q *Queries) ListProductsByCategoryId(ctx context.Context, arg ListProducts
 			&i.SellInBulk,
 			&i.Ncm,
 			&i.Cest,
-			&i.Csosn,
-			&i.CfopSaidaDentroEstado,
-			&i.CfopSaidaForaEstado,
 			&i.OrigemMercadoria,
 			&i.ModelName,
 			&i.Color,
+			&i.TaxProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -728,7 +718,7 @@ func (q *Queries) ListProductsByCategoryId(ctx context.Context, arg ListProducts
 }
 
 const listProductsByCompany = `-- name: ListProductsByCompany :many
-SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at, p.unit, p.sell_in_bulk, p.ncm, p.cest, p.csosn, p.cfop_saida_dentro_estado, p.cfop_saida_fora_estado, p.origem_mercadoria, p.model_name, p.color,
+SELECT p.id, p.company_id, p.category_id, p.name, p.description, p.barcode, p.quantity, p.size, p.cost_price, p.sale_price, p.created_by, p.updated_by, p.deleted_by, p.created_at, p.updated_at, p.deleted_at, p.unit, p.sell_in_bulk, p.ncm, p.cest, p.origem_mercadoria, p.model_name, p.color, p.tax_profile_id,
     c.name AS category_name
 FROM products p
     INNER JOIN product_categories c ON p.category_id = c.id
@@ -737,33 +727,31 @@ WHERE p.company_id = $1
 `
 
 type ListProductsByCompanyRow struct {
-	ID                    pgtype.UUID        `json:"id"`
-	CompanyID             pgtype.UUID        `json:"company_id"`
-	CategoryID            pgtype.UUID        `json:"category_id"`
-	Name                  string             `json:"name"`
-	Description           pgtype.Text        `json:"description"`
-	Barcode               pgtype.Text        `json:"barcode"`
-	Quantity              pgtype.Int4        `json:"quantity"`
-	Size                  pgtype.Text        `json:"size"`
-	CostPrice             pgtype.Numeric     `json:"cost_price"`
-	SalePrice             pgtype.Numeric     `json:"sale_price"`
-	CreatedBy             pgtype.UUID        `json:"created_by"`
-	UpdatedBy             pgtype.UUID        `json:"updated_by"`
-	DeletedBy             pgtype.UUID        `json:"deleted_by"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	DeletedAt             pgtype.Timestamptz `json:"deleted_at"`
-	Unit                  UnitOfMeasure      `json:"unit"`
-	SellInBulk            bool               `json:"sell_in_bulk"`
-	Ncm                   pgtype.Text        `json:"ncm"`
-	Cest                  pgtype.Text        `json:"cest"`
-	Csosn                 pgtype.Text        `json:"csosn"`
-	CfopSaidaDentroEstado pgtype.Text        `json:"cfop_saida_dentro_estado"`
-	CfopSaidaForaEstado   pgtype.Text        `json:"cfop_saida_fora_estado"`
-	OrigemMercadoria      int16              `json:"origem_mercadoria"`
-	ModelName             pgtype.Text        `json:"model_name"`
-	Color                 pgtype.Text        `json:"color"`
-	CategoryName          string             `json:"category_name"`
+	ID               pgtype.UUID        `json:"id"`
+	CompanyID        pgtype.UUID        `json:"company_id"`
+	CategoryID       pgtype.UUID        `json:"category_id"`
+	Name             string             `json:"name"`
+	Description      pgtype.Text        `json:"description"`
+	Barcode          pgtype.Text        `json:"barcode"`
+	Quantity         pgtype.Int4        `json:"quantity"`
+	Size             pgtype.Text        `json:"size"`
+	CostPrice        pgtype.Numeric     `json:"cost_price"`
+	SalePrice        pgtype.Numeric     `json:"sale_price"`
+	CreatedBy        pgtype.UUID        `json:"created_by"`
+	UpdatedBy        pgtype.UUID        `json:"updated_by"`
+	DeletedBy        pgtype.UUID        `json:"deleted_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	Unit             UnitOfMeasure      `json:"unit"`
+	SellInBulk       bool               `json:"sell_in_bulk"`
+	Ncm              pgtype.Text        `json:"ncm"`
+	Cest             pgtype.Text        `json:"cest"`
+	OrigemMercadoria int16              `json:"origem_mercadoria"`
+	ModelName        pgtype.Text        `json:"model_name"`
+	Color            pgtype.Text        `json:"color"`
+	TaxProfileID     pgtype.UUID        `json:"tax_profile_id"`
+	CategoryName     string             `json:"category_name"`
 }
 
 func (q *Queries) ListProductsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListProductsByCompanyRow, error) {
@@ -796,12 +784,10 @@ func (q *Queries) ListProductsByCompany(ctx context.Context, companyID pgtype.UU
 			&i.SellInBulk,
 			&i.Ncm,
 			&i.Cest,
-			&i.Csosn,
-			&i.CfopSaidaDentroEstado,
-			&i.CfopSaidaForaEstado,
 			&i.OrigemMercadoria,
 			&i.ModelName,
 			&i.Color,
+			&i.TaxProfileID,
 			&i.CategoryName,
 		); err != nil {
 			return nil, err
@@ -1019,7 +1005,7 @@ SET name = $2,
     updated_at = NOW()
 WHERE id = $1
     AND deleted_at IS NULL
-RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
+RETURNING id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, origem_mercadoria, model_name, color, tax_profile_id
 `
 
 type UpdateProductParams struct {
@@ -1071,12 +1057,10 @@ func (q *Queries) UpdateProduct(ctx context.Context, arg UpdateProductParams) (P
 		&i.SellInBulk,
 		&i.Ncm,
 		&i.Cest,
-		&i.Csosn,
-		&i.CfopSaidaDentroEstado,
-		&i.CfopSaidaForaEstado,
 		&i.OrigemMercadoria,
 		&i.ModelName,
 		&i.Color,
+		&i.TaxProfileID,
 	)
 	return i, err
 }

@@ -107,7 +107,7 @@ type seededProduct struct {
 func (s *seeder) clear(ctx context.Context) error {
 	// Ordem importa: sales/customers/users têm FKs com ON DELETE RESTRICT.
 	stmts := []string{
-		`DELETE FROM fiscal_invoices WHERE company_id = $1`,
+		`DELETE FROM fiscal_documents WHERE company_id = $1`,
 		`DELETE FROM payment_history WHERE company_id = $1`,
 		`DELETE FROM accounts_receivable WHERE company_id = $1`,
 		`DELETE FROM sales WHERE company_id = $1`,
@@ -126,7 +126,8 @@ func (s *seeder) clear(ctx context.Context) error {
 		`DELETE FROM whatsapp_messages WHERE company_id = $1`,
 		`DELETE FROM whatsapp_usage_monthly WHERE company_id = $1`,
 		`DELETE FROM company_whatsapp_configs WHERE company_id = $1`,
-		`DELETE FROM company_certificates WHERE company_id = $1`,
+		`DELETE FROM company_fiscal_settings WHERE company_id = $1`,
+		`DELETE FROM tax_profiles WHERE company_id = $1`,
 		`DELETE FROM users WHERE company_id = $1 AND id <> $2`,
 		`UPDATE users SET department_id = NULL WHERE company_id = $1 AND id = $2`,
 		`DELETE FROM departments WHERE company_id = $1`,

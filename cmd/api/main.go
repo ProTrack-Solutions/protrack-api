@@ -53,6 +53,10 @@ import (
 	departmentsHandler "github.com/ProTrack-Solutions/protrack-api/internal/departments/handler"
 	departmentsRepository "github.com/ProTrack-Solutions/protrack-api/internal/departments/repository"
 	departmentsService "github.com/ProTrack-Solutions/protrack-api/internal/departments/service"
+	fiscalClient "github.com/ProTrack-Solutions/protrack-api/internal/fiscal/client"
+	fiscalHandler "github.com/ProTrack-Solutions/protrack-api/internal/fiscal/handler"
+	fiscalRepository "github.com/ProTrack-Solutions/protrack-api/internal/fiscal/repository"
+	fiscalService "github.com/ProTrack-Solutions/protrack-api/internal/fiscal/service"
 	invoiceHistoryHandler "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/handler"
 	invoiceHistoryRepository "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/repository"
 	invoiceHistoryService "github.com/ProTrack-Solutions/protrack-api/internal/invoice_history/service"
@@ -354,6 +358,13 @@ func main() {
 	annountmentsService := annountmentsService.NewService(annountmentsRepository, db.Pool)
 	labelService := labelService.NewService(productsService)
 	modulesService := modulesService.NewService(modulesRepo)
+	// NFC-e pela protrack-fiscal-api (API a API): chaves só no servidor
+	fiscalAPI := fiscalClient.New(fiscalClient.Config{
+		BaseURL: cfg.FiscalAPIURL,
+		KeyTest: cfg.FiscalAPIKeyTest,
+		KeyLive: cfg.FiscalAPIKeyLive,
+	})
+	fiscalService := fiscalService.NewService(fiscalRepository.NewRepository(db.Pool), db.Pool, fiscalAPI)
 
 	companySettingsHandler := companySettingsHandler.NewHandler(companySettingsService, jwtManager, blacklist)
 	subscriptionsHandler := subscriptionsHandler.NewHandler(subscriptionsService, jwtManager, blacklist)
@@ -391,6 +402,7 @@ func main() {
 	metaWhatsappHandler := metaWhatsappHandler.NewHandler(metaWhatsappService, cfg, discordLogger, jwtManager, blacklist, departmentModulesService)
 	modulesHandler := modulesHandler.NewHandler(modulesService, jwtManager, blacklist)
 	departmentModulesHandler := departmentModulesHandler.NewHandler(departmentModulesService, jwtManager, blacklist)
+	fiscalHandler := fiscalHandler.NewHandler(fiscalService, jwtManager, blacklist, departmentModulesService)
 
 	api := r.Group("/api/v1")
 	usersHandler.RegisterRoutes(api)
@@ -429,6 +441,7 @@ func main() {
 	companySettingsHandler.RegisterRoute(api)
 	modulesHandler.RegisterRoutes(api)
 	departmentModulesHandler.RegisterRoute(api)
+	fiscalHandler.RegisterRoutes(api)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})

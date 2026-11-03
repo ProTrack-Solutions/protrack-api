@@ -56,6 +56,7 @@ type Querier interface {
 	CountPendingCashTransfers(ctx context.Context, sessionID pgtype.UUID) (int32, error)
 	CountProducts(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountProductsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountProductsMissingNcm(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountPurchaseOrdersByStatus(ctx context.Context, companyID pgtype.UUID) ([]CountPurchaseOrdersByStatusRow, error)
 	// Vendas com devolução ou geradas por troca não podem ser canceladas nem editadas
 	CountSaleReturnsBySale(ctx context.Context, saleID pgtype.UUID) (CountSaleReturnsBySaleRow, error)
@@ -111,6 +112,7 @@ type Querier interface {
 	CreateStockMovement(ctx context.Context, arg CreateStockMovementParams) error
 	CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error
 	CreateSubscriptionPaymentMethod(ctx context.Context, arg CreateSubscriptionPaymentMethodParams) (pgtype.UUID, error)
+	CreateTaxProfile(ctx context.Context, arg CreateTaxProfileParams) (TaxProfile, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVendors(ctx context.Context, arg CreateVendorsParams) error
 	CreateWhatsAppMessage(ctx context.Context, arg CreateWhatsAppMessageParams) (WhatsappMessage, error)
@@ -143,8 +145,11 @@ type Querier interface {
 	DeleteSale(ctx context.Context, arg DeleteSaleParams) error
 	DeleteSaleItem(ctx context.Context, id pgtype.UUID) error
 	DeleteSubscriptionPaymentMethod(ctx context.Context, id pgtype.UUID) error
+	DeleteTaxProfile(ctx context.Context, arg DeleteTaxProfileParams) (int64, error)
 	DeleteUser(ctx context.Context, id pgtype.UUID) error
 	DepartmentHasModule(ctx context.Context, arg DepartmentHasModuleParams) (bool, error)
+	// Perfil excluído: categorias e produtos voltam a herdar (empresa/categoria)
+	DetachTaxProfile(ctx context.Context, arg DetachTaxProfileParams) error
 	// Empresa nova (sem nenhum caixa) ganha o "Caixa principal"
 	EnsureDefaultCashRegister(ctx context.Context, companyID pgtype.UUID) error
 	GetBillCategoriesById(ctx context.Context, id pgtype.UUID) (BillCategory, error)
@@ -188,6 +193,9 @@ type Querier interface {
 	GetCashTransferForUpdate(ctx context.Context, arg GetCashTransferForUpdateParams) (CashTransfer, error)
 	GetCompanyByDocument(ctx context.Context, document pgtype.Text) (Company, error)
 	GetCompanyByID(ctx context.Context, id pgtype.UUID) (Company, error)
+	// ---------- Configuração fiscal da empresa ----------
+	GetCompanyFiscalSettings(ctx context.Context, companyID pgtype.UUID) (CompanyFiscalSetting, error)
+	GetCompanyForFiscal(ctx context.Context, id pgtype.UUID) (GetCompanyForFiscalRow, error)
 	// Busca o valor de uma config específica de uma empresa.
 	GetCompanySetting(ctx context.Context, arg GetCompanySettingParams) (CompanySetting, error)
 	// Consultas da visão geral (/cash-flow/overview). O intervalo chega como datas
@@ -242,6 +250,7 @@ type Querier interface {
 	GetProductByBarcode(ctx context.Context, arg GetProductByBarcodeParams) (Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (Product, error)
 	GetProductCategoryById(ctx context.Context, id pgtype.UUID) (ProductCategory, error)
+	GetProductFiscal(ctx context.Context, arg GetProductFiscalParams) (GetProductFiscalRow, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetProductsPerformanceSummaryRow, error)
 	GetPurchaseCategory(ctx context.Context, arg GetPurchaseCategoryParams) (pgtype.UUID, error)
 	// Dados de empresa, fornecedor e usuário para montar o e-mail do pedido
@@ -276,6 +285,7 @@ type Querier interface {
 	GetSubscriptionById(ctx context.Context, id pgtype.UUID) (Subscription, error)
 	GetSubscriptionDetailsByCompanyID(ctx context.Context, companyID pgtype.UUID) (GetSubscriptionDetailsByCompanyIDRow, error)
 	GetSubscriptionPaymentMethodById(ctx context.Context, id pgtype.UUID) (SubscriptionPaymentMethod, error)
+	GetTaxProfile(ctx context.Context, arg GetTaxProfileParams) (TaxProfile, error)
 	GetTop5BestSellingProducts(ctx context.Context, companyID pgtype.UUID) ([]GetTop5BestSellingProductsRow, error)
 	GetTotalAmountByStatus(ctx context.Context, arg GetTotalAmountByStatusParams) (float64, error)
 	GetTotalAmountIsPending(ctx context.Context, companyID pgtype.UUID) (pgtype.Numeric, error)
@@ -312,6 +322,7 @@ type Querier interface {
 	// user_id nulo lista os turnos de todos (visão do administrador). Com user_id,
 	// só os turnos de que o operador participou: abriu, fechou ou vendeu/recebeu.
 	ListCashSessions(ctx context.Context, arg ListCashSessionsParams) ([]ListCashSessionsRow, error)
+	ListCategoriesFiscal(ctx context.Context, companyID pgtype.UUID) ([]ListCategoriesFiscalRow, error)
 	ListCompanies(ctx context.Context) ([]Company, error)
 	// Lista todas as configs de uma empresa de uma vez — útil pra telas de
 	// "configurações" que mostram tudo junto, evitando N chamadas separadas.
@@ -390,6 +401,8 @@ type Querier interface {
 	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]ListStockEntriesRow, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
+	// ---------- Perfis tributários ----------
+	ListTaxProfiles(ctx context.Context, companyID pgtype.UUID) ([]ListTaxProfilesRow, error)
 	// Avisos vigentes agora, do mais importante (manutenção) ao menos importante (sucesso)
 	ListTopAnnouncementsOfDay(ctx context.Context, companyID pgtype.UUID) ([]ListTopAnnouncementsOfDayRow, error)
 	ListUsers(ctx context.Context) ([]User, error)
@@ -402,6 +415,8 @@ type Querier interface {
 	// Trava os turnos sempre na mesma ordem (por id): duas transferências cruzadas
 	// ao mesmo tempo não se travam uma à outra
 	LockCashSessions(ctx context.Context, ids []pgtype.UUID) ([]CashSession, error)
+	// Serializa o cadastro do emitente (dois cliques não criam dois CNPJs)
+	LockCompanyFiscalSettings(ctx context.Context, companyID string) error
 	// Serializa a numeração dos pedidos da empresa até o fim da transação
 	LockCompanyPurchaseNumbers(ctx context.Context, companyID string) error
 	// Serializa a numeração das devoluções da empresa até o fim da transação
@@ -460,6 +475,8 @@ type Querier interface {
 	SearchPurchaseProducts(ctx context.Context, arg SearchPurchaseProductsParams) ([]SearchPurchaseProductsRow, error)
 	// Vendas que ainda podem ter itens devolvidos (não canceladas e com saldo de itens)
 	SearchSalesForReturn(ctx context.Context, arg SearchSalesForReturnParams) ([]SearchSalesForReturnRow, error)
+	// ---------- Tributação de categorias e produtos ----------
+	SetCategoryTaxProfile(ctx context.Context, arg SetCategoryTaxProfileParams) (int64, error)
 	SetCompanyStatus(ctx context.Context, arg SetCompanyStatusParams) (int64, error)
 	// Inativar mantém o histórico; reativar volta o cliente para as listas
 	SetCustomerActive(ctx context.Context, arg SetCustomerActiveParams) (int64, error)
@@ -471,6 +488,7 @@ type Querier interface {
 	SumBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableOverdue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	SumBillsPayableSchedule(ctx context.Context, companyID pgtype.UUID) (float64, error)
+	TaxProfileNameExists(ctx context.Context, arg TaxProfileNameExistsParams) (bool, error)
 	ToggleBillCategoriesActive(ctx context.Context, arg ToggleBillCategoriesActiveParams) error
 	TogglePaymentMethodActive(ctx context.Context, arg TogglePaymentMethodActiveParams) error
 	TogglePlanActiveStatus(ctx context.Context, arg TogglePlanActiveStatusParams) error
@@ -495,6 +513,8 @@ type Querier interface {
 	// A quantidade não é editada aqui: entradas e ajustes de estoque passam pelo AdjustStock, que registra a movimentação
 	UpdateProduct(ctx context.Context, arg UpdateProductParams) (Product, error)
 	UpdateProductCategory(ctx context.Context, arg UpdateProductCategoryParams) (ProductCategory, error)
+	// Produto avulso ou, com model_name, todas as variações do modelo de grade
+	UpdateProductFiscal(ctx context.Context, arg UpdateProductFiscalParams) (int64, error)
 	UpdatePurchaseOrderHeader(ctx context.Context, arg UpdatePurchaseOrderHeaderParams) error
 	// sent_at é gravado só na primeira vez que o pedido sai do rascunho
 	UpdatePurchaseOrderStatus(ctx context.Context, arg UpdatePurchaseOrderStatusParams) error
@@ -506,12 +526,14 @@ type Querier interface {
 	UpdateSubscriptionPaymentMethod(ctx context.Context, arg UpdateSubscriptionPaymentMethodParams) error
 	UpdateSubscriptionPlan(ctx context.Context, arg UpdateSubscriptionPlanParams) error
 	UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error
+	UpdateTaxProfile(ctx context.Context, arg UpdateTaxProfileParams) (TaxProfile, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserCompanyAndRole(ctx context.Context, arg UpdateUserCompanyAndRoleParams) error
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateVendors(ctx context.Context, arg UpdateVendorsParams) error
 	// Chamado pelo handler de webhook quando chega um status novo (sent/delivered/failed).
 	UpdateWhatsAppMessageStatus(ctx context.Context, arg UpdateWhatsAppMessageStatusParams) (WhatsappMessage, error)
+	UpsertCompanyFiscalSettings(ctx context.Context, arg UpsertCompanyFiscalSettingsParams) (CompanyFiscalSetting, error)
 	// Cria a config se não existir, ou atualiza o valor se já existir
 	// (aproveita o UNIQUE (company_id, key) da tabela).
 	UpsertCompanySetting(ctx context.Context, arg UpsertCompanySettingParams) (CompanySetting, error)
