@@ -247,6 +247,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts-receivable/reminders/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Parcela vencida usa o template de venda vencida; parcela a vencer usa o template de lembrete configurado na empresa. Respeita WhatsApp ativo, plano e limite de mensagens, e permite um lembrete por parcela a cada 24 horas.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts-receivable"
+                ],
+                "summary": "Envia lembrete de cobrança pelo WhatsApp",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da parcela (conta a receber)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_receivable_reminders_domain.ReminderResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Parcela não encontrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Parcela quitada ou cancelada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Sem template, cliente sem WhatsApp ou WhatsApp indisponível no plano",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "Lembrete enviado há menos de 24 horas",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "502": {
+                        "description": "Falha no envio pela Meta",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/accounts-receivable/sale/{saleId}": {
             "get": {
                 "security": [
@@ -1665,6 +1744,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/cash-flow/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Série de entradas/saídas, comparação com o período anterior, categorias, formas de pagamento, previsão de recebimentos/pagamentos e últimas movimentações em uma única chamada",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-flow"
+                ],
+                "summary": "Visão geral do fluxo de caixa",
+                "parameters": [
+                    {
+                        "maximum": 90,
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 30,
+                        "name": "forecast_days",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "day",
+                            "week",
+                            "month"
+                        ],
+                        "type": "string",
+                        "example": "day",
+                        "name": "period",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 30,
+                        "name": "quantity",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetOverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de validação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/cash-flow/summary": {
             "get": {
                 "security": [
@@ -1785,6 +1944,502 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Fechar caixa",
+                "parameters": [
+                    {
+                        "description": "Dinheiro contado na gaveta",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CloseCashSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Nenhum caixa aberto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/current": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devolve o turno aberto do caixa do computador (header CashRegisterId; sem header, o único caixa ativo) com o resumo, ou session nulo quando o caixa está fechado",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Turno aberto do caixa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/movements": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Sangria ou suprimento",
+                "parameters": [
+                    {
+                        "description": "Movimento",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateMovementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Nenhum caixa aberto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Sangria maior que o dinheiro em caixa",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/open": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Abrir caixa",
+                "parameters": [
+                    {
+                        "description": "Valor inicial (troco)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenCashSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Caixa já aberto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/registers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Caixas cadastrados com o turno aberto de cada um",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Caixas da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Cadastrar caixa",
+                "parameters": [
+                    {
+                        "description": "Caixa",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister"
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/registers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Renomear, ativar ou desativar caixa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do caixa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Caixa",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister"
+                        }
+                    },
+                    "409": {
+                        "description": "Caixa com turno aberto",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "O administrador vê todos os turnos; os demais, os turnos de que participaram (abriram, fecharam, venderam ou receberam)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Histórico de caixas",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "register_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.ListCashSessionsResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/sessions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Detalhe de um caixa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do caixa",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Caixa não encontrado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/transfers": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Tira o dinheiro da gaveta do caixa deste computador agora; o caixa de destino precisa aceitar para receber",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Transferir troco para outro caixa",
+                "parameters": [
+                    {
+                        "description": "Transferência",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateTransferRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Caixa de destino fechado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Valor maior que o dinheiro em caixa",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/cash-register/transfers/{id}/{action}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "accept e reject no computador do caixa de destino; cancel no do caixa de origem. Recusada ou cancelada, o dinheiro volta para a origem",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cash-register"
+                ],
+                "summary": "Aceitar, recusar ou cancelar transferência de troco",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da transferência",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "accept, reject ou cancel",
+                        "name": "action",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail"
+                        }
+                    },
+                    "403": {
+                        "description": "Transferência de outro caixa",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Já resolvida",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2223,6 +2878,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/customers/browse": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Lista clientes com resumo de compras e financeiro",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "all",
+                            "debtors",
+                            "overdue",
+                            "credit",
+                            "no_purchases"
+                        ],
+                        "type": "string",
+                        "description": "debtors: com saldo devedor; overdue: com parcela vencida; credit: com\nvale-troca; no_purchases: nunca comprou",
+                        "name": "segment",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "recent",
+                            "name",
+                            "last_purchase",
+                            "total_spent",
+                            "balance"
+                        ],
+                        "type": "string",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "active",
+                            "inactive",
+                            "all"
+                        ],
+                        "type": "string",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.BrowseResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/customers/count": {
             "get": {
                 "security": [
@@ -2392,6 +3127,30 @@ const docTemplate = `{
                 }
             }
         },
+        "/customers/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Indicadores da tela de clientes",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Overview"
+                        }
+                    }
+                }
+            }
+        },
         "/customers/percentage": {
             "get": {
                 "security": [
@@ -2517,6 +3276,105 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/customers/{id}/deactivate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Inativa o cliente (mantém o histórico)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/{id}/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Perfil do cliente: dados, compras, parcelas em aberto e vale-troca",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile"
+                        }
+                    }
+                }
+            }
+        },
+        "/customers/{id}/reactivate": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "customers"
+                ],
+                "summary": "Reativa o cliente",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile"
+                        }
                     }
                 }
             }
@@ -4355,6 +5213,292 @@ const docTemplate = `{
                 }
             }
         },
+        "/product/models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Variações de um modelo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nome do modelo",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Edita o modelo (nome, categoria, descrição e preços das variações)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nome atual do modelo",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Modelo",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Cadastra um modelo com grade de cores e tamanhos",
+                "parameters": [
+                    {
+                        "description": "Modelo",
+                        "name": "model",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateModelRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/product/models/group": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Os produtos continuam os mesmos (saldo, histórico e vendas preservados); ganham modelo, cor e tamanho.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Agrupa produtos soltos num modelo de grade",
+                "parameters": [
+                    {
+                        "description": "Agrupamento",
+                        "name": "group",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupProductsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/product/models/stock-movements": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Entrada ou ajuste de estoque pela grade",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nome do modelo",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Movimentação",
+                        "name": "movement",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockMovementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/product/models/variations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Adiciona cores/tamanhos a um modelo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Nome do modelo",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "description": "Variações",
+                        "name": "variations",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.AddVariationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/product/models/variations/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Desativa uma variação sem saldo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da variação",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    }
+                }
+            }
+        },
         "/product/percentage": {
             "get": {
                 "security": [
@@ -4378,6 +5522,81 @@ const docTemplate = `{
                                 "type": "number",
                                 "format": "float64"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/product/stock": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cada modelo de grade vira uma linha com os totais das variações; produtos sem grade continuam como linha própria.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Estoque agrupado por modelo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2024-12-31",
+                        "description": "EndDate filters records created until this date.",
+                        "name": "endDate",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "example": "asc",
+                        "description": "OrderBy defines the ordering direction for the results.",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 1,
+                        "description": "Page is the page number to retrieve.",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "example": 10,
+                        "description": "PerPage is the number of items per page.",
+                        "name": "perPage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "joao",
+                        "description": "Search filters the list by a text term.",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2024-01-01",
+                        "description": "StartDate filters records created from this date.",
+                        "name": "startDate",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntriesResponse"
                         }
                     }
                 }
@@ -4510,6 +5729,52 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "No Content"
+                    }
+                }
+            }
+        },
+        "/product/{id}/stock-movements": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "ENTRY soma ao estoque (quantidade positiva). ADJUSTMENT corrige o saldo (positivo ou negativo) e exige motivo.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Lança entrada ou ajuste de estoque",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do produto",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Movimentação",
+                        "name": "movement",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateStockMovementRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse"
+                        }
                     }
                 }
             }
@@ -4728,7 +5993,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/reports": {
+        "/purchases/catalog/categories": {
             "get": {
                 "security": [
                     {
@@ -4736,38 +6001,94 @@ const docTemplate = `{
                     }
                 ],
                 "produces": [
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    "application/json"
                 ],
                 "tags": [
-                    "reports"
+                    "purchases"
                 ],
-                "summary": "Gera relatório em Excel",
+                "summary": "Categorias de produto ativas (cadastro rápido no pedido)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogCategory"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/catalog/models": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Variações de um modelo de grade",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Tipo do relatório",
-                        "name": "type",
+                        "description": "Nome do modelo",
+                        "name": "name",
                         "in": "query",
                         "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/catalog/products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Produtos da empresa e, quando há texto, os modelos de grade que casam com ele (atalho de recompra). Não exige o módulo Estoque.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Busca produtos para o pedido de compra",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Data inicial",
-                        "name": "start_date",
-                        "in": "query",
-                        "required": true
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
                     },
                     {
+                        "maxLength": 100,
                         "type": "string",
-                        "description": "Data final",
-                        "name": "end_date",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Formato (xlsx)",
-                        "name": "format",
+                        "name": "search",
                         "in": "query"
                     }
                 ],
@@ -4775,7 +6096,964 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "file"
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogSearchResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria um produto por combinação de cor e tamanho, sem estoque e com código de barras interno. Tudo ou nada: combinação já existente ou limite do plano recusam o lote inteiro.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Cadastro rápido de produto com grade",
+                "parameters": [
+                    {
+                        "description": "Modelo e variações",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CreateVariationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Variação já cadastrada",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Limite do plano ou categoria inválida",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Pedidos com totais e quanto já foi recebido, mais os indicadores da tela (a receber, recebido no mês, atrasados e contagem por status)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Lista pedidos de compra",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "draft",
+                            "sent",
+                            "partial",
+                            "received",
+                            "closed",
+                            "canceled"
+                        ],
+                        "type": "string",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "vendor_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ListOrdersResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cria em rascunho; com send=true já fica como enviado ao fornecedor",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Cria pedido de compra",
+                "parameters": [
+                    {
+                        "description": "Pedido",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Detalhe do pedido de compra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Só em rascunho ou enviado, antes de qualquer recebimento. Os itens são substituídos pelos enviados.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Altera pedido de compra",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pedido",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Cancela pedido sem recebimentos",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Motivo",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fecha o pedido com o que foi recebido; a quantidade pendente é descartada",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Encerra pedido recebido em parte",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Motivo",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}/email": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Corpo com os itens e o PDF anexo; resposta vai para o e-mail da empresa com cópia para quem enviou. kind: sent (pedido enviado), updated (pedido alterado) ou resend (reenvio). A entrega é assíncrona.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Envia o pedido de compra por e-mail ao fornecedor",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Tipo do e-mail",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.EmailOrderRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Pedido não está enviado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Fornecedor sem e-mail",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Fila de e-mail indisponível",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}/receipts": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Dá entrada no estoque, recalcula o custo médio com frete/despesas/desconto rateados, atualiza preço de venda quando informado e gera as contas a pagar das parcelas",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Recebe mercadoria do pedido",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Recebimento",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiveRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/orders/{id}/send": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Marca o pedido como enviado ao fornecedor",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do pedido",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/purchases/receipts/{id}/reverse": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devolve o estoque, recalcula o custo médio e cancela as parcelas em aberto. Bloqueado se houver parcela paga ou se o estoque atual não cobrir a devolução.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "purchases"
+                ],
+                "summary": "Estorna um recebimento",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do recebimento",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Motivo do estorno",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReverseReceiptRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reports": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Monta o relatório do tipo pedido para o período (datas locais da empresa, inclusivas; sem datas usa o mês corrente). format=json devolve colunas, linhas, totais e indicadores para exibir na tela; xlsx e pdf devolvem o arquivo para download.\nTipos: sales, sales_by_day, sales_by_payment_method, sales_by_seller, sales_by_customer, products_abc, profit_category, inventory, stock_movements, dre, payments_received, open_installments, bills_payable, cash_sessions",
+                "produces": [
+                    "application/json",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/pdf"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Gera um relatório",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2026-10-31",
+                        "description": "YYYY-MM-DD, inclusivo",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "json",
+                            "xlsx",
+                            "pdf"
+                        ],
+                        "type": "string",
+                        "example": "json",
+                        "x-enum-varnames": [
+                            "FormatJSON",
+                            "FormatXLSX",
+                            "FormatPDF"
+                        ],
+                        "description": "json (padrão), xlsx ou pdf",
+                        "name": "format",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-10-01",
+                        "description": "YYYY-MM-DD, inclusivo",
+                        "name": "start_date",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "sales",
+                            "sales_by_day",
+                            "sales_by_payment_method",
+                            "sales_by_seller",
+                            "sales_by_customer",
+                            "products_abc",
+                            "profit_category",
+                            "inventory",
+                            "stock_movements",
+                            "dre",
+                            "payments_received",
+                            "open_installments",
+                            "bills_payable",
+                            "cash_sessions"
+                        ],
+                        "type": "string",
+                        "example": "sales",
+                        "x-enum-varnames": [
+                            "ReportSales",
+                            "ReportSalesByDay",
+                            "ReportSalesByPaymentMethod",
+                            "ReportSalesBySeller",
+                            "ReportSalesByCustomer",
+                            "ReportProductsABC",
+                            "ReportProfitCategory",
+                            "ReportInventory",
+                            "ReportStockMovements",
+                            "ReportDRE",
+                            "ReportPaymentsReceived",
+                            "ReportOpenInstallments",
+                            "ReportBillsPayable",
+                            "ReportCashSessions"
+                        ],
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Report"
+                        }
+                    },
+                    "400": {
+                        "description": "Parâmetros inválidos",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Tipo de relatório inexistente",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/returns": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Lista trocas e devoluções",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "return",
+                            "exchange"
+                        ],
+                        "type": "string",
+                        "name": "kind",
+                        "in": "query"
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "name": "start_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ListReturnsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devolve o estoque, abate parcelas em aberto, gera vale-troca ou reembolso e, na troca, cria a venda dos itens novos",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Registra uma devolução ou troca",
+                "parameters": [
+                    {
+                        "description": "Devolução",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreateReturnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail"
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/customers/{id}/credit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Saldo e extrato do vale-troca do cliente",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do cliente",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CustomerCredit"
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/sales": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Busca vendas para trocar ou devolver",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 50,
+                        "minimum": 1,
+                        "type": "integer",
+                        "name": "per_page",
+                        "in": "query"
+                    },
+                    {
+                        "maxLength": 100,
+                        "type": "string",
+                        "name": "search",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/sales/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Itens da venda que ainda podem ser devolvidos",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableSale"
+                        }
+                    }
+                }
+            }
+        },
+        "/returns/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "returns"
+                ],
+                "summary": "Detalhe da troca/devolução",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da devolução",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail"
                         }
                     }
                 }
@@ -5206,6 +7484,72 @@ const docTemplate = `{
                 }
             }
         },
+        "/sales/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totais do período comparados ao período anterior e série de vendas. Sem start_date o período começa na primeira venda da empresa",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Visão geral das vendas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "2026-10-29",
+                        "name": "end_date",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-10-01",
+                        "name": "start_date",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetSalesOverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Erro de validação",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Não autorizado",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/sales/percentage": {
             "get": {
                 "security": [
@@ -5490,6 +7834,58 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/sales/{id}/receipt": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Busca a venda com empresa, cliente, vendedor e itens e devolve o recibo pronto para impressão",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "sales"
+                ],
+                "summary": "Gera o recibo da venda em PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da venda",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -6592,6 +8988,9 @@ const docTemplate = `{
                 "installment_number": {
                     "type": "integer"
                 },
+                "last_reminder_at": {
+                    "type": "string"
+                },
                 "sale_id": {
                     "type": "string"
                 },
@@ -6704,6 +9103,9 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse": {
             "type": "object",
             "properties": {
+                "content": {
+                    "type": "string"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -7228,6 +9630,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "days_overdue": {
+                    "type": "integer"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -7420,6 +9825,67 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "description": "EndDate último dia (inclusivo) do intervalo",
+                    "type": "string"
+                },
+                "forecast": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecast"
+                },
+                "inflow_by_category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare"
+                    }
+                },
+                "inflow_by_payment_method": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare"
+                    }
+                },
+                "outflow_by_category": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare"
+                    }
+                },
+                "period": {
+                    "type": "string"
+                },
+                "previous": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals"
+                },
+                "projection": {
+                    "description": "Projection tendência linear do resultado para o próximo período",
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "recent_movements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewMovement"
+                    }
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewPoint"
+                    }
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "totals": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse": {
             "type": "object",
             "properties": {
@@ -7455,6 +9921,138 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecast": {
+            "type": "object",
+            "properties": {
+                "days": {
+                    "type": "integer"
+                },
+                "net": {
+                    "type": "number"
+                },
+                "overdue_payable": {
+                    "type": "number"
+                },
+                "overdue_receivable": {
+                    "type": "number"
+                },
+                "payable": {
+                    "type": "number"
+                },
+                "receivable": {
+                    "type": "number"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecastPoint"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecastPoint": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "Balance saldo previsto acumulado (a receber − a pagar) até o dia",
+                    "type": "number"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "payable": {
+                    "type": "number"
+                },
+                "receivable": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewMovement": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "inflow",
+                        "outflow"
+                    ]
+                },
+                "occurred_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewPoint": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "description": "Balance resultado acumulado desde o início do intervalo",
+                    "type": "number"
+                },
+                "date": {
+                    "type": "string"
+                },
+                "inflow": {
+                    "type": "number"
+                },
+                "net": {
+                    "type": "number"
+                },
+                "outflow": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "percentage": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals": {
+            "type": "object",
+            "properties": {
+                "inflow": {
+                    "type": "number"
+                },
+                "inflow_count": {
+                    "type": "integer"
+                },
+                "net": {
+                    "type": "number"
+                },
+                "outflow": {
+                    "type": "number"
+                },
+                "outflow_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty": {
             "type": "object",
             "properties": {
@@ -7469,6 +10067,431 @@ const docTemplate = `{
                 },
                 "total_period_outflow": {
                     "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashMovement": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "transfer_label": {
+                    "description": "Preenchido quando o movimento veio de uma transferência entre caixas",
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_closing": {
+                    "description": "Nulo quando o caixa nunca foi fechado",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.LastClosing"
+                        }
+                    ]
+                },
+                "name": {
+                    "type": "string"
+                },
+                "open_session": {
+                    "description": "Nulo quando o caixa está fechado",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenRegisterSession"
+                        }
+                    ]
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession": {
+            "type": "object",
+            "properties": {
+                "closed_at": {
+                    "type": "string"
+                },
+                "closed_by_name": {
+                    "type": "string"
+                },
+                "closing_notes": {
+                    "type": "string"
+                },
+                "counted_cash": {
+                    "type": "number"
+                },
+                "difference": {
+                    "type": "number"
+                },
+                "expected_cash": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "opening_amount": {
+                    "type": "number"
+                },
+                "opening_notes": {
+                    "type": "string"
+                },
+                "received_total": {
+                    "type": "number"
+                },
+                "register_id": {
+                    "type": "string"
+                },
+                "register_name": {
+                    "type": "string"
+                },
+                "sales_count": {
+                    "type": "integer"
+                },
+                "sales_total": {
+                    "description": "Retrato gravado no fechamento; nulos enquanto o caixa está aberto",
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "description": "Quem abriu o turno",
+                    "type": "string"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail": {
+            "type": "object",
+            "properties": {
+                "incoming_transfers": {
+                    "description": "Transferências pendentes: chegando (aceitar/recusar) e saindo (cancelar)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer"
+                    }
+                },
+                "movements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashMovement"
+                    }
+                },
+                "outgoing_transfers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer"
+                    }
+                },
+                "session": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession"
+                },
+                "summary": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSummary"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSummary": {
+            "type": "object",
+            "properties": {
+                "by_method": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.MethodSummary"
+                    }
+                },
+                "by_operator": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OperatorSummary"
+                    }
+                },
+                "cash_received": {
+                    "description": "Dinheiro em espécie que entrou (vendas, entradas de vendas a prazo e parcelas)",
+                    "type": "number"
+                },
+                "cash_refunds": {
+                    "type": "number"
+                },
+                "change_count": {
+                    "description": "Troco devolvido nas vendas do turno (já descontado do dinheiro recebido)",
+                    "type": "integer"
+                },
+                "change_total": {
+                    "type": "number"
+                },
+                "expected_cash": {
+                    "type": "number"
+                },
+                "receipts_count": {
+                    "type": "integer"
+                },
+                "receipts_total": {
+                    "type": "number"
+                },
+                "received_total": {
+                    "description": "Tudo que entrou no turno, em qualquer forma de pagamento",
+                    "type": "number"
+                },
+                "refunds_count": {
+                    "description": "Dinheiro devolvido a clientes em trocas/devoluções do turno",
+                    "type": "integer"
+                },
+                "refunds_total": {
+                    "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
+                },
+                "sales_total": {
+                    "type": "number"
+                },
+                "supplies_total": {
+                    "type": "number"
+                },
+                "withdrawals_total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CloseCashSessionRequest": {
+            "type": "object",
+            "properties": {
+                "counted_cash": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateMovementRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "type"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "withdrawal",
+                        "supply"
+                    ]
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateTransferRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "to_register_id"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "to_register_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.LastClosing": {
+            "type": "object",
+            "properties": {
+                "closed_at": {
+                    "type": "string"
+                },
+                "closed_by_name": {
+                    "type": "string"
+                },
+                "counted_cash": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.ListCashSessionsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.MethodSummary": {
+            "type": "object",
+            "properties": {
+                "payment_method": {
+                    "type": "string"
+                },
+                "receipts_count": {
+                    "type": "integer"
+                },
+                "receipts_total": {
+                    "type": "number"
+                },
+                "received": {
+                    "type": "number"
+                },
+                "refunds_count": {
+                    "description": "Devolvido ao cliente em trocas/devoluções (já descontado de Received)",
+                    "type": "integer"
+                },
+                "refunds_total": {
+                    "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
+                },
+                "sales_total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenCashSessionRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "opening_amount": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenRegisterSession": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "opened_at": {
+                    "type": "string"
+                },
+                "opened_by_name": {
+                    "type": "string"
+                },
+                "opening_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OperatorSummary": {
+            "type": "object",
+            "properties": {
+                "receipts_total": {
+                    "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
+                },
+                "sales_total": {
+                    "type": "number"
+                },
+                "user_id": {
+                    "type": "string"
+                },
+                "user_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "from_register_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "to_register_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 60,
+                    "minLength": 1
                 }
             }
         },
@@ -7644,6 +10667,471 @@ const docTemplate = `{
                     "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.CompanySettingsKey"
                 },
                 "value": {}
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.BrowseResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CustomerRow"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CategoryShare": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "share": {
+                    "description": "Percentual do total comprado",
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CreditMovement": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "balance_after": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "return_number": {
+                    "type": "integer"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "sale_return_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CustomerRow": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "balance_due": {
+                    "type": "number"
+                },
+                "city": {
+                    "type": "string"
+                },
+                "cpf": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_purchase_at": {
+                    "type": "string"
+                },
+                "mobile_phone": {
+                    "type": "string"
+                },
+                "overdue_total": {
+                    "type": "number"
+                },
+                "purchases_count": {
+                    "type": "integer"
+                },
+                "purchases_total": {
+                    "type": "number"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "store_credit": {
+                    "type": "number"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite": {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "integer"
+                },
+                "share": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Insights": {
+            "type": "object",
+            "properties": {
+                "average_interval_days": {
+                    "description": "Dias, em média, entre uma compra e outra",
+                    "type": "number"
+                },
+                "best_period": {
+                    "type": "string"
+                },
+                "best_weekday": {
+                    "type": "integer"
+                },
+                "days_since_last": {
+                    "type": "integer"
+                },
+                "favorite_color": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite"
+                },
+                "favorite_payment": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PaymentShare"
+                },
+                "favorite_size": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite"
+                },
+                "next_expected_at": {
+                    "description": "Data em que, pelo costume, ele deveria voltar (YYYY-MM-DD)",
+                    "type": "string"
+                },
+                "periods": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PeriodStat"
+                    }
+                },
+                "rhythm": {
+                    "type": "string"
+                },
+                "top_categories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CategoryShare"
+                    }
+                },
+                "top_products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.TopProduct"
+                    }
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.WeekdayStat"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Installment": {
+            "type": "object",
+            "properties": {
+                "balance": {
+                    "type": "number"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "installment_number": {
+                    "type": "integer"
+                },
+                "overdue": {
+                    "type": "boolean"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "total_installments": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Overview": {
+            "type": "object",
+            "properties": {
+                "active_count": {
+                    "type": "integer"
+                },
+                "credit_count": {
+                    "type": "integer"
+                },
+                "credit_total": {
+                    "type": "number"
+                },
+                "debt_total": {
+                    "type": "number"
+                },
+                "debtors_count": {
+                    "type": "integer"
+                },
+                "inactive_count": {
+                    "type": "integer"
+                },
+                "new_last_month": {
+                    "type": "integer"
+                },
+                "new_this_month": {
+                    "type": "integer"
+                },
+                "overdue_count": {
+                    "type": "integer"
+                },
+                "overdue_total": {
+                    "type": "number"
+                },
+                "recent_buyers": {
+                    "description": "Clientes que compraram nos últimos 30 dias",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PaymentShare": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "share": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PeriodStat": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "period": {
+                    "description": "morning (5h-12h), afternoon (12h-18h), evening (18h-24h), night (0h-5h)",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean"
+                },
+                "address_city": {
+                    "type": "string"
+                },
+                "address_complement": {
+                    "type": "string"
+                },
+                "address_neighborhood": {
+                    "type": "string"
+                },
+                "address_number": {
+                    "type": "string"
+                },
+                "address_state": {
+                    "type": "string"
+                },
+                "address_street": {
+                    "type": "string"
+                },
+                "address_zipcode": {
+                    "type": "string"
+                },
+                "average_ticket": {
+                    "type": "number"
+                },
+                "balance_due": {
+                    "type": "number"
+                },
+                "birth_date": {
+                    "type": "string"
+                },
+                "cpf": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "credit_movements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CreditMovement"
+                    }
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_purchase_at": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "home_phone": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "insights": {
+                    "description": "Perfil de compra: o que, quando e como o cliente compra",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Insights"
+                        }
+                    ]
+                },
+                "last_purchase_at": {
+                    "type": "string"
+                },
+                "marital_status": {
+                    "type": "string"
+                },
+                "mobile_phone": {
+                    "type": "string"
+                },
+                "open_installments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Installment"
+                    }
+                },
+                "overdue_total": {
+                    "type": "number"
+                },
+                "purchases_count": {
+                    "type": "integer"
+                },
+                "purchases_total": {
+                    "type": "number"
+                },
+                "recent_sales": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.RecentSale"
+                    }
+                },
+                "returned_total": {
+                    "type": "number"
+                },
+                "rg": {
+                    "type": "string"
+                },
+                "store_credit": {
+                    "type": "number"
+                },
+                "whatsapp": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.RecentSale": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items_count": {
+                    "type": "integer"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "string"
+                },
+                "returned_total": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.TopProduct": {
+            "type": "object",
+            "properties": {
+                "last_bought_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.WeekdayStat": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "weekday": {
+                    "description": "0 = domingo ... 6 = sábado",
+                    "type": "integer"
+                }
             }
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CreateCustomersRequest": {
@@ -8045,7 +11533,11 @@ const docTemplate = `{
                 "mediun_stock",
                 "normal_stock",
                 "sale_overdue_template",
-                "language_sale_overdue_template"
+                "language_sale_overdue_template",
+                "require_open_cash_register",
+                "due_reminder_template",
+                "language_due_reminder_template",
+                "return_window_days"
             ],
             "x-enum-varnames": [
                 "IsWhatsappActive",
@@ -8054,7 +11546,11 @@ const docTemplate = `{
                 "MediumStock",
                 "NormalStock",
                 "SaleOverdueTemplate",
-                "LanguageSaleOverdueTemplate"
+                "LanguageSaleOverdueTemplate",
+                "RequireOpenCashRegister",
+                "DueReminderTemplate",
+                "LanguageDueReminderTemplate",
+                "ReturnWindowDays"
             ]
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender": {
@@ -8081,7 +11577,8 @@ const docTemplate = `{
                 "pix",
                 "bank_transfer",
                 "installments",
-                "other"
+                "other",
+                "store_credit"
             ],
             "x-enum-varnames": [
                 "PaymentMethodCash",
@@ -8090,7 +11587,8 @@ const docTemplate = `{
                 "PaymentMethodPix",
                 "PaymentMethodBankTransfer",
                 "PaymentMethodInstallments",
-                "PaymentMethodOther"
+                "PaymentMethodOther",
+                "PaymentMethodStoreCredit"
             ]
         },
         "github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status": {
@@ -8111,6 +11609,10 @@ const docTemplate = `{
             "properties": {
                 "product_id": {
                     "type": "string"
+                },
+                "quantity": {
+                    "description": "Quantidade de etiquetas; 0 ou omitido imprime uma por peça em estoque",
+                    "type": "integer"
                 }
             }
         },
@@ -8758,6 +12260,65 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.AddVariationsRequest": {
+            "type": "object",
+            "required": [
+                "variations"
+            ],
+            "properties": {
+                "cost_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "variations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateModelRequest": {
+            "type": "object",
+            "required": [
+                "category_id",
+                "model_name",
+                "variations"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "cost_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "model_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "variations": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput"
+                    }
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateProductRequest": {
             "type": "object",
             "properties": {
@@ -8796,6 +12357,187 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateStockMovementRequest": {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockItem": {
+            "type": "object",
+            "required": [
+                "product_id"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockMovementRequest": {
+            "type": "object",
+            "required": [
+                "items",
+                "type"
+            ],
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockItem"
+                    }
+                },
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "cost_price": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sale_price": {
+                    "type": "number"
+                },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "total_registered": {
+                    "type": "integer"
+                },
+                "total_sold": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "description": "Código de fábrica; vazio gera um código interno",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "color": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "cost_price": {
+                    "description": "Custo e preço próprios da variação; omitidos usam os do modelo",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "quantity": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "size": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupItem": {
+            "type": "object",
+            "required": [
+                "product_id"
+            ],
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "size": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupProductsRequest": {
+            "type": "object",
+            "required": [
+                "items",
+                "model_name"
+            ],
+            "properties": {
+                "category_id": {
+                    "description": "Obrigatória para modelo novo; num modelo existente vale a dele",
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupItem"
+                    }
+                },
+                "model_name": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ListProductsByCompanyRow": {
             "type": "object",
             "properties": {
@@ -8806,6 +12548,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "category_name": {
+                    "type": "string"
+                },
+                "color": {
                     "type": "string"
                 },
                 "company_id": {
@@ -8832,6 +12577,10 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "model_name": {
+                    "description": "Grade: modelo e cor da variação (vazios em produto sem grade)",
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -8846,6 +12595,14 @@ const docTemplate = `{
                 },
                 "size": {
                     "type": "string"
+                },
+                "total_registered": {
+                    "description": "Total que já entrou no estoque (cadastro + reposições); o saldo atual é Quantity",
+                    "type": "integer"
+                },
+                "total_sold": {
+                    "description": "Total vendido, já descontando as vendas canceladas",
+                    "type": "integer"
                 },
                 "unit": {
                     "type": "string"
@@ -8899,6 +12656,9 @@ const docTemplate = `{
                 "category_id": {
                     "type": "string"
                 },
+                "color": {
+                    "type": "string"
+                },
                 "company_id": {
                     "type": "string"
                 },
@@ -8923,6 +12683,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "model_name": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -8940,6 +12703,176 @@ const docTemplate = `{
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntriesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntry"
+                    }
+                },
+                "itens_in_stock": {
+                    "type": "integer"
+                },
+                "low_itens_in_stock": {
+                    "type": "integer"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "products_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                },
+                "total_value_in_stock": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntry": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "category_id": {
+                    "type": "string"
+                },
+                "category_name": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "colors": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "\"model\" | \"product\"",
+                    "type": "string"
+                },
+                "low_stock_variations": {
+                    "type": "integer"
+                },
+                "max_cost_price": {
+                    "type": "number"
+                },
+                "max_sale_price": {
+                    "type": "number"
+                },
+                "min_cost_price": {
+                    "type": "number"
+                },
+                "min_sale_price": {
+                    "type": "number"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "description": "Produto sem grade: id e dados do próprio produto",
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "sizes": {
+                    "type": "integer"
+                },
+                "total_registered": {
+                    "type": "integer"
+                },
+                "total_sold": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "variations": {
+                    "description": "Modelo: totais das variações",
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "current_quantity": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateModelRequest": {
+            "type": "object",
+            "required": [
+                "category_id",
+                "model_name"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "model_name": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "variations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.VariationPriceInput"
+                    }
                 }
             }
         },
@@ -8964,9 +12897,6 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "quantity": {
-                    "type": "integer"
-                },
                 "sale_price": {
                     "type": "number"
                 },
@@ -8978,6 +12908,1469 @@ const docTemplate = `{
                 },
                 "updated_by": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_products_domain.VariationPriceInput": {
+            "type": "object",
+            "required": [
+                "id"
+            ],
+            "properties": {
+                "barcode": {
+                    "description": "Troca o código (ex.: interno pelo de fábrica); omitido mantém o atual",
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "cost_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "id": {
+                    "type": "string"
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogCategory": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogModel": {
+            "type": "object",
+            "properties": {
+                "model_name": {
+                    "type": "string"
+                },
+                "variations": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "cost_price": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sale_price": {
+                    "type": "number"
+                },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogSearchResponse": {
+            "type": "object",
+            "properties": {
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogModel"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "products": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct"
+                    }
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CreateVariationsRequest": {
+            "type": "object",
+            "required": [
+                "category_id",
+                "model_name",
+                "variations"
+            ],
+            "properties": {
+                "category_id": {
+                    "type": "string"
+                },
+                "cost_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "model_name": {
+                    "type": "string",
+                    "maxLength": 120,
+                    "minLength": 2
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "variations": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.VariationRequest"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.EmailOrderRequest": {
+            "type": "object",
+            "required": [
+                "kind"
+            ],
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "sent",
+                        "updated",
+                        "resend"
+                    ]
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.InstallmentRequest": {
+            "type": "object",
+            "required": [
+                "amount",
+                "due_date"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "due_date": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ListOrdersResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderListItem"
+                    }
+                },
+                "overview": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrdersOverview"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                },
+                "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail": {
+            "type": "object",
+            "properties": {
+                "can_cancel": {
+                    "type": "boolean"
+                },
+                "can_close": {
+                    "type": "boolean"
+                },
+                "can_edit": {
+                    "description": "Ações liberadas no status atual, para o front não duplicar a regra",
+                    "type": "boolean"
+                },
+                "can_email": {
+                    "type": "boolean"
+                },
+                "can_receive": {
+                    "type": "boolean"
+                },
+                "can_send": {
+                    "type": "boolean"
+                },
+                "close_reason": {
+                    "type": "string"
+                },
+                "closed_at": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "emails": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderEmail"
+                    }
+                },
+                "expected_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItem"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "receipts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.Receipt"
+                    }
+                },
+                "received_quantity": {
+                    "type": "integer"
+                },
+                "received_total": {
+                    "type": "number"
+                },
+                "sent_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "vendor_email": {
+                    "type": "string"
+                },
+                "vendor_id": {
+                    "type": "string"
+                },
+                "vendor_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderEmail": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "recipient": {
+                    "type": "string"
+                },
+                "sent_by_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItem": {
+            "type": "object",
+            "properties": {
+                "barcode": {
+                    "type": "string"
+                },
+                "color": {
+                    "type": "string"
+                },
+                "current_cost": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "pending_quantity": {
+                    "type": "integer"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "received_quantity": {
+                    "type": "integer"
+                },
+                "sale_price": {
+                    "type": "number"
+                },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
+                "size": {
+                    "type": "string"
+                },
+                "stock_quantity": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "unit_cost": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit_cost": {
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderListItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expected_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items_count": {
+                    "type": "integer"
+                },
+                "late": {
+                    "type": "boolean"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "received_quantity": {
+                    "type": "integer"
+                },
+                "received_total": {
+                    "type": "number"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "vendor_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrdersOverview": {
+            "type": "object",
+            "properties": {
+                "count_by_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                },
+                "late_orders": {
+                    "type": "integer"
+                },
+                "pending_total": {
+                    "type": "number"
+                },
+                "received_this_month": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.Receipt": {
+            "type": "object",
+            "properties": {
+                "bills": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptBill"
+                    }
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "freight": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "invoice_key": {
+                    "type": "string"
+                },
+                "invoice_number": {
+                    "type": "string"
+                },
+                "invoice_series": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItem"
+                    }
+                },
+                "items_total": {
+                    "type": "number"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "other_expenses": {
+                    "type": "number"
+                },
+                "received_at": {
+                    "type": "string"
+                },
+                "reversal_reason": {
+                    "type": "string"
+                },
+                "reversed_at": {
+                    "type": "string"
+                },
+                "reversed_by_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptBill": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_paid": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "due_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payment_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItem": {
+            "type": "object",
+            "properties": {
+                "landed_unit_cost": {
+                    "type": "number"
+                },
+                "new_cost": {
+                    "type": "number"
+                },
+                "order_item_id": {
+                    "type": "string"
+                },
+                "previous_cost": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "unit_cost": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItemRequest": {
+            "type": "object",
+            "required": [
+                "order_item_id",
+                "quantity"
+            ],
+            "properties": {
+                "order_item_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "sale_price": {
+                    "description": "Novo preço de venda; omitido mantém o atual",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "unit_cost": {
+                    "description": "Preço unitário da nota (pode diferir do pedido)",
+                    "type": "number",
+                    "minimum": 0
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiveRequest": {
+            "type": "object",
+            "required": [
+                "items"
+            ],
+            "properties": {
+                "bill_category_id": {
+                    "type": "string"
+                },
+                "discount": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "freight": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "installments": {
+                    "type": "array",
+                    "maxItems": 60,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.InstallmentRequest"
+                    }
+                },
+                "invoice_key": {
+                    "type": "string"
+                },
+                "invoice_number": {
+                    "type": "string",
+                    "maxLength": 20
+                },
+                "invoice_series": {
+                    "type": "string",
+                    "maxLength": 5
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItemRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "other_expenses": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "payment_method_id": {
+                    "type": "string"
+                },
+                "received_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReverseReceiptRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 3
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest": {
+            "type": "object",
+            "required": [
+                "items",
+                "vendor_id"
+            ],
+            "properties": {
+                "expected_date": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "maxItems": 300,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItemRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                },
+                "send": {
+                    "description": "Na criação: true já marca o pedido como enviado ao fornecedor",
+                    "type": "boolean"
+                },
+                "vendor_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.VariationRequest": {
+            "type": "object",
+            "properties": {
+                "color": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "cost_price": {
+                    "description": "Custo e preço próprios da variação; omitidos usam os do modelo",
+                    "type": "number",
+                    "minimum": 0
+                },
+                "sale_price": {
+                    "type": "number",
+                    "minimum": 0
+                },
+                "size": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_receivable_reminders_domain.ReminderResponse": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "next_reminder_at": {
+                    "type": "string"
+                },
+                "recipient_phone": {
+                    "type": "string"
+                },
+                "sent_at": {
+                    "type": "string"
+                },
+                "template_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Column": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType": {
+            "type": "string",
+            "enum": [
+                "text",
+                "money",
+                "number",
+                "percent",
+                "date",
+                "datetime"
+            ],
+            "x-enum-varnames": [
+                "ColumnText",
+                "ColumnMoney",
+                "ColumnNumber",
+                "ColumnPercent",
+                "ColumnDate",
+                "ColumnDateTime"
+            ]
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Report": {
+            "type": "object",
+            "properties": {
+                "columns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Column"
+                    }
+                },
+                "company_name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
+                },
+                "generated_at": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rows": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {}
+                    }
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.SummaryItem"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                },
+                "totals": {
+                    "type": "array",
+                    "items": {}
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportType"
+                },
+                "uses_period": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportFormat": {
+            "type": "string",
+            "enum": [
+                "json",
+                "xlsx",
+                "pdf"
+            ],
+            "x-enum-varnames": [
+                "FormatJSON",
+                "FormatXLSX",
+                "FormatPDF"
+            ]
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportType": {
+            "type": "string",
+            "enum": [
+                "sales",
+                "sales_by_day",
+                "sales_by_payment_method",
+                "sales_by_seller",
+                "sales_by_customer",
+                "products_abc",
+                "profit_category",
+                "inventory",
+                "stock_movements",
+                "dre",
+                "payments_received",
+                "open_installments",
+                "bills_payable",
+                "cash_sessions"
+            ],
+            "x-enum-varnames": [
+                "ReportSales",
+                "ReportSalesByDay",
+                "ReportSalesByPaymentMethod",
+                "ReportSalesBySeller",
+                "ReportSalesByCustomer",
+                "ReportProductsABC",
+                "ReportProfitCategory",
+                "ReportInventory",
+                "ReportStockMovements",
+                "ReportDRE",
+                "ReportPaymentsReceived",
+                "ReportOpenInstallments",
+                "ReportBillsPayable",
+                "ReportCashSessions"
+            ]
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.SummaryItem": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreateReturnRequest": {
+            "type": "object",
+            "required": [
+                "items",
+                "kind",
+                "reason",
+                "sale_id"
+            ],
+            "properties": {
+                "amount_received": {
+                    "description": "Dinheiro entregue para pagar a diferença (calcula o troco)",
+                    "type": "number"
+                },
+                "customer_id": {
+                    "description": "Cliente do vale-troca quando a venda não tem cliente",
+                    "type": "string"
+                },
+                "destination": {
+                    "description": "O que fazer com o valor que sobra: vale-troca ou dinheiro de volta",
+                    "type": "string",
+                    "enum": [
+                        "credit",
+                        "refund"
+                    ]
+                },
+                "difference_method": {
+                    "description": "Forma de pagamento da diferença quando os itens novos valem mais",
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnItemRequest"
+                    }
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "return",
+                        "exchange"
+                    ]
+                },
+                "new_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.NewItemRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "override_reason": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "size",
+                        "defect",
+                        "regret",
+                        "wrong_item",
+                        "other"
+                    ]
+                },
+                "refund_method": {
+                    "type": "string"
+                },
+                "sale_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreditMovement": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "balance_after": {
+                    "type": "number"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "return_number": {
+                    "type": "integer"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "sale_return_id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CustomerCredit": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "movements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreditMovement"
+                    }
+                },
+                "store_credit": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ExchangeItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ListReturnsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnListItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.NewItemRequest": {
+            "type": "object",
+            "required": [
+                "product_id",
+                "quantity"
+            ],
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.PreviousReturn": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "returned_total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "credit_amount": {
+                    "type": "number"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "debt_reduction": {
+                    "type": "number"
+                },
+                "difference_method": {
+                    "type": "string"
+                },
+                "difference_paid": {
+                    "type": "number"
+                },
+                "exchange_credit": {
+                    "type": "number"
+                },
+                "exchange_sale_id": {
+                    "type": "string"
+                },
+                "exchange_total": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnedItem"
+                    }
+                },
+                "items_count": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "new_items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ExchangeItem"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "out_of_window": {
+                    "type": "boolean"
+                },
+                "override_reason": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "refund_amount": {
+                    "type": "number"
+                },
+                "refund_method": {
+                    "type": "string"
+                },
+                "returned_total": {
+                    "type": "number"
+                },
+                "sale_created_at": {
+                    "type": "string"
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "sale_total": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnItemRequest": {
+            "type": "object",
+            "required": [
+                "quantity",
+                "sale_item_id"
+            ],
+            "properties": {
+                "quantity": {
+                    "type": "integer"
+                },
+                "restock": {
+                    "description": "false = peça avariada, não volta ao estoque. Omitido = volta.",
+                    "type": "boolean"
+                },
+                "sale_item_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnListItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by_name": {
+                    "type": "string"
+                },
+                "credit_amount": {
+                    "type": "number"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "debt_reduction": {
+                    "type": "number"
+                },
+                "difference_paid": {
+                    "type": "number"
+                },
+                "exchange_sale_id": {
+                    "type": "string"
+                },
+                "exchange_total": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items_count": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "integer"
+                },
+                "out_of_window": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "refund_amount": {
+                    "type": "number"
+                },
+                "refund_method": {
+                    "type": "string"
+                },
+                "returned_total": {
+                    "type": "number"
+                },
+                "sale_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableItem": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "integer"
+                },
+                "net_total": {
+                    "description": "Valor pago pela linha e o que dela já foi devolvido: a tela calcula o\nvalor da devolução com a mesma regra do servidor (LineReturnAmount)",
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "returned_quantity": {
+                    "type": "integer"
+                },
+                "returned_total": {
+                    "type": "number"
+                },
+                "sale_item_id": {
+                    "type": "string"
+                },
+                "sell_in_bulk": {
+                    "type": "boolean"
+                },
+                "unit_amount": {
+                    "description": "Valor pago por unidade, já com o desconto da venda",
+                    "type": "number"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableSale": {
+            "type": "object",
+            "properties": {
+                "can_override": {
+                    "type": "boolean"
+                },
+                "canceled": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_credit": {
+                    "type": "number"
+                },
+                "customer_id": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "deadline": {
+                    "type": "string"
+                },
+                "discount_amount": {
+                    "type": "number"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableItem"
+                    }
+                },
+                "open_debt": {
+                    "description": "Saldo das parcelas em aberto: a devolução abate daqui antes de gerar crédito",
+                    "type": "number"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "previous_returns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.PreviousReturn"
+                    }
+                },
+                "sale_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subtotal": {
+                    "type": "number"
+                },
+                "total_amount": {
+                    "type": "number"
+                },
+                "window_days": {
+                    "description": "Prazo de troca: WindowDays = 0 é sem prazo",
+                    "type": "integer"
+                },
+                "within_window": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnedItem": {
+            "type": "object",
+            "properties": {
+                "product_id": {
+                    "type": "string"
+                },
+                "product_name": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "restock": {
+                    "type": "boolean"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "unit_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchItem": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "customer_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "items_count": {
+                    "type": "integer"
+                },
+                "payment_method": {
+                    "type": "string"
+                },
+                "products": {
+                    "type": "string"
+                },
+                "returned_count": {
+                    "type": "integer"
+                },
+                "total_amount": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchItem"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "per_page": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -8995,8 +14388,16 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleRequest": {
             "type": "object",
             "properties": {
+                "amount_received": {
+                    "description": "Dinheiro entregue pelo cliente no balcão (total da venda em dinheiro ou\nentrada da venda a prazo). Nil quando ele pagou o valor exato.",
+                    "type": "number"
+                },
                 "buyer_document": {
                     "type": "string"
+                },
+                "credit_amount": {
+                    "description": "Parte paga com o vale-troca do cliente. Cobrindo o total, a forma de\npagamento é store_credit; parcial, o resto vai na forma informada.",
+                    "type": "number"
                 },
                 "customer_id": {
                     "type": "string"
@@ -9043,6 +14444,38 @@ const docTemplate = `{
                 },
                 "total_sale": {
                     "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetSalesOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "end_date": {
+                    "type": "string"
+                },
+                "period": {
+                    "description": "Granularidade da série: day, week ou month, conforme o tamanho do período",
+                    "type": "string"
+                },
+                "previous": {
+                    "description": "Período anterior de mesmo tamanho; zerado quando o período é \"desde o início\"",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals"
+                        }
+                    ]
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewPoint"
+                    }
+                },
+                "start_date": {
+                    "type": "string"
+                },
+                "totals": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals"
                 }
             }
         },
@@ -9123,6 +14556,9 @@ const docTemplate = `{
         "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse": {
             "type": "object",
             "properties": {
+                "credit_amount": {
+                    "type": "number"
+                },
                 "customer_id": {
                     "type": "string"
                 },
@@ -9141,7 +14577,14 @@ const docTemplate = `{
                 "installments_count": {
                     "type": "integer"
                 },
+                "is_exchange_sale": {
+                    "type": "boolean"
+                },
                 "payment_method": {},
+                "returned_total": {
+                    "description": "Valor já devolvido da venda e se ela foi criada por uma troca",
+                    "type": "number"
+                },
                 "sale_at": {
                     "type": "string"
                 },
@@ -9219,6 +14662,60 @@ const docTemplate = `{
                     "type": "number"
                 },
                 "total_rows": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewPoint": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string"
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "sales_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals": {
+            "type": "object",
+            "properties": {
+                "average_ticket": {
+                    "type": "number"
+                },
+                "canceled_amount": {
+                    "type": "number"
+                },
+                "canceled_count": {
+                    "type": "integer"
+                },
+                "customers_count": {
+                    "type": "integer"
+                },
+                "discounts": {
+                    "type": "number"
+                },
+                "items_sold": {
+                    "type": "integer"
+                },
+                "open_receivable": {
+                    "description": "Saldo em aberto das parcelas das vendas do período",
+                    "type": "number"
+                },
+                "overdue_receivable": {
+                    "type": "number"
+                },
+                "returned_amount": {
+                    "description": "Devoluções registradas no período",
+                    "type": "number"
+                },
+                "revenue": {
+                    "type": "number"
+                },
+                "sales_count": {
                     "type": "integer"
                 }
             }

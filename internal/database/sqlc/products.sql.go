@@ -297,21 +297,28 @@ func (q *Queries) DecrementStock(ctx context.Context, arg DecrementStockParams) 
 	return err
 }
 
-const deleteProduct = `-- name: DeleteProduct :exec
+const deleteProduct = `-- name: DeleteProduct :execrows
 UPDATE products
 SET deleted_by = $2,
     deleted_at = NOW()
 WHERE id = $1
+    AND company_id = $3
+    AND deleted_at IS NULL
 `
 
 type DeleteProductParams struct {
 	ID        pgtype.UUID `json:"id"`
 	DeletedBy pgtype.UUID `json:"deleted_by"`
+	CompanyID pgtype.UUID `json:"company_id"`
 }
 
-func (q *Queries) DeleteProduct(ctx context.Context, arg DeleteProductParams) error {
-	_, err := q.db.Exec(ctx, deleteProduct, arg.ID, arg.DeletedBy)
-	return err
+// Só apaga produto da própria empresa; nenhuma linha = não encontrado
+func (q *Queries) DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteProduct, arg.ID, arg.DeletedBy, arg.CompanyID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const getCostTotalStock = `-- name: GetCostTotalStock :one
@@ -425,11 +432,20 @@ const getProductByBarcode = `-- name: GetProductByBarcode :one
 SELECT id, company_id, category_id, name, description, barcode, quantity, size, cost_price, sale_price, created_by, updated_by, deleted_by, created_at, updated_at, deleted_at, unit, sell_in_bulk, ncm, cest, csosn, cfop_saida_dentro_estado, cfop_saida_fora_estado, origem_mercadoria, model_name, color
 FROM products
 WHERE barcode = $1
+    AND company_id = $2
     AND deleted_at IS NULL
+ORDER BY created_at
+LIMIT 1
 `
 
-func (q *Queries) GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (Product, error) {
-	row := q.db.QueryRow(ctx, getProductByBarcode, barcode)
+type GetProductByBarcodeParams struct {
+	Barcode   pgtype.Text `json:"barcode"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+// Por empresa: o mesmo código de fábrica (EAN) pode existir em várias empresas
+func (q *Queries) GetProductByBarcode(ctx context.Context, arg GetProductByBarcodeParams) (Product, error) {
+	row := q.db.QueryRow(ctx, getProductByBarcode, arg.Barcode, arg.CompanyID)
 	var i Product
 	err := row.Scan(
 		&i.ID,
@@ -805,6 +821,8 @@ SELECT
     p.created_by, p.updated_by, p.deleted_by,
     p.created_at, p.updated_at, p.deleted_at,
     p.sell_in_bulk, p.unit,
+    COALESCE(p.model_name, '')::TEXT AS model_name,
+    COALESCE(p.color, '')::TEXT AS color,
     c.name AS category_name,
     COALESCE(sm.total_registered, 0)::INT AS total_registered,
     COALESCE(sm.total_sold, 0)::INT AS total_sold,
@@ -866,6 +884,8 @@ type ListProductsByCompanyPaginatedRow struct {
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 	SellInBulk      bool               `json:"sell_in_bulk"`
 	Unit            UnitOfMeasure      `json:"unit"`
+	ModelName       string             `json:"model_name"`
+	Color           string             `json:"color"`
 	CategoryName    string             `json:"category_name"`
 	TotalRegistered int32              `json:"total_registered"`
 	TotalSold       int32              `json:"total_sold"`
@@ -908,6 +928,8 @@ func (q *Queries) ListProductsByCompanyPaginated(ctx context.Context, arg ListPr
 			&i.DeletedAt,
 			&i.SellInBulk,
 			&i.Unit,
+			&i.ModelName,
+			&i.Color,
 			&i.CategoryName,
 			&i.TotalRegistered,
 			&i.TotalSold,

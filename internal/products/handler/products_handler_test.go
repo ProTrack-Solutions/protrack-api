@@ -119,10 +119,10 @@ func TestServiceContract_GetProductByBarcode_Success(t *testing.T) {
 	expected.Barcode = barcode
 
 	mockSvc.EXPECT().
-		GetProductByBarcode(gomock.Any(), barcode).
+		GetProductByBarcode(gomock.Any(), gomock.Any(), barcode).
 		Return(expected, nil)
 
-	resp, err := mockSvc.GetProductByBarcode(ginCtxBackground(), barcode)
+	resp, err := mockSvc.GetProductByBarcode(ginCtxBackground(), uuid.New(), barcode)
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -139,10 +139,10 @@ func TestServiceContract_GetProductByBarcode_Error(t *testing.T) {
 	mockSvc := mocks.NewMockServiceInterface(ctrl)
 
 	mockSvc.EXPECT().
-		GetProductByBarcode(gomock.Any(), gomock.Any()).
+		GetProductByBarcode(gomock.Any(), gomock.Any(), gomock.Any()).
 		Return(domain.ProductResponse{}, errService)
 
-	_, err := mockSvc.GetProductByBarcode(ginCtxBackground(), "QUALQUER")
+	_, err := mockSvc.GetProductByBarcode(ginCtxBackground(), uuid.New(), "QUALQUER")
 
 	if err == nil {
 		t.Fatal("esperava erro do serviço")
@@ -255,10 +255,10 @@ func TestServiceContract_UpdateProduct_Success(t *testing.T) {
 	expected.Name = "Novo Nome"
 
 	mockSvc.EXPECT().
-		UpdateProduct(gomock.Any(), id, updateReq).
+		UpdateProduct(gomock.Any(), gomock.Any(), id, updateReq).
 		Return(expected, nil)
 
-	resp, err := mockSvc.UpdateProduct(ginCtxBackground(), id, updateReq)
+	resp, err := mockSvc.UpdateProduct(ginCtxBackground(), uuid.New(), id, updateReq)
 	if err != nil {
 		t.Fatalf("esperava nil, obteve: %v", err)
 	}
@@ -521,14 +521,14 @@ func TestHTTP_GetProductBarcode_Success(t *testing.T) {
 	expected.Barcode = barcode
 
 	mockSvc.EXPECT().
-		GetProductByBarcode(gomock.Any(), barcode).
+		GetProductByBarcode(gomock.Any(), gomock.Any(), barcode).
 		Return(expected, nil)
 
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	r.GET("/product/barcode/:barcode", func(c *gin.Context) {
 		b := c.Param("barcode")
-		product, err := mockSvc.GetProductByBarcode(c.Request.Context(), b)
+		product, err := mockSvc.GetProductByBarcode(c.Request.Context(), uuid.New(), b)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

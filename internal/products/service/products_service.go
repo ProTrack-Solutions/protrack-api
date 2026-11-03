@@ -23,8 +23,8 @@ import (
 
 type RepositoryInterface interface {
 	CreateProduct(ctx context.Context, arg db.CreateProductParams) (db.Product, error)
-	DeleteProduct(ctx context.Context, arg db.DeleteProductParams) error
-	GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (db.Product, error)
+	DeleteProduct(ctx context.Context, arg db.DeleteProductParams) (int64, error)
+	GetProductByBarcode(ctx context.Context, arg db.GetProductByBarcodeParams) (db.Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (db.Product, error)
 	ListProductsByCategoryId(ctx context.Context, arg db.ListProductsByCategoryIdParams) ([]db.Product, error)
 	ListProductsByCompany(ctx context.Context, companyId pgtype.UUID) ([]db.ListProductsByCompanyRow, error)
@@ -43,6 +43,8 @@ type RepositoryInterface interface {
 	CountLowStockProductsByCompany(ctx context.Context, companyId pgtype.UUID) (int64, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyId pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyId pgtype.UUID) (int32, error)
+	ListStockEntries(ctx context.Context, arg db.ListStockEntriesParams) ([]db.ListStockEntriesRow, error)
+	ListGridVariations(ctx context.Context, arg db.ListGridVariationsParams) ([]db.ListGridVariationsRow, error)
 	WithTx(tx db.DBTX) *repository.Repository
 }
 
@@ -137,15 +139,31 @@ func (s *Service) CreateProduct(ctx context.Context, userId, companyId uuid.UUID
 	}, nil
 }
 
+// DeleteProduct exclusão lógica, só de produto da própria empresa
 func (s *Service) DeleteProduct(ctx context.Context, req domain.DeleteProductRequest) error {
-	return s.repo.DeleteProduct(ctx, db.DeleteProductParams{
+	affected, err := s.repo.DeleteProduct(ctx, db.DeleteProductParams{
 		ID:        pgconv.ParseUUIDToPgType(req.ID),
 		DeletedBy: pgconv.ParseUUIDToPgType(req.DeletedBy),
+		CompanyID: pgconv.ParseUUIDToPgType(req.CompanyID),
 	})
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return domain.ErrProductNotFound
+	}
+	return nil
 }
 
-func (s *Service) GetProductByBarcode(ctx context.Context, barcode string) (domain.ProductResponse, error) {
-	product, err := s.repo.GetProductByBarcode(ctx, pgconv.ParseStringToPgText(barcode))
+// GetProductByBarcode busca na empresa (o mesmo EAN pode existir em outras)
+func (s *Service) GetProductByBarcode(ctx context.Context, companyId uuid.UUID, barcode string) (domain.ProductResponse, error) {
+	product, err := s.repo.GetProductByBarcode(ctx, db.GetProductByBarcodeParams{
+		Barcode:   pgconv.ParseStringToPgText(barcode),
+		CompanyID: pgconv.ParseUUIDToPgType(companyId),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ProductResponse{}, domain.ErrProductNotFound
+	}
 	if err != nil {
 		return domain.ProductResponse{}, err
 	}
@@ -159,6 +177,8 @@ func (s *Service) GetProductByBarcode(ctx context.Context, barcode string) (doma
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
 		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
+		ModelName:   pgconv.ParsePgTextToString(product.ModelName),
+		Color:       pgconv.ParsePgTextToString(product.Color),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
 		CreatedBy:   pgconv.PgUUIDToUUID(product.CreatedBy),
@@ -185,6 +205,8 @@ func (s *Service) GetProductById(ctx context.Context, id uuid.UUID) (domain.Prod
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
 		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
+		ModelName:   pgconv.ParsePgTextToString(product.ModelName),
+		Color:       pgconv.ParsePgTextToString(product.Color),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
 		CreatedBy:   pgconv.PgUUIDToUUID(product.CreatedBy),
@@ -194,6 +216,15 @@ func (s *Service) GetProductById(ctx context.Context, id uuid.UUID) (domain.Prod
 		UpdatedAt:   pgconv.PgTimestamptzToTime(product.UpdatedAt),
 		DeletedAt:   pgconv.PgTimestamptzToTime(product.DeletedAt),
 	}, nil
+}
+
+// GetCompanyProductById para as rotas HTTP: produto de outra empresa "não existe"
+func (s *Service) GetCompanyProductById(ctx context.Context, companyId, id uuid.UUID) (domain.ProductResponse, error) {
+	product, err := s.GetProductById(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && product.CompanyID != companyId) {
+		return domain.ProductResponse{}, domain.ErrProductNotFound
+	}
+	return product, err
 }
 
 func (s *Service) GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID) (domain.ProductResponse, error) {
@@ -213,6 +244,8 @@ func (s *Service) GetProductByIdTx(ctx context.Context, tx db.DBTX, id uuid.UUID
 		Barcode:     pgconv.ParsePgTextToString(product.Barcode),
 		Quantity:    int32(pgconv.PgInt4ToInt(product.Quantity)),
 		Size:        pgconv.ParsePgTextToString(product.Size),
+		ModelName:   pgconv.ParsePgTextToString(product.ModelName),
+		Color:       pgconv.ParsePgTextToString(product.Color),
 		CostPrice:   pgconv.PgNumericToFloat64(product.CostPrice),
 		SalePrice:   pgconv.PgNumericToFloat64(product.SalePrice),
 		CreatedBy:   pgconv.PgUUIDToUUID(product.CreatedBy),
@@ -351,6 +384,8 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 			Unit:            string(product.Unit),
 			TotalRegistered: product.TotalRegistered,
 			TotalSold:       product.TotalSold,
+			ModelName:       product.ModelName,
+			Color:           product.Color,
 		})
 	}
 
@@ -364,8 +399,11 @@ func (s *Service) ListProductsByCompanyPaginated(ctx context.Context, companyId 
 	}, nil
 }
 
-func (s *Service) UpdateProduct(ctx context.Context, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error) {
+func (s *Service) UpdateProduct(ctx context.Context, companyId, id uuid.UUID, req domain.UpdateProductRequest) (domain.ProductResponse, error) {
 	currentProduct, err := s.repo.GetProductById(ctx, pgconv.ParseUUIDToPgType(id))
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && pgconv.PgUUIDToUUID(currentProduct.CompanyID) != companyId) {
+		return domain.ProductResponse{}, domain.ErrProductNotFound
+	}
 	if err != nil {
 		return domain.ProductResponse{}, err
 	}

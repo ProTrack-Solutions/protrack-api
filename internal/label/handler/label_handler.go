@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -9,7 +10,9 @@ import (
 	departmentModulesDomain "github.com/ProTrack-Solutions/protrack-api/internal/department_modules/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/label/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/label/service"
+	productsDomain "github.com/ProTrack-Solutions/protrack-api/internal/products/domain"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
@@ -46,7 +49,21 @@ func (h *Handler) DownloadLabels(c *gin.Context) {
 		return
 	}
 
-	pdfBuffer, err := h.service.GenerateProductsLabelPDF(c.Request.Context(), req)
+	companyAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id null"})
+		return
+	}
+
+	pdfBuffer, err := h.service.GenerateProductsLabelPDF(c.Request.Context(), companyAny.(uuid.UUID), req)
+	if errors.Is(err, domain.ErrTooManyLabels) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if errors.Is(err, productsDomain.ErrProductNotFound) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "produto não encontrado"})
+		return
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Erro ao gerar PDF de etiquetas",

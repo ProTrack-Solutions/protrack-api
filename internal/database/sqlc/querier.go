@@ -22,6 +22,8 @@ type Querier interface {
 	AdjustStock(ctx context.Context, arg AdjustStockParams) (AdjustStockRow, error)
 	// Soma (ou subtrai, no estorno) o saldo e grava o novo custo; preço de venda só quando informado
 	ApplyPurchaseToProduct(ctx context.Context, arg ApplyPurchaseToProductParams) error
+	// Agrupa um produto já existente num modelo; saldo, histórico e vendas continuam no mesmo produto
+	AssignProductToModel(ctx context.Context, arg AssignProductToModelParams) error
 	BarcodeExists(ctx context.Context, arg BarcodeExistsParams) (bool, error)
 	BillCategoryBelongsToCompany(ctx context.Context, arg BillCategoryBelongsToCompanyParams) (bool, error)
 	// Grava o turno na variável da transação: é o valor padrão de cash_session_id
@@ -37,6 +39,7 @@ type Querier interface {
 	ClosePurchaseOrder(ctx context.Context, arg ClosePurchaseOrderParams) error
 	ContSalesPendingAndOverdue(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountAccountsReceivableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
+	CountActiveProducts(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	CountAnnoucementsByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountBillsPayableByCompany(ctx context.Context, companyID pgtype.UUID) (int64, error)
 	CountCompanies(ctx context.Context) (int64, error)
@@ -80,6 +83,8 @@ type Querier interface {
 	// valor dos itens devolvidos; o resto (diferença) na forma informada.
 	CreateExchangeSale(ctx context.Context, arg CreateExchangeSaleParams) (pgtype.UUID, error)
 	CreateExchangeSaleItem(ctx context.Context, arg CreateExchangeSaleItemParams) (pgtype.UUID, error)
+	// Variação nova com a entrada inicial de estoque na mesma instrução
+	CreateGridProduct(ctx context.Context, arg CreateGridProductParams) (pgtype.UUID, error)
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
@@ -131,7 +136,8 @@ type Querier interface {
 	DeleteDepartment(ctx context.Context, arg DeleteDepartmentParams) error
 	DeleteItemsBySale(ctx context.Context, saleID pgtype.UUID) error
 	DeletePlanFeature(ctx context.Context, id pgtype.UUID) error
-	DeleteProduct(ctx context.Context, arg DeleteProductParams) error
+	// Só apaga produto da própria empresa; nenhuma linha = não encontrado
+	DeleteProduct(ctx context.Context, arg DeleteProductParams) (int64, error)
 	DeleteProductCategory(ctx context.Context, arg DeleteProductCategoryParams) error
 	DeletePurchaseOrderItems(ctx context.Context, orderID pgtype.UUID) error
 	DeleteSale(ctx context.Context, arg DeleteSaleParams) error
@@ -232,7 +238,8 @@ type Querier interface {
 	GetPendingSalesDetailedReport(ctx context.Context, arg GetPendingSalesDetailedReportParams) ([]GetPendingSalesDetailedReportRow, error)
 	GetPlanByID(ctx context.Context, id pgtype.UUID) (Plan, error)
 	GetPlatformAdminByEmail(ctx context.Context, email string) (PlatformAdmin, error)
-	GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (Product, error)
+	// Por empresa: o mesmo código de fábrica (EAN) pode existir em várias empresas
+	GetProductByBarcode(ctx context.Context, arg GetProductByBarcodeParams) (Product, error)
 	GetProductById(ctx context.Context, id pgtype.UUID) (Product, error)
 	GetProductCategoryById(ctx context.Context, id pgtype.UUID) (ProductCategory, error)
 	GetProductsPerformanceSummary(ctx context.Context, companyID pgtype.UUID) (GetProductsPerformanceSummaryRow, error)
@@ -283,6 +290,8 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (GetUserByIDRow, error)
 	GetVendorsById(ctx context.Context, arg GetVendorsByIdParams) (Vendor, error)
+	GridBarcodeExists(ctx context.Context, arg GridBarcodeExistsParams) (bool, error)
+	GridCategoryExists(ctx context.Context, arg GridCategoryExistsParams) (bool, error)
 	IncrementStock(ctx context.Context, arg IncrementStockParams) error
 	IncrementStockForReturn(ctx context.Context, arg IncrementStockForReturnParams) error
 	ListAccountsReceivables(ctx context.Context, arg ListAccountsReceivablesParams) ([]ListAccountsReceivablesRow, error)
@@ -320,6 +329,8 @@ type Querier interface {
 	ListExchangeSaleItems(ctx context.Context, saleID pgtype.UUID) ([]ListExchangeSaleItemsRow, error)
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
+	// Todas as variações de um modelo, na ordem em que foram cadastradas
+	ListGridVariations(ctx context.Context, arg ListGridVariationsParams) ([]ListGridVariationsRow, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)
 	ListItemsByCompany(ctx context.Context, companyID pgtype.UUID) ([]ListItemsByCompanyRow, error)
 	ListItemsByDate(ctx context.Context, arg ListItemsByDateParams) ([]ListItemsByDateRow, error)
@@ -371,6 +382,12 @@ type Querier interface {
 	ListSalesWithDetails(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsRow, error)
 	ListSalesWithDetailsPaginate(ctx context.Context, arg ListSalesWithDetailsPaginateParams) ([]ListSalesWithDetailsPaginateRow, error)
 	ListSalesWithDetailsPendingOverdue(ctx context.Context, companyID pgtype.UUID) ([]ListSalesWithDetailsPendingOverdueRow, error)
+	// Grade de produtos: cada combinação cor × tamanho é um produto normal,
+	// agrupado por model_name (ver migração 000062).
+	// Estoque agrupado: cada modelo vira uma linha (com os totais das variações) e
+	// cada produto sem modelo continua sendo uma linha própria. A busca casa com
+	// qualquer variação, mas os totais do modelo sempre consideram todas elas.
+	ListStockEntries(ctx context.Context, arg ListStockEntriesParams) ([]ListStockEntriesRow, error)
 	ListSubscriptionPaymentMethodsByCompanyId(ctx context.Context, companyID pgtype.UUID) ([]SubscriptionPaymentMethod, error)
 	ListSubscriptionsDueOn(ctx context.Context, arg ListSubscriptionsDueOnParams) ([]Subscription, error)
 	// Avisos vigentes agora, do mais importante (manutenção) ao menos importante (sucesso)
@@ -389,6 +406,8 @@ type Querier interface {
 	LockCompanyPurchaseNumbers(ctx context.Context, companyID string) error
 	// Serializa a numeração das devoluções da empresa até o fim da transação
 	LockCompanyReturnNumbers(ctx context.Context, companyID string) error
+	// Trava as linhas dos produtos (variações ou produtos a agrupar) até o fim da transação
+	LockGridProducts(ctx context.Context, arg LockGridProductsParams) ([]LockGridProductsRow, error)
 	LockProductForPurchase(ctx context.Context, arg LockProductForPurchaseParams) (LockProductForPurchaseRow, error)
 	LockPurchaseOrder(ctx context.Context, arg LockPurchaseOrderParams) (LockPurchaseOrderRow, error)
 	LockPurchaseReceipt(ctx context.Context, arg LockPurchaseReceiptParams) (LockPurchaseReceiptRow, error)
@@ -403,6 +422,8 @@ type Querier interface {
 	// Parcela zerada pela devolução: sem nada pago ela é cancelada; com pagamento
 	// parcial fica quitada
 	ReduceReceivableForReturn(ctx context.Context, arg ReduceReceivableForReturnParams) error
+	// Desativa uma variação sem saldo (exclusão lógica, o histórico continua)
+	RemoveGridVariation(ctx context.Context, arg RemoveGridVariationParams) (int64, error)
 	RemoveModuleFromDepartment(ctx context.Context, arg RemoveModuleFromDepartmentParams) error
 	ReplaceDepartmentModules(ctx context.Context, departmentID pgtype.UUID) error
 	ReportBillsPayable(ctx context.Context, arg ReportBillsPayableParams) ([]ReportBillsPayableRow, error)
@@ -462,6 +483,8 @@ type Querier interface {
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) error
 	UpdateCustomerBalance(ctx context.Context, arg UpdateCustomerBalanceParams) error
 	UpdateDepartment(ctx context.Context, arg UpdateDepartmentParams) (Department, error)
+	// Edição do modelo: nome, categoria e descrição valem para todas as variações; preços por variação
+	UpdateGridVariation(ctx context.Context, arg UpdateGridVariationParams) error
 	UpdateInvoiceStatus(ctx context.Context, arg UpdateInvoiceStatusParams) error
 	UpdateLastLogin(ctx context.Context, id pgtype.UUID) error
 	UpdateOverdueBillsPayable(ctx context.Context) error

@@ -1,11 +1,18 @@
 package domain
 
-import "github.com/google/uuid"
+import (
+	"errors"
+
+	"github.com/google/uuid"
+)
 
 type GenetareTagProduct struct {
 	Name    string
 	Amount  float64
 	Barcode string
+	// Variação da grade: a etiqueta mostra o modelo no nome e cor/tamanho em destaque
+	Color string
+	Size  string
 }
 
 // LabelLayout define as dimensões físicas e a grade de layout para a folha A4
@@ -33,4 +40,11 @@ var Layout5x13 = LabelLayout{
 
 type GenetareTagProductRequest struct {
 	ProductId uuid.UUID `json:"product_id"`
+	// Quantidade de etiquetas; 0 ou omitido imprime uma por peça em estoque
+	Quantity int32 `json:"quantity"`
 }
+
+// MaxLabelsPerSheetRequest evita PDFs gigantes por engano
+const MaxLabelsPerSheetRequest = 5000
+
+var ErrTooManyLabels = errors.New("no máximo 5000 etiquetas por vez")

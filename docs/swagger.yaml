@@ -67,6 +67,8 @@ definitions:
         type: string
       installment_number:
         type: integer
+      last_reminder_at:
+        type: string
       sale_id:
         type: string
       status:
@@ -144,6 +146,8 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_annoucements_domain.ListAnnoucementsResponse:
     properties:
+      content:
+        type: string
       created_at:
         type: string
       expires_at:
@@ -511,6 +515,8 @@ definitions:
         type: string
       created_at:
         type: string
+      days_overdue:
+        type: integer
       description:
         type: string
       due_date:
@@ -636,6 +642,47 @@ definitions:
       total_outflow:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetOverviewResponse:
+    properties:
+      end_date:
+        description: EndDate último dia (inclusivo) do intervalo
+        type: string
+      forecast:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecast'
+      inflow_by_category:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare'
+        type: array
+      inflow_by_payment_method:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare'
+        type: array
+      outflow_by_category:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare'
+        type: array
+      period:
+        type: string
+      previous:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals'
+      projection:
+        description: Projection tendência linear do resultado para o próximo período
+        type: number
+      quantity:
+        type: integer
+      recent_movements:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewMovement'
+        type: array
+      series:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewPoint'
+        type: array
+      start_date:
+        type: string
+      totals:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals'
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetTotalSummaryResponse:
     properties:
       projection:
@@ -659,6 +706,94 @@ definitions:
       total_outflow:
         type: number
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecast:
+    properties:
+      days:
+        type: integer
+      net:
+        type: number
+      overdue_payable:
+        type: number
+      overdue_receivable:
+        type: number
+      payable:
+        type: number
+      receivable:
+        type: number
+      series:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecastPoint'
+        type: array
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewForecastPoint:
+    properties:
+      balance:
+        description: Balance saldo previsto acumulado (a receber − a pagar) até o
+          dia
+        type: number
+      date:
+        type: string
+      payable:
+        type: number
+      receivable:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewMovement:
+    properties:
+      amount:
+        type: number
+      description:
+        type: string
+      detail:
+        type: string
+      id:
+        type: string
+      kind:
+        enum:
+        - inflow
+        - outflow
+        type: string
+      occurred_at:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewPoint:
+    properties:
+      balance:
+        description: Balance resultado acumulado desde o início do intervalo
+        type: number
+      date:
+        type: string
+      inflow:
+        type: number
+      net:
+        type: number
+      outflow:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewShare:
+    properties:
+      count:
+        type: integer
+      name:
+        type: string
+      percentage:
+        type: number
+      total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.OverviewTotals:
+    properties:
+      inflow:
+        type: number
+      inflow_count:
+        type: integer
+      net:
+        type: number
+      outflow:
+        type: number
+      outflow_count:
+        type: integer
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.TotalSummaty:
     properties:
       period:
@@ -669,6 +804,292 @@ definitions:
         type: number
       total_period_outflow:
         type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashMovement:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      id:
+        type: string
+      reason:
+        type: string
+      transfer_label:
+        description: Preenchido quando o movimento veio de uma transferência entre
+          caixas
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister:
+    properties:
+      active:
+        type: boolean
+      id:
+        type: string
+      last_closing:
+        allOf:
+        - $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.LastClosing'
+        description: Nulo quando o caixa nunca foi fechado
+      name:
+        type: string
+      open_session:
+        allOf:
+        - $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenRegisterSession'
+        description: Nulo quando o caixa está fechado
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession:
+    properties:
+      closed_at:
+        type: string
+      closed_by_name:
+        type: string
+      closing_notes:
+        type: string
+      counted_cash:
+        type: number
+      difference:
+        type: number
+      expected_cash:
+        type: number
+      id:
+        type: string
+      opened_at:
+        type: string
+      opening_amount:
+        type: number
+      opening_notes:
+        type: string
+      received_total:
+        type: number
+      register_id:
+        type: string
+      register_name:
+        type: string
+      sales_count:
+        type: integer
+      sales_total:
+        description: Retrato gravado no fechamento; nulos enquanto o caixa está aberto
+        type: number
+      status:
+        type: string
+      user_id:
+        description: Quem abriu o turno
+        type: string
+      user_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail:
+    properties:
+      incoming_transfers:
+        description: 'Transferências pendentes: chegando (aceitar/recusar) e saindo
+          (cancelar)'
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer'
+        type: array
+      movements:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashMovement'
+        type: array
+      outgoing_transfers:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer'
+        type: array
+      session:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession'
+      summary:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSummary'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSummary:
+    properties:
+      by_method:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.MethodSummary'
+        type: array
+      by_operator:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OperatorSummary'
+        type: array
+      cash_received:
+        description: Dinheiro em espécie que entrou (vendas, entradas de vendas a
+          prazo e parcelas)
+        type: number
+      cash_refunds:
+        type: number
+      change_count:
+        description: Troco devolvido nas vendas do turno (já descontado do dinheiro
+          recebido)
+        type: integer
+      change_total:
+        type: number
+      expected_cash:
+        type: number
+      receipts_count:
+        type: integer
+      receipts_total:
+        type: number
+      received_total:
+        description: Tudo que entrou no turno, em qualquer forma de pagamento
+        type: number
+      refunds_count:
+        description: Dinheiro devolvido a clientes em trocas/devoluções do turno
+        type: integer
+      refunds_total:
+        type: number
+      sales_count:
+        type: integer
+      sales_total:
+        type: number
+      supplies_total:
+        type: number
+      withdrawals_total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CloseCashSessionRequest:
+    properties:
+      counted_cash:
+        minimum: 0
+        type: number
+      notes:
+        maxLength: 500
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateMovementRequest:
+    properties:
+      amount:
+        type: number
+      reason:
+        maxLength: 500
+        type: string
+      type:
+        enum:
+        - withdrawal
+        - supply
+        type: string
+    required:
+    - amount
+    - type
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateTransferRequest:
+    properties:
+      amount:
+        type: number
+      reason:
+        maxLength: 500
+        type: string
+      to_register_id:
+        type: string
+    required:
+    - amount
+    - to_register_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.LastClosing:
+    properties:
+      closed_at:
+        type: string
+      closed_by_name:
+        type: string
+      counted_cash:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.ListCashSessionsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSession'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.MethodSummary:
+    properties:
+      payment_method:
+        type: string
+      receipts_count:
+        type: integer
+      receipts_total:
+        type: number
+      received:
+        type: number
+      refunds_count:
+        description: Devolvido ao cliente em trocas/devoluções (já descontado de Received)
+        type: integer
+      refunds_total:
+        type: number
+      sales_count:
+        type: integer
+      sales_total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenCashSessionRequest:
+    properties:
+      notes:
+        maxLength: 500
+        type: string
+      opening_amount:
+        minimum: 0
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenRegisterSession:
+    properties:
+      id:
+        type: string
+      opened_at:
+        type: string
+      opened_by_name:
+        type: string
+      opening_amount:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OperatorSummary:
+    properties:
+      receipts_total:
+        type: number
+      sales_count:
+        type: integer
+      sales_total:
+        type: number
+      user_id:
+        type: string
+      user_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.PendingTransfer:
+    properties:
+      amount:
+        type: number
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      from_register_name:
+        type: string
+      id:
+        type: string
+      reason:
+        type: string
+      to_register_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest:
+    properties:
+      active:
+        type: boolean
+      name:
+        maxLength: 60
+        minLength: 1
+        type: string
+    required:
+    - name
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_companies_domain.CompanyResponse:
     properties:
@@ -785,6 +1206,313 @@ definitions:
       key:
         $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.CompanySettingsKey'
       value: {}
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.BrowseResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CustomerRow'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CategoryShare:
+    properties:
+      name:
+        type: string
+      share:
+        description: Percentual do total comprado
+        type: number
+      total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CreditMovement:
+    properties:
+      amount:
+        type: number
+      balance_after:
+        type: number
+      created_at:
+        type: string
+      id:
+        type: string
+      return_number:
+        type: integer
+      sale_id:
+        type: string
+      sale_return_id:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CustomerRow:
+    properties:
+      active:
+        type: boolean
+      balance_due:
+        type: number
+      city:
+        type: string
+      cpf:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      full_name:
+        type: string
+      id:
+        type: string
+      last_purchase_at:
+        type: string
+      mobile_phone:
+        type: string
+      overdue_total:
+        type: number
+      purchases_count:
+        type: integer
+      purchases_total:
+        type: number
+      state:
+        type: string
+      store_credit:
+        type: number
+      whatsapp:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite:
+    properties:
+      quantity:
+        type: integer
+      share:
+        type: number
+      value:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Insights:
+    properties:
+      average_interval_days:
+        description: Dias, em média, entre uma compra e outra
+        type: number
+      best_period:
+        type: string
+      best_weekday:
+        type: integer
+      days_since_last:
+        type: integer
+      favorite_color:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite'
+      favorite_payment:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PaymentShare'
+      favorite_size:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Favorite'
+      next_expected_at:
+        description: Data em que, pelo costume, ele deveria voltar (YYYY-MM-DD)
+        type: string
+      periods:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PeriodStat'
+        type: array
+      rhythm:
+        type: string
+      top_categories:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CategoryShare'
+        type: array
+      top_products:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.TopProduct'
+        type: array
+      weekdays:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.WeekdayStat'
+        type: array
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Installment:
+    properties:
+      balance:
+        type: number
+      due_date:
+        type: string
+      id:
+        type: string
+      installment_number:
+        type: integer
+      overdue:
+        type: boolean
+      sale_id:
+        type: string
+      status:
+        type: string
+      total_amount:
+        type: number
+      total_installments:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Overview:
+    properties:
+      active_count:
+        type: integer
+      credit_count:
+        type: integer
+      credit_total:
+        type: number
+      debt_total:
+        type: number
+      debtors_count:
+        type: integer
+      inactive_count:
+        type: integer
+      new_last_month:
+        type: integer
+      new_this_month:
+        type: integer
+      overdue_count:
+        type: integer
+      overdue_total:
+        type: number
+      recent_buyers:
+        description: Clientes que compraram nos últimos 30 dias
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PaymentShare:
+    properties:
+      count:
+        type: integer
+      method:
+        type: string
+      share:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.PeriodStat:
+    properties:
+      count:
+        type: integer
+      period:
+        description: morning (5h-12h), afternoon (12h-18h), evening (18h-24h), night
+          (0h-5h)
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile:
+    properties:
+      active:
+        type: boolean
+      address_city:
+        type: string
+      address_complement:
+        type: string
+      address_neighborhood:
+        type: string
+      address_number:
+        type: string
+      address_state:
+        type: string
+      address_street:
+        type: string
+      address_zipcode:
+        type: string
+      average_ticket:
+        type: number
+      balance_due:
+        type: number
+      birth_date:
+        type: string
+      cpf:
+        type: string
+      created_at:
+        type: string
+      credit_movements:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.CreditMovement'
+        type: array
+      email:
+        type: string
+      first_purchase_at:
+        type: string
+      full_name:
+        type: string
+      gender:
+        type: string
+      home_phone:
+        type: string
+      id:
+        type: string
+      insights:
+        allOf:
+        - $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Insights'
+        description: 'Perfil de compra: o que, quando e como o cliente compra'
+      last_purchase_at:
+        type: string
+      marital_status:
+        type: string
+      mobile_phone:
+        type: string
+      open_installments:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Installment'
+        type: array
+      overdue_total:
+        type: number
+      purchases_count:
+        type: integer
+      purchases_total:
+        type: number
+      recent_sales:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.RecentSale'
+        type: array
+      returned_total:
+        type: number
+      rg:
+        type: string
+      store_credit:
+        type: number
+      whatsapp:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.RecentSale:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      items_count:
+        type: integer
+      payment_method:
+        type: string
+      products:
+        type: string
+      returned_total:
+        type: number
+      status:
+        type: string
+      total_amount:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.TopProduct:
+    properties:
+      last_bought_at:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.WeekdayStat:
+    properties:
+      count:
+        type: integer
+      total:
+        type: number
+      weekday:
+        description: 0 = domingo ... 6 = sábado
+        type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_customers_domain.CreateCustomersRequest:
     properties:
@@ -1051,6 +1779,10 @@ definitions:
     - normal_stock
     - sale_overdue_template
     - language_sale_overdue_template
+    - require_open_cash_register
+    - due_reminder_template
+    - language_due_reminder_template
+    - return_window_days
     type: string
     x-enum-varnames:
     - IsWhatsappActive
@@ -1060,6 +1792,10 @@ definitions:
     - NormalStock
     - SaleOverdueTemplate
     - LanguageSaleOverdueTemplate
+    - RequireOpenCashRegister
+    - DueReminderTemplate
+    - LanguageDueReminderTemplate
+    - ReturnWindowDays
   github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Gender:
     enum:
     - MALE
@@ -1081,6 +1817,7 @@ definitions:
     - bank_transfer
     - installments
     - other
+    - store_credit
     type: string
     x-enum-varnames:
     - PaymentMethodCash
@@ -1090,6 +1827,7 @@ definitions:
     - PaymentMethodBankTransfer
     - PaymentMethodInstallments
     - PaymentMethodOther
+    - PaymentMethodStoreCredit
   github_com_ProTrack-Solutions_protrack-api_internal_domain_enums.Status:
     enum:
     - ACTIVE
@@ -1104,6 +1842,10 @@ definitions:
     properties:
       product_id:
         type: string
+      quantity:
+        description: Quantidade de etiquetas; 0 ou omitido imprime uma por peça em
+          estoque
+        type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_meta_whatsapp_domain.CompanyWhatsAppConfig:
     properties:
@@ -1541,6 +2283,48 @@ definitions:
       updated_by:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.AddVariationsRequest:
+    properties:
+      cost_price:
+        minimum: 0
+        type: number
+      sale_price:
+        minimum: 0
+        type: number
+      variations:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput'
+        minItems: 1
+        type: array
+    required:
+    - variations
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateModelRequest:
+    properties:
+      category_id:
+        type: string
+      cost_price:
+        minimum: 0
+        type: number
+      description:
+        maxLength: 1000
+        type: string
+      model_name:
+        maxLength: 100
+        type: string
+      sale_price:
+        minimum: 0
+        type: number
+      variations:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput'
+        minItems: 1
+        type: array
+    required:
+    - category_id
+    - model_name
+    - variations
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateProductRequest:
     properties:
       barcode:
@@ -1566,6 +2350,130 @@ definitions:
       unit:
         type: string
     type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateStockMovementRequest:
+    properties:
+      quantity:
+        type: integer
+      reason:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockItem:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - product_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockMovementRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockItem'
+        minItems: 1
+        type: array
+      reason:
+        maxLength: 500
+        type: string
+      type:
+        type: string
+    required:
+    - items
+    - type
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      category_name:
+        type: string
+      color:
+        type: string
+      cost_price:
+        type: number
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      model_name:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      sell_in_bulk:
+        type: boolean
+      size:
+        type: string
+      total_registered:
+        type: integer
+      total_sold:
+        type: integer
+      unit:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariationInput:
+    properties:
+      barcode:
+        description: Código de fábrica; vazio gera um código interno
+        maxLength: 50
+        type: string
+      color:
+        maxLength: 50
+        type: string
+      cost_price:
+        description: Custo e preço próprios da variação; omitidos usam os do modelo
+        minimum: 0
+        type: number
+      quantity:
+        minimum: 0
+        type: integer
+      sale_price:
+        minimum: 0
+        type: number
+      size:
+        maxLength: 20
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupItem:
+    properties:
+      color:
+        maxLength: 50
+        type: string
+      product_id:
+        type: string
+      size:
+        maxLength: 20
+        type: string
+    required:
+    - product_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupProductsRequest:
+    properties:
+      category_id:
+        description: Obrigatória para modelo novo; num modelo existente vale a dele
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupItem'
+        minItems: 1
+        type: array
+      model_name:
+        maxLength: 100
+        type: string
+    required:
+    - items
+    - model_name
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_domain.ListProductsByCompanyRow:
     properties:
       barcode:
@@ -1573,6 +2481,8 @@ definitions:
       category_id:
         type: string
       category_name:
+        type: string
+      color:
         type: string
       company_id:
         type: string
@@ -1590,6 +2500,9 @@ definitions:
         type: string
       id:
         type: string
+      model_name:
+        description: 'Grade: modelo e cor da variação (vazios em produto sem grade)'
+        type: string
       name:
         type: string
       quantity:
@@ -1600,6 +2513,13 @@ definitions:
         type: boolean
       size:
         type: string
+      total_registered:
+        description: Total que já entrou no estoque (cadastro + reposições); o saldo
+          atual é Quantity
+        type: integer
+      total_sold:
+        description: Total vendido, já descontando as vendas canceladas
+        type: integer
       unit:
         type: string
       updated_at:
@@ -1634,6 +2554,8 @@ definitions:
         type: string
       category_id:
         type: string
+      color:
+        type: string
       company_id:
         type: string
       cost_price:
@@ -1650,6 +2572,8 @@ definitions:
         type: string
       id:
         type: string
+      model_name:
+        type: string
       name:
         type: string
       quantity:
@@ -1662,6 +2586,120 @@ definitions:
         type: string
       updated_by:
         type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntriesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntry'
+        type: array
+      itens_in_stock:
+        type: integer
+      low_itens_in_stock:
+        type: integer
+      page:
+        type: integer
+      per_page:
+        type: integer
+      products_count:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+      total_value_in_stock:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntry:
+    properties:
+      barcode:
+        type: string
+      category_id:
+        type: string
+      category_name:
+        type: string
+      color:
+        type: string
+      colors:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      key:
+        type: string
+      kind:
+        description: '"model" | "product"'
+        type: string
+      low_stock_variations:
+        type: integer
+      max_cost_price:
+        type: number
+      max_sale_price:
+        type: number
+      min_cost_price:
+        type: number
+      min_sale_price:
+        type: number
+      model_name:
+        type: string
+      name:
+        type: string
+      product_id:
+        description: 'Produto sem grade: id e dados do próprio produto'
+        type: string
+      quantity:
+        type: integer
+      sell_in_bulk:
+        type: boolean
+      size:
+        type: string
+      sizes:
+        type: integer
+      total_registered:
+        type: integer
+      total_sold:
+        type: integer
+      unit:
+        type: string
+      variations:
+        description: 'Modelo: totais das variações'
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse:
+    properties:
+      created_at:
+        type: string
+      current_quantity:
+        type: integer
+      id:
+        type: string
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      reason:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateModelRequest:
+    properties:
+      category_id:
+        type: string
+      description:
+        maxLength: 1000
+        type: string
+      model_name:
+        maxLength: 100
+        type: string
+      variations:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.VariationPriceInput'
+        type: array
+    required:
+    - category_id
+    - model_name
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateProductRequest:
     properties:
@@ -1677,8 +2715,6 @@ definitions:
         type: string
       name:
         type: string
-      quantity:
-        type: integer
       sale_price:
         type: number
       size:
@@ -1687,6 +2723,1010 @@ definitions:
         type: string
       updated_by:
         type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_products_domain.VariationPriceInput:
+    properties:
+      barcode:
+        description: 'Troca o código (ex.: interno pelo de fábrica); omitido mantém
+          o atual'
+        maxLength: 50
+        type: string
+      cost_price:
+        minimum: 0
+        type: number
+      id:
+        type: string
+      sale_price:
+        minimum: 0
+        type: number
+    required:
+    - id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogCategory:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogModel:
+    properties:
+      model_name:
+        type: string
+      variations:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct:
+    properties:
+      barcode:
+        type: string
+      color:
+        type: string
+      cost_price:
+        type: number
+      id:
+        type: string
+      model_name:
+        type: string
+      name:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        type: number
+      sell_in_bulk:
+        type: boolean
+      size:
+        type: string
+      unit:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogSearchResponse:
+    properties:
+      models:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogModel'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      products:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct'
+        type: array
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest:
+    properties:
+      reason:
+        maxLength: 500
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CreateVariationsRequest:
+    properties:
+      category_id:
+        type: string
+      cost_price:
+        minimum: 0
+        type: number
+      description:
+        maxLength: 500
+        type: string
+      model_name:
+        maxLength: 120
+        minLength: 2
+        type: string
+      sale_price:
+        minimum: 0
+        type: number
+      variations:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.VariationRequest'
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - category_id
+    - model_name
+    - variations
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.EmailOrderRequest:
+    properties:
+      kind:
+        enum:
+        - sent
+        - updated
+        - resend
+        type: string
+    required:
+    - kind
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.InstallmentRequest:
+    properties:
+      amount:
+        type: number
+      due_date:
+        type: string
+    required:
+    - amount
+    - due_date
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ListOrdersResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderListItem'
+        type: array
+      overview:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrdersOverview'
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total_pages:
+        type: integer
+      total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail:
+    properties:
+      can_cancel:
+        type: boolean
+      can_close:
+        type: boolean
+      can_edit:
+        description: Ações liberadas no status atual, para o front não duplicar a
+          regra
+        type: boolean
+      can_email:
+        type: boolean
+      can_receive:
+        type: boolean
+      can_send:
+        type: boolean
+      close_reason:
+        type: string
+      closed_at:
+        type: string
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      emails:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderEmail'
+        type: array
+      expected_date:
+        type: string
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItem'
+        type: array
+      notes:
+        type: string
+      number:
+        type: integer
+      quantity:
+        type: integer
+      receipts:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.Receipt'
+        type: array
+      received_quantity:
+        type: integer
+      received_total:
+        type: number
+      sent_at:
+        type: string
+      status:
+        type: string
+      total:
+        type: number
+      updated_at:
+        type: string
+      vendor_email:
+        type: string
+      vendor_id:
+        type: string
+      vendor_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderEmail:
+    properties:
+      created_at:
+        type: string
+      kind:
+        type: string
+      recipient:
+        type: string
+      sent_by_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItem:
+    properties:
+      barcode:
+        type: string
+      color:
+        type: string
+      current_cost:
+        type: number
+      id:
+        type: string
+      model_name:
+        type: string
+      pending_quantity:
+        type: integer
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      received_quantity:
+        type: integer
+      sale_price:
+        type: number
+      sell_in_bulk:
+        type: boolean
+      size:
+        type: string
+      stock_quantity:
+        type: integer
+      total:
+        type: number
+      unit:
+        type: string
+      unit_cost:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItemRequest:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+      unit_cost:
+        minimum: 0
+        type: number
+    required:
+    - product_id
+    - quantity
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderListItem:
+    properties:
+      created_at:
+        type: string
+      expected_date:
+        type: string
+      id:
+        type: string
+      items_count:
+        type: integer
+      late:
+        type: boolean
+      number:
+        type: integer
+      quantity:
+        type: integer
+      received_quantity:
+        type: integer
+      received_total:
+        type: number
+      status:
+        type: string
+      total:
+        type: number
+      vendor_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrdersOverview:
+    properties:
+      count_by_status:
+        additionalProperties:
+          format: int32
+          type: integer
+        type: object
+      late_orders:
+        type: integer
+      pending_total:
+        type: number
+      received_this_month:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.Receipt:
+    properties:
+      bills:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptBill'
+        type: array
+      created_by_name:
+        type: string
+      discount:
+        type: number
+      freight:
+        type: number
+      id:
+        type: string
+      invoice_key:
+        type: string
+      invoice_number:
+        type: string
+      invoice_series:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItem'
+        type: array
+      items_total:
+        type: number
+      notes:
+        type: string
+      other_expenses:
+        type: number
+      received_at:
+        type: string
+      reversal_reason:
+        type: string
+      reversed_at:
+        type: string
+      reversed_by_name:
+        type: string
+      status:
+        type: string
+      total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptBill:
+    properties:
+      amount:
+        type: number
+      amount_paid:
+        type: number
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      payment_date:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItem:
+    properties:
+      landed_unit_cost:
+        type: number
+      new_cost:
+        type: number
+      order_item_id:
+        type: string
+      previous_cost:
+        type: number
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      unit_cost:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItemRequest:
+    properties:
+      order_item_id:
+        type: string
+      quantity:
+        type: integer
+      sale_price:
+        description: Novo preço de venda; omitido mantém o atual
+        minimum: 0
+        type: number
+      unit_cost:
+        description: Preço unitário da nota (pode diferir do pedido)
+        minimum: 0
+        type: number
+    required:
+    - order_item_id
+    - quantity
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiveRequest:
+    properties:
+      bill_category_id:
+        type: string
+      discount:
+        minimum: 0
+        type: number
+      freight:
+        minimum: 0
+        type: number
+      installments:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.InstallmentRequest'
+        maxItems: 60
+        type: array
+      invoice_key:
+        type: string
+      invoice_number:
+        maxLength: 20
+        type: string
+      invoice_series:
+        maxLength: 5
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiptItemRequest'
+        minItems: 1
+        type: array
+      notes:
+        maxLength: 1000
+        type: string
+      other_expenses:
+        minimum: 0
+        type: number
+      payment_method_id:
+        type: string
+      received_at:
+        type: string
+    required:
+    - items
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReverseReceiptRequest:
+    properties:
+      reason:
+        maxLength: 500
+        minLength: 3
+        type: string
+    required:
+    - reason
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest:
+    properties:
+      expected_date:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderItemRequest'
+        maxItems: 300
+        minItems: 1
+        type: array
+      notes:
+        maxLength: 1000
+        type: string
+      send:
+        description: 'Na criação: true já marca o pedido como enviado ao fornecedor'
+        type: boolean
+      vendor_id:
+        type: string
+    required:
+    - items
+    - vendor_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.VariationRequest:
+    properties:
+      color:
+        maxLength: 50
+        type: string
+      cost_price:
+        description: Custo e preço próprios da variação; omitidos usam os do modelo
+        minimum: 0
+        type: number
+      sale_price:
+        minimum: 0
+        type: number
+      size:
+        maxLength: 20
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_receivable_reminders_domain.ReminderResponse:
+    properties:
+      kind:
+        type: string
+      next_reminder_at:
+        type: string
+      recipient_phone:
+        type: string
+      sent_at:
+        type: string
+      template_name:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Column:
+    properties:
+      key:
+        type: string
+      label:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType:
+    enum:
+    - text
+    - money
+    - number
+    - percent
+    - date
+    - datetime
+    type: string
+    x-enum-varnames:
+    - ColumnText
+    - ColumnMoney
+    - ColumnNumber
+    - ColumnPercent
+    - ColumnDate
+    - ColumnDateTime
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Report:
+    properties:
+      columns:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Column'
+        type: array
+      company_name:
+        type: string
+      description:
+        type: string
+      end_date:
+        type: string
+      generated_at:
+        type: string
+      notes:
+        items:
+          type: string
+        type: array
+      rows:
+        items:
+          items: {}
+          type: array
+        type: array
+      start_date:
+        type: string
+      summary:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.SummaryItem'
+        type: array
+      title:
+        type: string
+      totals:
+        items: {}
+        type: array
+      type:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportType'
+      uses_period:
+        type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportFormat:
+    enum:
+    - json
+    - xlsx
+    - pdf
+    type: string
+    x-enum-varnames:
+    - FormatJSON
+    - FormatXLSX
+    - FormatPDF
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ReportType:
+    enum:
+    - sales
+    - sales_by_day
+    - sales_by_payment_method
+    - sales_by_seller
+    - sales_by_customer
+    - products_abc
+    - profit_category
+    - inventory
+    - stock_movements
+    - dre
+    - payments_received
+    - open_installments
+    - bills_payable
+    - cash_sessions
+    type: string
+    x-enum-varnames:
+    - ReportSales
+    - ReportSalesByDay
+    - ReportSalesByPaymentMethod
+    - ReportSalesBySeller
+    - ReportSalesByCustomer
+    - ReportProductsABC
+    - ReportProfitCategory
+    - ReportInventory
+    - ReportStockMovements
+    - ReportDRE
+    - ReportPaymentsReceived
+    - ReportOpenInstallments
+    - ReportBillsPayable
+    - ReportCashSessions
+  github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.SummaryItem:
+    properties:
+      label:
+        type: string
+      type:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.ColumnType'
+      value:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreateReturnRequest:
+    properties:
+      amount_received:
+        description: Dinheiro entregue para pagar a diferença (calcula o troco)
+        type: number
+      customer_id:
+        description: Cliente do vale-troca quando a venda não tem cliente
+        type: string
+      destination:
+        description: 'O que fazer com o valor que sobra: vale-troca ou dinheiro de
+          volta'
+        enum:
+        - credit
+        - refund
+        type: string
+      difference_method:
+        description: Forma de pagamento da diferença quando os itens novos valem mais
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnItemRequest'
+        minItems: 1
+        type: array
+      kind:
+        enum:
+        - return
+        - exchange
+        type: string
+      new_items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.NewItemRequest'
+        type: array
+      notes:
+        maxLength: 500
+        type: string
+      override_reason:
+        maxLength: 500
+        type: string
+      reason:
+        enum:
+        - size
+        - defect
+        - regret
+        - wrong_item
+        - other
+        type: string
+      refund_method:
+        type: string
+      sale_id:
+        type: string
+    required:
+    - items
+    - kind
+    - reason
+    - sale_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreditMovement:
+    properties:
+      amount:
+        type: number
+      balance_after:
+        type: number
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      id:
+        type: string
+      return_number:
+        type: integer
+      sale_id:
+        type: string
+      sale_return_id:
+        type: string
+      type:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CustomerCredit:
+    properties:
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      movements:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreditMovement'
+        type: array
+      store_credit:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ExchangeItem:
+    properties:
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      total:
+        type: number
+      unit_price:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ListReturnsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnListItem'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.NewItemRequest:
+    properties:
+      product_id:
+        type: string
+      quantity:
+        type: integer
+    required:
+    - product_id
+    - quantity
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.PreviousReturn:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      kind:
+        type: string
+      number:
+        type: integer
+      returned_total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail:
+    properties:
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      credit_amount:
+        type: number
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      debt_reduction:
+        type: number
+      difference_method:
+        type: string
+      difference_paid:
+        type: number
+      exchange_credit:
+        type: number
+      exchange_sale_id:
+        type: string
+      exchange_total:
+        type: number
+      id:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnedItem'
+        type: array
+      items_count:
+        type: integer
+      kind:
+        type: string
+      new_items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ExchangeItem'
+        type: array
+      notes:
+        type: string
+      number:
+        type: integer
+      out_of_window:
+        type: boolean
+      override_reason:
+        type: string
+      reason:
+        type: string
+      refund_amount:
+        type: number
+      refund_method:
+        type: string
+      returned_total:
+        type: number
+      sale_created_at:
+        type: string
+      sale_id:
+        type: string
+      sale_total:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnItemRequest:
+    properties:
+      quantity:
+        type: integer
+      restock:
+        description: false = peça avariada, não volta ao estoque. Omitido = volta.
+        type: boolean
+      sale_item_id:
+        type: string
+    required:
+    - quantity
+    - sale_item_id
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnListItem:
+    properties:
+      created_at:
+        type: string
+      created_by_name:
+        type: string
+      credit_amount:
+        type: number
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      debt_reduction:
+        type: number
+      difference_paid:
+        type: number
+      exchange_sale_id:
+        type: string
+      exchange_total:
+        type: number
+      id:
+        type: string
+      items_count:
+        type: integer
+      kind:
+        type: string
+      number:
+        type: integer
+      out_of_window:
+        type: boolean
+      reason:
+        type: string
+      refund_amount:
+        type: number
+      refund_method:
+        type: string
+      returned_total:
+        type: number
+      sale_id:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableItem:
+    properties:
+      available:
+        type: integer
+      net_total:
+        description: |-
+          Valor pago pela linha e o que dela já foi devolvido: a tela calcula o
+          valor da devolução com a mesma regra do servidor (LineReturnAmount)
+        type: number
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      returned_quantity:
+        type: integer
+      returned_total:
+        type: number
+      sale_item_id:
+        type: string
+      sell_in_bulk:
+        type: boolean
+      unit_amount:
+        description: Valor pago por unidade, já com o desconto da venda
+        type: number
+      unit_price:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableSale:
+    properties:
+      can_override:
+        type: boolean
+      canceled:
+        type: boolean
+      created_at:
+        type: string
+      customer_credit:
+        type: number
+      customer_id:
+        type: string
+      customer_name:
+        type: string
+      deadline:
+        type: string
+      discount_amount:
+        type: number
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableItem'
+        type: array
+      open_debt:
+        description: 'Saldo das parcelas em aberto: a devolução abate daqui antes
+          de gerar crédito'
+        type: number
+      payment_method:
+        type: string
+      previous_returns:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.PreviousReturn'
+        type: array
+      sale_id:
+        type: string
+      status:
+        type: string
+      subtotal:
+        type: number
+      total_amount:
+        type: number
+      window_days:
+        description: 'Prazo de troca: WindowDays = 0 é sem prazo'
+        type: integer
+      within_window:
+        type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnedItem:
+    properties:
+      product_id:
+        type: string
+      product_name:
+        type: string
+      quantity:
+        type: integer
+      restock:
+        type: boolean
+      total:
+        type: number
+      unit_amount:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchItem:
+    properties:
+      created_at:
+        type: string
+      customer_name:
+        type: string
+      id:
+        type: string
+      items_count:
+        type: integer
+      payment_method:
+        type: string
+      products:
+        type: string
+      returned_count:
+        type: integer
+      total_amount:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchItem'
+        type: array
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleItemRequest:
     properties:
@@ -1697,8 +3737,18 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.CreateSaleRequest:
     properties:
+      amount_received:
+        description: |-
+          Dinheiro entregue pelo cliente no balcão (total da venda em dinheiro ou
+          entrada da venda a prazo). Nil quando ele pagou o valor exato.
+        type: number
       buyer_document:
         type: string
+      credit_amount:
+        description: |-
+          Parte paga com o vale-troca do cliente. Cobrindo o total, a forma de
+          pagamento é store_credit; parcial, o resto vai na forma informada.
+        type: number
       customer_id:
         type: string
       discount_amount:
@@ -1729,6 +3779,28 @@ definitions:
         type: number
       total_sale:
         type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetSalesOverviewResponse:
+    properties:
+      end_date:
+        type: string
+      period:
+        description: 'Granularidade da série: day, week ou month, conforme o tamanho
+          do período'
+        type: string
+      previous:
+        allOf:
+        - $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals'
+        description: Período anterior de mesmo tamanho; zerado quando o período é
+          "desde o início"
+      series:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewPoint'
+        type: array
+      start_date:
+        type: string
+      totals:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals'
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetTop5RealProfitItemResponse:
     properties:
@@ -1780,6 +3852,8 @@ definitions:
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.ListSalesResponse:
     properties:
+      credit_amount:
+        type: number
       customer_id:
         type: string
       customer_name:
@@ -1792,7 +3866,12 @@ definitions:
         type: number
       installments_count:
         type: integer
+      is_exchange_sale:
+        type: boolean
       payment_method: {}
+      returned_total:
+        description: Valor já devolvido da venda e se ela foi criada por uma troca
+        type: number
       sale_at:
         type: string
       sale_id:
@@ -1844,6 +3923,42 @@ definitions:
       total_pending:
         type: number
       total_rows:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewPoint:
+    properties:
+      date:
+        type: string
+      revenue:
+        type: number
+      sales_count:
+        type: integer
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.SalesOverviewTotals:
+    properties:
+      average_ticket:
+        type: number
+      canceled_amount:
+        type: number
+      canceled_count:
+        type: integer
+      customers_count:
+        type: integer
+      discounts:
+        type: number
+      items_sold:
+        type: integer
+      open_receivable:
+        description: Saldo em aberto das parcelas das vendas do período
+        type: number
+      overdue_receivable:
+        type: number
+      returned_amount:
+        description: Devoluções registradas no período
+        type: number
+      revenue:
+        type: number
+      sales_count:
         type: integer
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.UpdateSaleParams:
@@ -2352,6 +4467,60 @@ paths:
       security:
       - BearerAuth: []
       summary: Lista contas a receber em atraso
+      tags:
+      - accounts-receivable
+  /accounts-receivable/reminders/{id}:
+    post:
+      description: Parcela vencida usa o template de venda vencida; parcela a vencer
+        usa o template de lembrete configurado na empresa. Respeita WhatsApp ativo,
+        plano e limite de mensagens, e permite um lembrete por parcela a cada 24 horas.
+      parameters:
+      - description: ID da parcela (conta a receber)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_receivable_reminders_domain.ReminderResponse'
+        "404":
+          description: Parcela não encontrada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Parcela quitada ou cancelada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Sem template, cliente sem WhatsApp ou WhatsApp indisponível
+            no plano
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: Lembrete enviado há menos de 24 horas
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "502":
+          description: Falha no envio pela Meta
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Envia lembrete de cobrança pelo WhatsApp
       tags:
       - accounts-receivable
   /accounts-receivable/sale/{saleId}:
@@ -3249,6 +5418,61 @@ paths:
       summary: Saídas de caixa por categoria
       tags:
       - cash-flow
+  /cash-flow/overview:
+    get:
+      description: Série de entradas/saídas, comparação com o período anterior, categorias,
+        formas de pagamento, previsão de recebimentos/pagamentos e últimas movimentações
+        em uma única chamada
+      parameters:
+      - example: 30
+        in: query
+        maximum: 90
+        minimum: 1
+        name: forecast_days
+        type: integer
+      - enum:
+        - day
+        - week
+        - month
+        example: day
+        in: query
+        name: period
+        type: string
+      - example: 30
+        in: query
+        minimum: 1
+        name: quantity
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_flow_domain.GetOverviewResponse'
+        "400":
+          description: Erro de validação
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Visão geral do fluxo de caixa
+      tags:
+      - cash-flow
   /cash-flow/summary:
     get:
       parameters:
@@ -3329,6 +5553,320 @@ paths:
       summary: Resumo total
       tags:
       - cash-flow
+  /cash-register/close:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Dinheiro contado na gaveta
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CloseCashSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "409":
+          description: Nenhum caixa aberto
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Fechar caixa
+      tags:
+      - cash-register
+  /cash-register/current:
+    get:
+      description: Devolve o turno aberto do caixa do computador (header CashRegisterId;
+        sem header, o único caixa ativo) com o resumo, ou session nulo quando o caixa
+        está fechado
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+      security:
+      - BearerAuth: []
+      summary: Turno aberto do caixa
+      tags:
+      - cash-register
+  /cash-register/movements:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Movimento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateMovementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "409":
+          description: Nenhum caixa aberto
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Sangria maior que o dinheiro em caixa
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Sangria ou suprimento
+      tags:
+      - cash-register
+  /cash-register/open:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Valor inicial (troco)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.OpenCashSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "409":
+          description: Caixa já aberto
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Abrir caixa
+      tags:
+      - cash-register
+  /cash-register/registers:
+    get:
+      description: Caixas cadastrados com o turno aberto de cada um
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Caixas da empresa
+      tags:
+      - cash-register
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Caixa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister'
+      security:
+      - BearerAuth: []
+      summary: Cadastrar caixa
+      tags:
+      - cash-register
+  /cash-register/registers/{id}:
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do caixa
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Caixa
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.SaveCashRegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashRegister'
+        "409":
+          description: Caixa com turno aberto
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Renomear, ativar ou desativar caixa
+      tags:
+      - cash-register
+  /cash-register/sessions:
+    get:
+      description: O administrador vê todos os turnos; os demais, os turnos de que
+        participaram (abriram, fecharam, venderam ou receberam)
+      parameters:
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        name: register_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.ListCashSessionsResponse'
+      security:
+      - BearerAuth: []
+      summary: Histórico de caixas
+      tags:
+      - cash-register
+  /cash-register/sessions/{id}:
+    get:
+      parameters:
+      - description: ID do caixa
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "404":
+          description: Caixa não encontrado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Detalhe de um caixa
+      tags:
+      - cash-register
+  /cash-register/transfers:
+    post:
+      consumes:
+      - application/json
+      description: Tira o dinheiro da gaveta do caixa deste computador agora; o caixa
+        de destino precisa aceitar para receber
+      parameters:
+      - description: Transferência
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CreateTransferRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "409":
+          description: Caixa de destino fechado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Valor maior que o dinheiro em caixa
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Transferir troco para outro caixa
+      tags:
+      - cash-register
+  /cash-register/transfers/{id}/{action}:
+    post:
+      description: accept e reject no computador do caixa de destino; cancel no do
+        caixa de origem. Recusada ou cancelada, o dinheiro volta para a origem
+      parameters:
+      - description: ID da transferência
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: accept, reject ou cancel
+        in: path
+        name: action
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_cash_register_domain.CashSessionDetail'
+        "403":
+          description: Transferência de outro caixa
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Já resolvida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Aceitar, recusar ou cancelar transferência de troco
+      tags:
+      - cash-register
   /companies:
     get:
       produces:
@@ -3630,6 +6168,66 @@ paths:
       summary: Atualiza um cliente
       tags:
       - customers
+  /customers/{id}/deactivate:
+    post:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile'
+      security:
+      - BearerAuth: []
+      summary: Inativa o cliente (mantém o histórico)
+      tags:
+      - customers
+  /customers/{id}/profile:
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile'
+      security:
+      - BearerAuth: []
+      summary: 'Perfil do cliente: dados, compras, parcelas em aberto e vale-troca'
+      tags:
+      - customers
+  /customers/{id}/reactivate:
+    post:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Profile'
+      security:
+      - BearerAuth: []
+      summary: Reativa o cliente
+      tags:
+      - customers
   /customers/balanceDue/{id}:
     put:
       consumes:
@@ -3654,6 +6252,62 @@ paths:
       security:
       - BearerAuth: []
       summary: Atualiza saldo devedor do cliente
+      tags:
+      - customers
+  /customers/browse:
+    get:
+      parameters:
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        maxLength: 100
+        name: search
+        type: string
+      - description: |-
+          debtors: com saldo devedor; overdue: com parcela vencida; credit: com
+          vale-troca; no_purchases: nunca comprou
+        enum:
+        - all
+        - debtors
+        - overdue
+        - credit
+        - no_purchases
+        in: query
+        name: segment
+        type: string
+      - enum:
+        - recent
+        - name
+        - last_purchase
+        - total_spent
+        - balance
+        in: query
+        name: sort
+        type: string
+      - enum:
+        - active
+        - inactive
+        - all
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.BrowseResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista clientes com resumo de compras e financeiro
       tags:
       - customers
   /customers/count:
@@ -3767,6 +6421,20 @@ paths:
       security:
       - BearerAuth: []
       summary: Lista clientes da empresa com paginação
+      tags:
+      - customers
+  /customers/overview:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_customer_profile_domain.Overview'
+      security:
+      - BearerAuth: []
+      summary: Indicadores da tela de clientes
       tags:
       - customers
   /customers/percentage:
@@ -4868,6 +7536,36 @@ paths:
       summary: Atualiza um produto
       tags:
       - products
+  /product/{id}/stock-movements:
+    post:
+      consumes:
+      - application/json
+      description: ENTRY soma ao estoque (quantidade positiva). ADJUSTMENT corrige
+        o saldo (positivo ou negativo) e exige motivo.
+      parameters:
+      - description: ID do produto
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Movimentação
+        in: body
+        name: movement
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateStockMovementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse'
+      security:
+      - BearerAuth: []
+      summary: Lança entrada ou ajuste de estoque
+      tags:
+      - products
   /product/barcode/{barcode}:
     get:
       parameters:
@@ -5010,6 +7708,184 @@ paths:
       summary: Conta produtos da empresa
       tags:
       - products
+  /product/models:
+    get:
+      parameters:
+      - description: Nome do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Variações de um modelo
+      tags:
+      - products
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Modelo
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.CreateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Cadastra um modelo com grade de cores e tamanhos
+      tags:
+      - products
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome atual do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Modelo
+        in: body
+        name: model
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.UpdateModelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Edita o modelo (nome, categoria, descrição e preços das variações)
+      tags:
+      - products
+  /product/models/group:
+    post:
+      consumes:
+      - application/json
+      description: Os produtos continuam os mesmos (saldo, histórico e vendas preservados);
+        ganham modelo, cor e tamanho.
+      parameters:
+      - description: Agrupamento
+        in: body
+        name: group
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GroupProductsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Agrupa produtos soltos num modelo de grade
+      tags:
+      - products
+  /product/models/stock-movements:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Movimentação
+        in: body
+        name: movement
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridStockMovementRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockMovementResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Entrada ou ajuste de estoque pela grade
+      tags:
+      - products
+  /product/models/variations:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Nome do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      - description: Variações
+        in: body
+        name: variations
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.AddVariationsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.GridVariation'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Adiciona cores/tamanhos a um modelo
+      tags:
+      - products
+  /product/models/variations/{id}:
+    delete:
+      parameters:
+      - description: ID da variação
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+      security:
+      - BearerAuth: []
+      summary: Desativa uma variação sem saldo
+      tags:
+      - products
   /product/percentage:
     get:
       produces:
@@ -5025,6 +7901,58 @@ paths:
       security:
       - BearerAuth: []
       summary: Resumo de performance dos produtos
+      tags:
+      - products
+  /product/stock:
+    get:
+      description: Cada modelo de grade vira uma linha com os totais das variações;
+        produtos sem grade continuam como linha própria.
+      parameters:
+      - description: EndDate filters records created until this date.
+        example: "2024-12-31"
+        in: query
+        name: endDate
+        type: string
+      - description: OrderBy defines the ordering direction for the results.
+        enum:
+        - asc
+        - desc
+        example: asc
+        in: query
+        name: orderBy
+        type: string
+      - description: Page is the page number to retrieve.
+        example: 1
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: PerPage is the number of items per page.
+        example: 10
+        in: query
+        minimum: 1
+        name: perPage
+        type: integer
+      - description: Search filters the list by a text term.
+        example: joao
+        in: query
+        name: search
+        type: string
+      - description: StartDate filters records created from this date.
+        example: "2024-01-01"
+        in: query
+        name: startDate
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_products_domain.StockEntriesResponse'
+      security:
+      - BearerAuth: []
+      summary: Estoque agrupado por modelo
       tags:
       - products
   /product/top-products:
@@ -5174,40 +8102,705 @@ paths:
       summary: Altera o status de uma categoria de produto
       tags:
       - products-categories
-  /reports:
+  /purchases/catalog/categories:
     get:
-      parameters:
-      - description: Tipo do relatório
-        in: query
-        name: type
-        required: true
-        type: string
-      - description: Data inicial
-        in: query
-        name: start_date
-        required: true
-        type: string
-      - description: Data final
-        in: query
-        name: end_date
-        required: true
-        type: string
-      - description: Formato (xlsx)
-        in: query
-        name: format
-        type: string
       produces:
-      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      - application/json
       responses:
         "200":
           description: OK
           schema:
-            type: file
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogCategory'
+            type: array
       security:
       - BearerAuth: []
-      summary: Gera relatório em Excel
+      summary: Categorias de produto ativas (cadastro rápido no pedido)
+      tags:
+      - purchases
+  /purchases/catalog/models:
+    get:
+      parameters:
+      - description: Nome do modelo
+        in: query
+        name: name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Variações de um modelo de grade
+      tags:
+      - purchases
+  /purchases/catalog/products:
+    get:
+      description: Produtos da empresa e, quando há texto, os modelos de grade que
+        casam com ele (atalho de recompra). Não exige o módulo Estoque.
+      parameters:
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 50
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        maxLength: 100
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogSearchResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca produtos para o pedido de compra
+      tags:
+      - purchases
+    post:
+      consumes:
+      - application/json
+      description: 'Cria um produto por combinação de cor e tamanho, sem estoque e
+        com código de barras interno. Tudo ou nada: combinação já existente ou limite
+        do plano recusam o lote inteiro.'
+      parameters:
+      - description: Modelo e variações
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CreateVariationsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CatalogProduct'
+            type: array
+        "409":
+          description: Variação já cadastrada
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Limite do plano ou categoria inválida
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cadastro rápido de produto com grade
+      tags:
+      - purchases
+  /purchases/orders:
+    get:
+      description: Pedidos com totais e quanto já foi recebido, mais os indicadores
+        da tela (a receber, recebido no mês, atrasados e contagem por status)
+      parameters:
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        maxLength: 100
+        name: search
+        type: string
+      - enum:
+        - draft
+        - sent
+        - partial
+        - received
+        - closed
+        - canceled
+        in: query
+        name: status
+        type: string
+      - in: query
+        name: vendor_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ListOrdersResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista pedidos de compra
+      tags:
+      - purchases
+    post:
+      consumes:
+      - application/json
+      description: Cria em rascunho; com send=true já fica como enviado ao fornecedor
+      parameters:
+      - description: Pedido
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cria pedido de compra
+      tags:
+      - purchases
+  /purchases/orders/{id}:
+    get:
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Detalhe do pedido de compra
+      tags:
+      - purchases
+    put:
+      consumes:
+      - application/json
+      description: Só em rascunho ou enviado, antes de qualquer recebimento. Os itens
+        são substituídos pelos enviados.
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Pedido
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.SaveOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Altera pedido de compra
+      tags:
+      - purchases
+  /purchases/orders/{id}/cancel:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Motivo
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+      security:
+      - BearerAuth: []
+      summary: Cancela pedido sem recebimentos
+      tags:
+      - purchases
+  /purchases/orders/{id}/close:
+    post:
+      consumes:
+      - application/json
+      description: Fecha o pedido com o que foi recebido; a quantidade pendente é
+        descartada
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Motivo
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.CloseOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+      security:
+      - BearerAuth: []
+      summary: Encerra pedido recebido em parte
+      tags:
+      - purchases
+  /purchases/orders/{id}/email:
+    post:
+      consumes:
+      - application/json
+      description: 'Corpo com os itens e o PDF anexo; resposta vai para o e-mail da
+        empresa com cópia para quem enviou. kind: sent (pedido enviado), updated (pedido
+        alterado) ou resend (reenvio). A entrega é assíncrona.'
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Tipo do e-mail
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.EmailOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "409":
+          description: Pedido não está enviado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Fornecedor sem e-mail
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "503":
+          description: Fila de e-mail indisponível
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Envia o pedido de compra por e-mail ao fornecedor
+      tags:
+      - purchases
+  /purchases/orders/{id}/receipts:
+    post:
+      consumes:
+      - application/json
+      description: Dá entrada no estoque, recalcula o custo médio com frete/despesas/desconto
+        rateados, atualiza preço de venda quando informado e gera as contas a pagar
+        das parcelas
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Recebimento
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReceiveRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "422":
+          description: Unprocessable Entity
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Recebe mercadoria do pedido
+      tags:
+      - purchases
+  /purchases/orders/{id}/send:
+    post:
+      parameters:
+      - description: ID do pedido
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+      security:
+      - BearerAuth: []
+      summary: Marca o pedido como enviado ao fornecedor
+      tags:
+      - purchases
+  /purchases/receipts/{id}/reverse:
+    post:
+      consumes:
+      - application/json
+      description: Devolve o estoque, recalcula o custo médio e cancela as parcelas
+        em aberto. Bloqueado se houver parcela paga ou se o estoque atual não cobrir
+        a devolução.
+      parameters:
+      - description: ID do recebimento
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Motivo do estorno
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.ReverseReceiptRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_purchases_domain.OrderDetail'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Estorna um recebimento
+      tags:
+      - purchases
+  /reports:
+    get:
+      description: |-
+        Monta o relatório do tipo pedido para o período (datas locais da empresa, inclusivas; sem datas usa o mês corrente). format=json devolve colunas, linhas, totais e indicadores para exibir na tela; xlsx e pdf devolvem o arquivo para download.
+        Tipos: sales, sales_by_day, sales_by_payment_method, sales_by_seller, sales_by_customer, products_abc, profit_category, inventory, stock_movements, dre, payments_received, open_installments, bills_payable, cash_sessions
+      parameters:
+      - description: YYYY-MM-DD, inclusivo
+        example: "2026-10-31"
+        in: query
+        name: end_date
+        type: string
+      - description: json (padrão), xlsx ou pdf
+        enum:
+        - json
+        - xlsx
+        - pdf
+        example: json
+        in: query
+        name: format
+        type: string
+        x-enum-varnames:
+        - FormatJSON
+        - FormatXLSX
+        - FormatPDF
+      - description: YYYY-MM-DD, inclusivo
+        example: "2026-10-01"
+        in: query
+        name: start_date
+        type: string
+      - enum:
+        - sales
+        - sales_by_day
+        - sales_by_payment_method
+        - sales_by_seller
+        - sales_by_customer
+        - products_abc
+        - profit_category
+        - inventory
+        - stock_movements
+        - dre
+        - payments_received
+        - open_installments
+        - bills_payable
+        - cash_sessions
+        example: sales
+        in: query
+        name: type
+        required: true
+        type: string
+        x-enum-varnames:
+        - ReportSales
+        - ReportSalesByDay
+        - ReportSalesByPaymentMethod
+        - ReportSalesBySeller
+        - ReportSalesByCustomer
+        - ReportProductsABC
+        - ReportProfitCategory
+        - ReportInventory
+        - ReportStockMovements
+        - ReportDRE
+        - ReportPaymentsReceived
+        - ReportOpenInstallments
+        - ReportBillsPayable
+        - ReportCashSessions
+      produces:
+      - application/json
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_reports_domain.Report'
+        "400":
+          description: Parâmetros inválidos
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Tipo de relatório inexistente
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Gera um relatório
       tags:
       - reports
+  /returns:
+    get:
+      parameters:
+      - in: query
+        name: end_date
+        type: string
+      - enum:
+        - return
+        - exchange
+        in: query
+        name: kind
+        type: string
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 100
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        maxLength: 100
+        name: search
+        type: string
+      - in: query
+        name: start_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ListReturnsResponse'
+      security:
+      - BearerAuth: []
+      summary: Lista trocas e devoluções
+      tags:
+      - returns
+    post:
+      consumes:
+      - application/json
+      description: Devolve o estoque, abate parcelas em aberto, gera vale-troca ou
+        reembolso e, na troca, cria a venda dos itens novos
+      parameters:
+      - description: Devolução
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CreateReturnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail'
+      security:
+      - BearerAuth: []
+      summary: Registra uma devolução ou troca
+      tags:
+      - returns
+  /returns/{id}:
+    get:
+      parameters:
+      - description: ID da devolução
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnDetail'
+      security:
+      - BearerAuth: []
+      summary: Detalhe da troca/devolução
+      tags:
+      - returns
+  /returns/customers/{id}/credit:
+    get:
+      parameters:
+      - description: ID do cliente
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.CustomerCredit'
+      security:
+      - BearerAuth: []
+      summary: Saldo e extrato do vale-troca do cliente
+      tags:
+      - returns
+  /returns/sales:
+    get:
+      parameters:
+      - in: query
+        minimum: 1
+        name: page
+        type: integer
+      - in: query
+        maximum: 50
+        minimum: 1
+        name: per_page
+        type: integer
+      - in: query
+        maxLength: 100
+        name: search
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.SaleSearchResponse'
+      security:
+      - BearerAuth: []
+      summary: Busca vendas para trocar ou devolver
+      tags:
+      - returns
+  /returns/sales/{id}:
+    get:
+      parameters:
+      - description: ID da venda
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sale_returns_domain.ReturnableSale'
+      security:
+      - BearerAuth: []
+      summary: Itens da venda que ainda podem ser devolvidos
+      tags:
+      - returns
   /sale-items/{id}:
     delete:
       parameters:
@@ -5336,6 +8929,40 @@ paths:
       security:
       - BearerAuth: []
       summary: Busca venda por ID
+      tags:
+      - sales
+  /sales/{id}/receipt:
+    get:
+      description: Busca a venda com empresa, cliente, vendedor e itens e devolve
+        o recibo pronto para impressão
+      parameters:
+      - description: ID da venda
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Gera o recibo da venda em PDF
       tags:
       - sales
   /sales/{id}/status:
@@ -5577,6 +9204,49 @@ paths:
       security:
       - BearerAuth: []
       summary: Distribuição de margem de lucro
+      tags:
+      - sales
+  /sales/overview:
+    get:
+      description: Totais do período comparados ao período anterior e série de vendas.
+        Sem start_date o período começa na primeira venda da empresa
+      parameters:
+      - example: "2026-10-29"
+        in: query
+        name: end_date
+        type: string
+      - example: "2026-10-01"
+        in: query
+        name: start_date
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_sales_domain.GetSalesOverviewResponse'
+        "400":
+          description: Erro de validação
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Não autorizado
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Erro interno
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Visão geral das vendas
       tags:
       - sales
   /sales/percentage:

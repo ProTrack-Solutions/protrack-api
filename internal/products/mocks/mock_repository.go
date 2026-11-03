@@ -133,11 +133,12 @@ func (mr *MockRepositoryInterfaceMockRecorder) DecrementStock(ctx, arg any) *gom
 }
 
 // DeleteProduct mocks base method.
-func (m *MockRepositoryInterface) DeleteProduct(ctx context.Context, arg db.DeleteProductParams) error {
+func (m *MockRepositoryInterface) DeleteProduct(ctx context.Context, arg db.DeleteProductParams) (int64, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteProduct", ctx, arg)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // DeleteProduct indicates an expected call of DeleteProduct.
@@ -207,18 +208,18 @@ func (mr *MockRepositoryInterfaceMockRecorder) GetInventoryReport(ctx, arg any) 
 }
 
 // GetProductByBarcode mocks base method.
-func (m *MockRepositoryInterface) GetProductByBarcode(ctx context.Context, barcode pgtype.Text) (db.Product, error) {
+func (m *MockRepositoryInterface) GetProductByBarcode(ctx context.Context, arg db.GetProductByBarcodeParams) (db.Product, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProductByBarcode", ctx, barcode)
+	ret := m.ctrl.Call(m, "GetProductByBarcode", ctx, arg)
 	ret0, _ := ret[0].(db.Product)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProductByBarcode indicates an expected call of GetProductByBarcode.
-func (mr *MockRepositoryInterfaceMockRecorder) GetProductByBarcode(ctx, barcode any) *gomock.Call {
+func (mr *MockRepositoryInterfaceMockRecorder) GetProductByBarcode(ctx, arg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductByBarcode", reflect.TypeOf((*MockRepositoryInterface)(nil).GetProductByBarcode), ctx, barcode)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProductByBarcode", reflect.TypeOf((*MockRepositoryInterface)(nil).GetProductByBarcode), ctx, arg)
 }
 
 // GetProductById mocks base method.
@@ -264,6 +265,21 @@ func (m *MockRepositoryInterface) GetTop5BestSellingProducts(ctx context.Context
 func (mr *MockRepositoryInterfaceMockRecorder) GetTop5BestSellingProducts(ctx, companyId any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetTop5BestSellingProducts", reflect.TypeOf((*MockRepositoryInterface)(nil).GetTop5BestSellingProducts), ctx, companyId)
+}
+
+// ListGridVariations mocks base method.
+func (m *MockRepositoryInterface) ListGridVariations(ctx context.Context, arg db.ListGridVariationsParams) ([]db.ListGridVariationsRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListGridVariations", ctx, arg)
+	ret0, _ := ret[0].([]db.ListGridVariationsRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListGridVariations indicates an expected call of ListGridVariations.
+func (mr *MockRepositoryInterfaceMockRecorder) ListGridVariations(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListGridVariations", reflect.TypeOf((*MockRepositoryInterface)(nil).ListGridVariations), ctx, arg)
 }
 
 // ListProductBuCategoryIdAndDate mocks base method.
@@ -339,6 +355,21 @@ func (m *MockRepositoryInterface) ListProductsByDate(ctx context.Context, arg db
 func (mr *MockRepositoryInterfaceMockRecorder) ListProductsByDate(ctx, arg any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListProductsByDate", reflect.TypeOf((*MockRepositoryInterface)(nil).ListProductsByDate), ctx, arg)
+}
+
+// ListStockEntries mocks base method.
+func (m *MockRepositoryInterface) ListStockEntries(ctx context.Context, arg db.ListStockEntriesParams) ([]db.ListStockEntriesRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListStockEntries", ctx, arg)
+	ret0, _ := ret[0].([]db.ListStockEntriesRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListStockEntries indicates an expected call of ListStockEntries.
+func (mr *MockRepositoryInterfaceMockRecorder) ListStockEntries(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListStockEntries", reflect.TypeOf((*MockRepositoryInterface)(nil).ListStockEntries), ctx, arg)
 }
 
 // UpdateProduct mocks base method.
