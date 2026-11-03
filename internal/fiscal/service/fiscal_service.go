@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rs/zerolog/log"
 )
 
 // FiscalAPI é o que o serviço usa do cliente da API fiscal (fake nos testes).
@@ -86,6 +87,8 @@ func translate(err error) error {
 		}
 		return &APIError{Status: apiErr.Status, Message: msg}
 	}
+	// Rede/DNS/timeout: o motivo real só vai para o log (URL errada, API fora...)
+	log.Error().Err(err).Msg("NFC-e: falha ao chamar a protrack-fiscal-api")
 	return &APIError{Status: 502, Message: "não foi possível falar com o serviço fiscal; tente de novo em instantes"}
 }
 

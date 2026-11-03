@@ -53,6 +53,10 @@ services:
       - 1.1.1.1
     container_name: protrack-api
     restart: unless-stopped
+    # Serviços rodando na máquina (ex.: protrack-fiscal-api em dev):
+    # FISCAL_API_URL=http://host.docker.internal:3000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "0.0.0.0:8080:8080"
     env_file:
