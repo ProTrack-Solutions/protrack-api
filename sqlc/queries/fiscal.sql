@@ -273,9 +273,9 @@ WHERE fd.company_id = @company_id
 ORDER BY fd.created_at DESC
 LIMIT @page_size::int OFFSET @page_offset::int;
 
--- name: ListFiscalSummaryBySales :many
--- Situação da última nota de cada venda (lista de vendas)
-SELECT DISTINCT ON (sale_id) sale_id, id, status, number, environment
+-- name: ListFiscalDocumentsBySales :many
+-- Última nota de cada venda (lista de vendas)
+SELECT DISTINCT ON (sale_id) *
 FROM fiscal_documents
 WHERE company_id = @company_id AND sale_id = ANY(@sale_ids::uuid[]) AND model = 65
 ORDER BY sale_id, attempt DESC;

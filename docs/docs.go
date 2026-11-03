@@ -4228,6 +4228,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/fiscal/sales": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Para a lista de vendas: mapa venda -\u003e nota (vendas sem nota ficam de fora).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Última NFC-e de várias vendas",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IDs das vendas separados por vírgula (até 100)",
+                        "name": "ids",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/fiscal/sales/{saleId}": {
             "get": {
                 "security": [

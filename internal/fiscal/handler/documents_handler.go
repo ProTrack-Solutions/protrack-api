@@ -5,10 +5,12 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/ProTrack-Solutions/protrack-api/internal/fiscal/domain"
 	"github.com/ProTrack-Solutions/protrack-api/internal/fiscal/service"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 )
 
@@ -53,6 +55,47 @@ func (h *Handler) ListDocuments(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// maxSalesPerLookup: uma página da lista de vendas
+const maxSalesPerLookup = 100
+
+// SalesDocuments godoc
+// @Summary      Última NFC-e de várias vendas
+// @Description  Para a lista de vendas: mapa venda -> nota (vendas sem nota ficam de fora).
+// @Tags         fiscal
+// @Produce      json
+// @Security     BearerAuth
+// @Param        ids query string true "IDs das vendas separados por vírgula (até 100)"
+// @Success      200 {object} map[string]domain.FiscalDocument
+// @Router       /fiscal/sales [get]
+func (h *Handler) SalesDocuments(c *gin.Context) {
+	companyId, _, ok := identity(c)
+	if !ok {
+		return
+	}
+	var ids []uuid.UUID
+	for _, raw := range strings.Split(c.Query("ids"), ",") {
+		if raw = strings.TrimSpace(raw); raw == "" {
+			continue
+		}
+		id, err := uuid.Parse(raw)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "id de venda inválido"})
+			return
+		}
+		ids = append(ids, id)
+	}
+	if len(ids) > maxSalesPerLookup {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "no máximo 100 vendas por consulta"})
+		return
+	}
+	out, err := h.service.SalesDocuments(c.Request.Context(), companyId, ids)
+	if err != nil {
+		respondDocumentError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"documents": out})
 }
 
 // GetSaleDocument godoc

@@ -389,9 +389,10 @@ func (s *Service) ListDocuments(ctx context.Context, companyId uuid.UUID, status
 	return out, nil
 }
 
-// SalesSummary: situação fiscal de várias vendas (para a lista de vendas).
-func (s *Service) SalesSummary(ctx context.Context, companyId uuid.UUID, saleIds []uuid.UUID) (map[uuid.UUID]domain.FiscalSummary, error) {
-	out := map[uuid.UUID]domain.FiscalSummary{}
+// SalesDocuments: última nota de cada venda pedida (lista de vendas). Vendas sem
+// nota não aparecem no mapa.
+func (s *Service) SalesDocuments(ctx context.Context, companyId uuid.UUID, saleIds []uuid.UUID) (map[uuid.UUID]domain.FiscalDocument, error) {
+	out := map[uuid.UUID]domain.FiscalDocument{}
 	if len(saleIds) == 0 {
 		return out, nil
 	}
@@ -399,19 +400,14 @@ func (s *Service) SalesSummary(ctx context.Context, companyId uuid.UUID, saleIds
 	for _, id := range saleIds {
 		ids = append(ids, pgconv.ParseUUIDToPgType(id))
 	}
-	rows, err := s.repo.ListFiscalSummaryBySales(ctx, db.ListFiscalSummaryBySalesParams{
+	rows, err := s.repo.ListFiscalDocumentsBySales(ctx, db.ListFiscalDocumentsBySalesParams{
 		CompanyID: pgconv.ParseUUIDToPgType(companyId), SaleIds: ids,
 	})
 	if err != nil {
 		return nil, err
 	}
 	for _, r := range rows {
-		out[pgconv.PgUUIDToUUID(r.SaleID)] = domain.FiscalSummary{
-			DocumentID:  pgconv.PgUUIDToUUID(r.ID),
-			Status:      r.Status,
-			Number:      pgconv.PgInt4ToIntPtr(r.Number),
-			Environment: r.Environment,
-		}
+		out[pgconv.PgUUIDToUUID(r.SaleID)] = toDocument(r)
 	}
 	return out, nil
 }

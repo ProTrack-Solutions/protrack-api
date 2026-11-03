@@ -7357,6 +7357,30 @@ paths:
       summary: Salva o perfil fiscal do emitente
       tags:
       - fiscal
+  /fiscal/sales:
+    get:
+      description: 'Para a lista de vendas: mapa venda -> nota (vendas sem nota ficam
+        de fora).'
+      parameters:
+      - description: IDs das vendas separados por vírgula (até 100)
+        in: query
+        name: ids
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument'
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Última NFC-e de várias vendas
+      tags:
+      - fiscal
   /fiscal/sales/{saleId}:
     get:
       description: Última tentativa de nota da venda; document null quando a venda

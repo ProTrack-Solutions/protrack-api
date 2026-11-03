@@ -352,8 +352,8 @@ type Querier interface {
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumentsParams) ([]ListFiscalDocumentsRow, error)
-	// Situação da última nota de cada venda (lista de vendas)
-	ListFiscalSummaryBySales(ctx context.Context, arg ListFiscalSummaryBySalesParams) ([]ListFiscalSummaryBySalesRow, error)
+	// Última nota de cada venda (lista de vendas)
+	ListFiscalDocumentsBySales(ctx context.Context, arg ListFiscalDocumentsBySalesParams) ([]FiscalDocument, error)
 	// Todas as variações de um modelo, na ordem em que foram cadastradas
 	ListGridVariations(ctx context.Context, arg ListGridVariationsParams) ([]ListGridVariationsRow, error)
 	ListInvoicesByCompany(ctx context.Context, arg ListInvoicesByCompanyParams) ([]InvoiceHistory, error)

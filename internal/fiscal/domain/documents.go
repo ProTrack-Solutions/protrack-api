@@ -73,14 +73,6 @@ type FiscalDocumentList struct {
 	PerPage   int                      `json:"per_page"`
 }
 
-// FiscalSummary é a situação fiscal resumida de uma venda.
-type FiscalSummary struct {
-	DocumentID  uuid.UUID `json:"document_id"`
-	Status      string    `json:"status"`
-	Number      *int32    `json:"number"`
-	Environment string    `json:"environment"`
-}
-
 type CancelInput struct {
 	Reason string `json:"reason"`
 }

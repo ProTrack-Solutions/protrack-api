@@ -27,6 +27,7 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		sales.GET("/documents/:id/danfce", h.Danfce)
 		sales.GET("/documents/:id/xml", h.Xml)
 		sales.POST("/documents/:id/cancel", h.CancelDocument)
+		sales.GET("/sales", h.SalesDocuments)
 		sales.GET("/sales/:saleId", h.GetSaleDocument)
 		sales.POST("/sales/:saleId/nfce", h.EmitSaleDocument)
 	}

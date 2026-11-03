@@ -885,42 +885,53 @@ func (q *Queries) ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumen
 	return items, nil
 }
 
-const listFiscalSummaryBySales = `-- name: ListFiscalSummaryBySales :many
-SELECT DISTINCT ON (sale_id) sale_id, id, status, number, environment
+const listFiscalDocumentsBySales = `-- name: ListFiscalDocumentsBySales :many
+SELECT DISTINCT ON (sale_id) id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
 FROM fiscal_documents
 WHERE company_id = $1 AND sale_id = ANY($2::uuid[]) AND model = 65
 ORDER BY sale_id, attempt DESC
 `
 
-type ListFiscalSummaryBySalesParams struct {
+type ListFiscalDocumentsBySalesParams struct {
 	CompanyID pgtype.UUID   `json:"company_id"`
 	SaleIds   []pgtype.UUID `json:"sale_ids"`
 }
 
-type ListFiscalSummaryBySalesRow struct {
-	SaleID      pgtype.UUID `json:"sale_id"`
-	ID          pgtype.UUID `json:"id"`
-	Status      string      `json:"status"`
-	Number      pgtype.Int4 `json:"number"`
-	Environment string      `json:"environment"`
-}
-
-// Situação da última nota de cada venda (lista de vendas)
-func (q *Queries) ListFiscalSummaryBySales(ctx context.Context, arg ListFiscalSummaryBySalesParams) ([]ListFiscalSummaryBySalesRow, error) {
-	rows, err := q.db.Query(ctx, listFiscalSummaryBySales, arg.CompanyID, arg.SaleIds)
+// Última nota de cada venda (lista de vendas)
+func (q *Queries) ListFiscalDocumentsBySales(ctx context.Context, arg ListFiscalDocumentsBySalesParams) ([]FiscalDocument, error) {
+	rows, err := q.db.Query(ctx, listFiscalDocumentsBySales, arg.CompanyID, arg.SaleIds)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListFiscalSummaryBySalesRow{}
+	items := []FiscalDocument{}
 	for rows.Next() {
-		var i ListFiscalSummaryBySalesRow
+		var i FiscalDocument
 		if err := rows.Scan(
-			&i.SaleID,
 			&i.ID,
+			&i.CompanyID,
+			&i.SaleID,
+			&i.Model,
+			&i.Environment,
+			&i.Attempt,
+			&i.IdempotencyKey,
+			&i.ExternalID,
 			&i.Status,
 			&i.Number,
-			&i.Environment,
+			&i.AccessKey,
+			&i.Protocol,
+			&i.StatusCode,
+			&i.RejectReason,
+			&i.ErrorMessage,
+			&i.EmissionType,
+			&i.AuthorizedAt,
+			&i.CancelReason,
+			&i.CancelledAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.RequestPayload,
+			&i.Retries,
 		); err != nil {
 			return nil, err
 		}
