@@ -30,6 +30,25 @@ type Handler struct {
 // a nota (autorizada, pendente, com falha...) ou nil quando a emissão está desligada.
 type FiscalHook interface {
 	AfterSale(ctx context.Context, companyId, userId, saleId uuid.UUID) *fiscalDomain.FiscalDocument
+	// Cancela a NFC-e autorizada; erro bloqueia o cancelamento da venda
+	BeforeSaleCancel(ctx context.Context, companyId, saleId uuid.UUID) error
+	// Venda com NFC-e não pode ser alterada
+	BeforeSaleUpdate(ctx context.Context, companyId, saleId uuid.UUID) error
+}
+
+// fiscalBlocked responde 409 quando a NFC-e impede a operação. true = já respondeu.
+func fiscalBlocked(c *gin.Context, err error) bool {
+	if err == nil {
+		return false
+	}
+	var blocked *fiscalDomain.SaleBlockedError
+	if errors.As(err, &blocked) {
+		c.JSON(http.StatusConflict, gin.H{"error": blocked.Reason})
+		return true
+	}
+	_ = c.Error(err)
+	c.JSON(http.StatusBadGateway, gin.H{"error": "não foi possível conferir a NFC-e da venda; tente de novo"})
+	return true
 }
 
 // SetFiscal liga a emissão de NFC-e no PDV.
@@ -176,6 +195,10 @@ func (h *Handler) DeleteSale(c *gin.Context) {
 	req.CompanyID = companyId
 
 	req.DeletedBy = userId
+
+	if h.fiscal != nil && fiscalBlocked(c, h.fiscal.BeforeSaleCancel(c.Request.Context(), companyId, id)) {
+		return
+	}
 
 	if err := h.service.DeleteSale(c.Request.Context(), id, req); err != nil {
 		respondSaleError(c, err)
@@ -756,6 +779,10 @@ func (h *Handler) UpdateSale(c *gin.Context) {
 	var req domain.UpdateSaleParams
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if h.fiscal != nil && fiscalBlocked(c, h.fiscal.BeforeSaleUpdate(c.Request.Context(), companyId, saleId)) {
 		return
 	}
 

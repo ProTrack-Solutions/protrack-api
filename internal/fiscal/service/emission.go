@@ -415,3 +415,63 @@ func (s *Service) SalesSummary(ctx context.Context, companyId uuid.UUID, saleIds
 	}
 	return out, nil
 }
+
+// Motivo usado quando a venda é cancelada no ERP (mínimo de 15 caracteres na SEFAZ).
+const saleCancelReason = "Venda cancelada no sistema de gestão ProTrack"
+
+// BeforeSaleCancel roda antes de cancelar a venda: cancela a NFC-e autorizada e
+// bloqueia se a nota ainda está em andamento ou se a SEFAZ recusar o cancelamento.
+func (s *Service) BeforeSaleCancel(ctx context.Context, companyId, saleId uuid.UUID) error {
+	d, err := s.repo.GetLiveFiscalDocumentBySale(ctx, pgconv.ParseUUIDToPgType(saleId))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if pgconv.PgUUIDToUUID(d.CompanyID) != companyId {
+		return nil // o cancelamento da venda devolve "não encontrada"
+	}
+	// Venda que não pode ser cancelada (devolução/troca): não mexe na nota
+	returns, err := s.repo.CountSaleReturnsBySale(ctx, pgconv.ParseUUIDToPgType(saleId))
+	if err != nil {
+		return err
+	}
+	if returns.ReturnsCount > 0 || returns.IsExchangeSale {
+		return nil
+	}
+	switch d.Status {
+	case domain.StatusCancelled:
+		return nil
+	case domain.StatusAuthorized:
+		out, err := s.CancelDocument(ctx, companyId, pgconv.PgUUIDToUUID(d.ID), saleCancelReason)
+		if err != nil {
+			var apiErr *APIError
+			if errors.As(err, &apiErr) {
+				return &domain.SaleBlockedError{Reason: "não foi possível cancelar a NFC-e: " + apiErr.Message + ". Fora do prazo de cancelamento, registre uma devolução"}
+			}
+			return err
+		}
+		if out.Status != domain.StatusCancelled {
+			return &domain.SaleBlockedError{Reason: "o cancelamento da NFC-e foi enviado e aguarda a SEFAZ; tente cancelar a venda em instantes"}
+		}
+		return nil
+	default:
+		return &domain.SaleBlockedError{Reason: "a NFC-e desta venda ainda está sendo processada; aguarde alguns minutos para cancelar"}
+	}
+}
+
+// BeforeSaleUpdate bloqueia a alteração de venda que já tem NFC-e válida ou em andamento.
+func (s *Service) BeforeSaleUpdate(ctx context.Context, companyId, saleId uuid.UUID) error {
+	d, err := s.repo.GetLiveFiscalDocumentBySale(ctx, pgconv.ParseUUIDToPgType(saleId))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if pgconv.PgUUIDToUUID(d.CompanyID) != companyId || d.Status == domain.StatusCancelled {
+		return nil
+	}
+	return &domain.SaleBlockedError{Reason: "a venda já tem NFC-e e não pode ser alterada; cancele a venda (a nota é cancelada junto) e faça uma nova"}
+}

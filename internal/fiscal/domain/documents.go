@@ -16,6 +16,11 @@ var (
 	ErrInvalidCancelReason    = errors.New("a justificativa do cancelamento deve ter de 15 a 255 caracteres")
 )
 
+// SaleBlockedError: a NFC-e impede cancelar/alterar a venda agora (o texto vai ao usuário).
+type SaleBlockedError struct{ Reason string }
+
+func (e *SaleBlockedError) Error() string { return e.Reason }
+
 // Situações da nota no ERP: as da API fiscal + FAILED (não virou nota).
 const (
 	StatusPending     = "PENDING"
