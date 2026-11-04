@@ -101,6 +101,7 @@ func respondSaleError(c *gin.Context, err error) {
 		errors.Is(err, domain.ErrInsufficientCredit),
 		errors.Is(err, domain.ErrSaleHasReturns),
 		errors.Is(err, domain.ErrExchangeSale),
+		errors.Is(err, domain.ErrSaleWithoutInstallments),
 		errors.Is(err, cashRegisterDomain.ErrCashRegisterRequired),
 		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotSelected),
 		errors.Is(err, cashRegisterDomain.ErrCashRegisterNotFound):
@@ -239,6 +240,43 @@ func (h *Handler) GetSaleReceipt(c *gin.Context) {
 	}
 
 	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"recibo_venda_%s.pdf\"", id))
+	c.Data(http.StatusOK, "application/pdf", pdfBuffer.Bytes())
+}
+
+// GetSaleBooklet godoc
+// @Summary      Gera o carnê de pagamento da venda a prazo em PDF
+// @Description  Uma lâmina por parcela em aberto ou paga, com canhoto da loja e via do cliente, pronta para impressão
+// @Tags         sales
+// @Produce      application/pdf
+// @Security     BearerAuth
+// @Param        id path string true "ID da venda"
+// @Success      200 {file} file
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /sales/{id}/booklet [get]
+func (h *Handler) GetSaleBooklet(c *gin.Context) {
+	companyIdAny, exists := c.Get("company_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "company_id is null"})
+		return
+	}
+
+	companyId := companyIdAny.(uuid.UUID)
+
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id da venda inválido"})
+		return
+	}
+
+	pdfBuffer, err := h.service.GenerateSaleBookletPDF(c.Request.Context(), id, companyId)
+	if err != nil {
+		respondSaleError(c, err)
+		return
+	}
+
+	c.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"carne_venda_%s.pdf\"", id))
 	c.Data(http.StatusOK, "application/pdf", pdfBuffer.Bytes())
 }
 

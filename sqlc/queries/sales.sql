@@ -509,6 +509,20 @@ WHERE si.sale_id = $1
 ORDER BY si.created_at,
     p.name;
 
+-- name: ListSaleBookletInstallments :many
+-- Parcelas do carnê de uma venda a prazo; canceladas (deleted_at) ficam de fora
+SELECT ar.installment_number,
+    ar.total_installments,
+    ar.due_date,
+    ar.total_amount,
+    ar.balance,
+    ar.status
+FROM accounts_receivable ar
+WHERE ar.sale_id = $1
+    AND ar.company_id = $2
+    AND ar.deleted_at IS NULL
+ORDER BY ar.installment_number ASC;
+
 -- name: GetSalesOverviewTotals :one
 -- Totais das vendas feitas em [start_date, end_date) no fuso da empresa.
 -- Venda cancelada tem deleted_at preenchido: entra só nos campos canceled_*.
