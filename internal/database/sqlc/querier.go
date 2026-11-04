@@ -373,6 +373,8 @@ type Querier interface {
 	// Itens da venda com o que já foi devolvido. net_total é o valor pago pela
 	// linha (preço menos o desconto rateado da venda).
 	ListReturnableItems(ctx context.Context, saleID pgtype.UUID) ([]ListReturnableItemsRow, error)
+	// Parcelas do carnê de uma venda a prazo; canceladas (deleted_at) ficam de fora
+	ListSaleBookletInstallments(ctx context.Context, arg ListSaleBookletInstallmentsParams) ([]ListSaleBookletInstallmentsRow, error)
 	ListSaleReceiptItems(ctx context.Context, saleID pgtype.UUID) ([]ListSaleReceiptItemsRow, error)
 	ListSaleReturnItems(ctx context.Context, returnID pgtype.UUID) ([]ListSaleReturnItemsRow, error)
 	ListSaleReturns(ctx context.Context, arg ListSaleReturnsParams) ([]ListSaleReturnsRow, error)

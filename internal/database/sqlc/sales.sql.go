@@ -979,6 +979,62 @@ func (q *Queries) GetTotalAmountSummary(ctx context.Context, companyID pgtype.UU
 	return i, err
 }
 
+const listSaleBookletInstallments = `-- name: ListSaleBookletInstallments :many
+SELECT ar.installment_number,
+    ar.total_installments,
+    ar.due_date,
+    ar.total_amount,
+    ar.balance,
+    ar.status
+FROM accounts_receivable ar
+WHERE ar.sale_id = $1
+    AND ar.company_id = $2
+    AND ar.deleted_at IS NULL
+ORDER BY ar.installment_number ASC
+`
+
+type ListSaleBookletInstallmentsParams struct {
+	SaleID    pgtype.UUID `json:"sale_id"`
+	CompanyID pgtype.UUID `json:"company_id"`
+}
+
+type ListSaleBookletInstallmentsRow struct {
+	InstallmentNumber pgtype.Int4    `json:"installment_number"`
+	TotalInstallments pgtype.Int4    `json:"total_installments"`
+	DueDate           pgtype.Date    `json:"due_date"`
+	TotalAmount       pgtype.Numeric `json:"total_amount"`
+	Balance           pgtype.Numeric `json:"balance"`
+	Status            string         `json:"status"`
+}
+
+// Parcelas do carnê de uma venda a prazo; canceladas (deleted_at) ficam de fora
+func (q *Queries) ListSaleBookletInstallments(ctx context.Context, arg ListSaleBookletInstallmentsParams) ([]ListSaleBookletInstallmentsRow, error) {
+	rows, err := q.db.Query(ctx, listSaleBookletInstallments, arg.SaleID, arg.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSaleBookletInstallmentsRow{}
+	for rows.Next() {
+		var i ListSaleBookletInstallmentsRow
+		if err := rows.Scan(
+			&i.InstallmentNumber,
+			&i.TotalInstallments,
+			&i.DueDate,
+			&i.TotalAmount,
+			&i.Balance,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSaleReceiptItems = `-- name: ListSaleReceiptItems :many
 SELECT p.barcode,
     p.name AS product_name,

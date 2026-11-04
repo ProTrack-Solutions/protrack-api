@@ -215,6 +215,20 @@ func (mr *MockRepositoryInterfaceMockRecorder) GetSaleReceipt(ctx, arg any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSaleReceipt", reflect.TypeOf((*MockRepositoryInterface)(nil).GetSaleReceipt), ctx, arg)
 }
 
+// ListSaleBookletInstallments mocks o método ListSaleBookletInstallments.
+func (m *MockRepositoryInterface) ListSaleBookletInstallments(ctx context.Context, arg db.ListSaleBookletInstallmentsParams) ([]db.ListSaleBookletInstallmentsRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSaleBookletInstallments", ctx, arg)
+	ret0, _ := ret[0].([]db.ListSaleBookletInstallmentsRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+func (mr *MockRepositoryInterfaceMockRecorder) ListSaleBookletInstallments(ctx, arg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSaleBookletInstallments", reflect.TypeOf((*MockRepositoryInterface)(nil).ListSaleBookletInstallments), ctx, arg)
+}
+
 // ListSaleReceiptItems mocks o método ListSaleReceiptItems.
 func (m *MockRepositoryInterface) ListSaleReceiptItems(ctx context.Context, saleId pgtype.UUID) ([]db.ListSaleReceiptItemsRow, error) {
 	m.ctrl.T.Helper()
