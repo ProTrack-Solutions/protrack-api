@@ -52,6 +52,11 @@ func (r *Repository) ListSaleReceiptItems(ctx context.Context, saleId pgtype.UUI
 	return q.ListSaleReceiptItems(ctx, saleId)
 }
 
+func (r *Repository) ListSaleBookletInstallments(ctx context.Context, arg db.ListSaleBookletInstallmentsParams) ([]db.ListSaleBookletInstallmentsRow, error) {
+	q := db.New(r.db)
+	return q.ListSaleBookletInstallments(ctx, arg)
+}
+
 func (r *Repository) ListSales(ctx context.Context, companyId pgtype.UUID) ([]db.ListSalesRow, error) {
 	q := db.New(r.db)
 	return q.ListSales(ctx, companyId)

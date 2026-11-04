@@ -62,6 +62,8 @@ var (
 	ErrInsufficientCredit = errors.New("vale-troca insuficiente")
 	ErrSaleHasReturns     = errors.New("a venda tem trocas ou devoluções registradas e não pode ser cancelada nem alterada")
 	ErrExchangeSale       = errors.New("venda gerada por uma troca não pode ser cancelada nem alterada")
+
+	ErrSaleWithoutInstallments = errors.New("a venda não possui parcelas a prazo para gerar o carnê")
 )
 
 // MaxInstallments é o limite de parcelas de uma venda a prazo (o mesmo oferecido na tela).
@@ -411,4 +413,27 @@ type SaleReceiptItem struct {
 	Quantity    int32
 	UnitPrice   float64
 	Total       float64
+}
+
+// SaleBooklet reúne os dados para imprimir o carnê de uma venda no crediário:
+// uma lâmina por parcela, com canhoto da loja e via do cliente.
+type SaleBooklet struct {
+	SaleID       uuid.UUID
+	SaleAt       time.Time
+	PrintedAt    time.Time
+	TotalAmount  float64
+	DownPayment  float64
+	Status       string
+	Company      SaleReceiptCompany
+	Customer     SaleReceiptCustomer
+	Installments []SaleBookletInstallment
+}
+
+type SaleBookletInstallment struct {
+	Number  int
+	Total   int
+	DueDate time.Time
+	Amount  float64
+	Balance float64
+	Status  string
 }
