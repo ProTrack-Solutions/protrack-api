@@ -3838,19 +3838,31 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Última tentativa de cada venda. problems=true traz só rejeitadas, com falha ou pendentes.",
+                "description": "Última tentativa de cada venda e as notas manuais. problems=true traz só rejeitadas, com falha ou pendentes.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "fiscal"
                 ],
-                "summary": "Notas fiscais (NFC-e) da empresa",
+                "summary": "Notas fiscais (NFC-e e NF-e) da empresa",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Situação (AUTHORIZED, REJECTED, FAILED, PENDING, CANCELLED...)",
                         "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "55 = NF-e, 65 = NFC-e",
+                        "name": "model",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "sale (vendas) ou manual",
+                        "name": "source",
                         "in": "query"
                     },
                     {
@@ -3877,6 +3889,84 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents/manual": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Nota sem venda e sem baixa de estoque. idempotency_key (UUID gerado pela tela) evita nota duplicada. Problemas no pedido voltam 400 com a lista em \"problems\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Emite NF-e ou NFC-e manual (avulsa)",
+                "parameters": [
+                    {
+                        "description": "Nota manual",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument"
+                        }
+                    }
+                }
+            }
+        },
+        "/fiscal/documents/manual/preview": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Devolve os problemas que impedem a emissão, o CFOP de cada item e os totais (na NF-e, calculados pela API fiscal).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fiscal"
+                ],
+                "summary": "Confere a NF-e/NFC-e manual antes de emitir",
+                "parameters": [
+                    {
+                        "description": "Nota manual",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreview"
                         }
                     }
                 }
@@ -3940,7 +4030,7 @@ const docTemplate = `{
                 "tags": [
                     "fiscal"
                 ],
-                "summary": "DANFC-e (PDF 80 mm) da nota",
+                "summary": "PDF da nota: DANFC-e 80 mm (NFC-e) ou DANFE A4 (NF-e)",
                 "parameters": [
                     {
                         "type": "string",
@@ -12476,6 +12566,87 @@ const docTemplate = `{
                 "StatusDeleted"
             ]
         },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_client.NfeTotals": {
+            "type": "object",
+            "properties": {
+                "cofins": {
+                    "type": "number"
+                },
+                "difal": {
+                    "type": "object",
+                    "properties": {
+                        "fcp": {
+                            "type": "number"
+                        },
+                        "icms": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "fcp": {
+                    "type": "number"
+                },
+                "fcpSt": {
+                    "type": "number"
+                },
+                "freight": {
+                    "type": "number"
+                },
+                "ibsCbs": {
+                    "type": "object",
+                    "properties": {
+                        "base": {
+                            "type": "number"
+                        },
+                        "cbs": {
+                            "type": "number"
+                        },
+                        "ibsCity": {
+                            "type": "number"
+                        },
+                        "ibsState": {
+                            "type": "number"
+                        }
+                    }
+                },
+                "icms": {
+                    "type": "number"
+                },
+                "icmsBase": {
+                    "type": "number"
+                },
+                "insurance": {
+                    "type": "number"
+                },
+                "ipi": {
+                    "type": "number"
+                },
+                "otherExpenses": {
+                    "type": "number"
+                },
+                "pis": {
+                    "type": "number"
+                },
+                "products": {
+                    "type": "number"
+                },
+                "st": {
+                    "type": "number"
+                },
+                "stBase": {
+                    "type": "number"
+                },
+                "total": {
+                    "type": "number"
+                },
+                "totalWithIbsCbs": {
+                    "type": "number"
+                }
+            }
+        },
         "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput": {
             "type": "object",
             "properties": {
@@ -12589,10 +12760,23 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "model": {
+                    "description": "55 = NF-e, 65 = NFC-e",
+                    "type": "integer"
+                },
                 "number": {
                     "type": "integer"
                 },
+                "operation_nature": {
+                    "type": "string"
+                },
                 "protocol": {
+                    "type": "string"
+                },
+                "recipient_document": {
+                    "type": "string"
+                },
+                "recipient_name": {
                     "type": "string"
                 },
                 "reject_reason": {
@@ -12601,11 +12785,18 @@ const docTemplate = `{
                 "sale_id": {
                     "type": "string"
                 },
+                "source": {
+                    "description": "sale ou manual",
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
                 "status_code": {
                     "type": "string"
+                },
+                "total": {
+                    "type": "number"
                 }
             }
         },
@@ -12665,10 +12856,23 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "model": {
+                    "description": "55 = NF-e, 65 = NFC-e",
+                    "type": "integer"
+                },
                 "number": {
                     "type": "integer"
                 },
+                "operation_nature": {
+                    "type": "string"
+                },
                 "protocol": {
+                    "type": "string"
+                },
+                "recipient_document": {
+                    "type": "string"
+                },
+                "recipient_name": {
                     "type": "string"
                 },
                 "reject_reason": {
@@ -12683,11 +12887,18 @@ const docTemplate = `{
                 "sale_total": {
                     "type": "number"
                 },
+                "source": {
+                    "description": "sale ou manual",
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },
                 "status_code": {
                     "type": "string"
+                },
+                "total": {
+                    "type": "number"
                 }
             }
         },
@@ -12817,6 +13028,251 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "csc_secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualAddress": {
+            "type": "object",
+            "properties": {
+                "city_code": {
+                    "description": "Código IBGE do município (7 dígitos)",
+                    "type": "string"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "complement": {
+                    "type": "string"
+                },
+                "district": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "street": {
+                    "type": "string"
+                },
+                "zip_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualCarrier": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "document": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string"
+                },
+                "state_registration": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDifal": {
+            "type": "object",
+            "properties": {
+                "destination_rate": {
+                    "type": "number"
+                },
+                "fcp_rate": {
+                    "type": "number"
+                },
+                "interstate_rate": {
+                    "type": "integer"
+                },
+                "method": {
+                    "description": "single (padrão) ou double (base dupla)",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput": {
+            "type": "object",
+            "properties": {
+                "additional_info": {
+                    "type": "string"
+                },
+                "default_cfop": {
+                    "description": "CFOP dos itens sem CFOP próprio (ex.: 5910 bonificação). Vazio = CFOP do perfil.\nNa NF-e para outro estado o 5 vira 6 sozinho.",
+                    "type": "string"
+                },
+                "final_consumer": {
+                    "description": "indFinal (NF-e). Vazio = consumidor final quando o destinatário não é contribuinte",
+                    "type": "boolean"
+                },
+                "idempotency_key": {
+                    "description": "Gerada pela tela ao abrir o formulário: o mesmo envio (duplo clique) não vira duas notas",
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualItemInput"
+                    }
+                },
+                "model": {
+                    "description": "55 = NF-e, 65 = NFC-e",
+                    "type": "integer"
+                },
+                "operation_nature": {
+                    "description": "natOp (NF-e). Vazio = \"Venda de mercadoria\"",
+                    "type": "string"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualPayment"
+                    }
+                },
+                "presence": {
+                    "description": "indPres (NF-e): 0 não se aplica, 1 presencial, 2 internet, 3 teleatendimento,\n4 entrega em domicílio, 5 presencial fora do estabelecimento, 9 outros",
+                    "type": "string"
+                },
+                "recipient": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualRecipient"
+                },
+                "transport": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualTransport"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualItemInput": {
+            "type": "object",
+            "properties": {
+                "additional_info": {
+                    "type": "string"
+                },
+                "cfop": {
+                    "description": "Vazio = CFOP do perfil (5xxx; vira 6xxx na NF-e para outro estado)",
+                    "type": "string"
+                },
+                "description": {
+                    "description": "Vazio = nome do produto",
+                    "type": "string"
+                },
+                "difal": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDifal"
+                },
+                "discount": {
+                    "type": "number"
+                },
+                "freight": {
+                    "type": "number"
+                },
+                "insurance": {
+                    "type": "number"
+                },
+                "other_expenses": {
+                    "type": "number"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "number"
+                },
+                "tax_profile_id": {
+                    "description": "Vazio = perfil do produto -\u003e categoria -\u003e padrão da empresa",
+                    "type": "string"
+                },
+                "unit_price": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualPayment": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualRecipient": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualAddress"
+                },
+                "document": {
+                    "description": "CPF ou CNPJ (só dígitos ou com máscara)",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "ie_indicator": {
+                    "description": "indIEDest: 1 contribuinte (IE obrigatória), 2 isento, 9 não contribuinte",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "state_registration": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualTransport": {
+            "type": "object",
+            "properties": {
+                "carrier": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualCarrier"
+                },
+                "mode": {
+                    "description": "modFrete: 0 emitente, 1 destinatário, 2 terceiros, 3 próprio remetente, 4 próprio destinatário, 9 sem frete",
+                    "type": "string"
+                },
+                "volumes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualVolume"
+                    }
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualVolume": {
+            "type": "object",
+            "properties": {
+                "brand": {
+                    "type": "string"
+                },
+                "gross_weight": {
+                    "type": "number"
+                },
+                "net_weight": {
+                    "type": "number"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "species": {
                     "type": "string"
                 }
             }
@@ -13036,6 +13492,44 @@ const docTemplate = `{
                 },
                 "enabled": {
                     "type": "boolean"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreview": {
+            "type": "object",
+            "properties": {
+                "interstate": {
+                    "type": "boolean"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreviewItem"
+                    }
+                },
+                "problems": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "total": {
+                    "description": "Total a pagar: vNF na NF-e, soma dos itens na NFC-e",
+                    "type": "number"
+                },
+                "totals": {
+                    "$ref": "#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_client.NfeTotals"
+                }
+            }
+        },
+        "github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreviewItem": {
+            "type": "object",
+            "properties": {
+                "cfop": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
                 }
             }
         },

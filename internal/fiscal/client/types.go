@@ -213,6 +213,146 @@ type NfcePayment struct {
 	IntegrationType string  `json:"integrationType,omitempty"`
 }
 
+// ---- NF-e (modelo 55) ----
+
+type NfeRequest struct {
+	OperationNature string        `json:"operationNature"`
+	FinalConsumer   bool          `json:"finalConsumer"`
+	Presence        string        `json:"presence"`
+	Customer        NfeCustomer   `json:"customer"`
+	Items           []NfeItem     `json:"items"`
+	Transport       *NfeTransport `json:"transport,omitempty"`
+	Payments        []NfePayment  `json:"payments"`
+	AdditionalInfo  string        `json:"additionalInfo,omitempty"`
+}
+
+// NfeCustomer: CNPJ ou CPF (um dos dois). StateRegistrationIndicator é o indIEDest:
+// 1 contribuinte (IE obrigatória), 2 isento, 9 não contribuinte.
+type NfeCustomer struct {
+	CNPJ                       string     `json:"cnpj,omitempty"`
+	CPF                        string     `json:"cpf,omitempty"`
+	Name                       string     `json:"name"`
+	StateRegistrationIndicator string     `json:"stateRegistrationIndicator"`
+	StateRegistration          string     `json:"stateRegistration,omitempty"`
+	Email                      string     `json:"email,omitempty"`
+	Address                    NfeAddress `json:"address"`
+}
+
+type NfeAddress struct {
+	Street     string `json:"street"`
+	Number     string `json:"number"`
+	Complement string `json:"complement,omitempty"`
+	District   string `json:"district"`
+	CityCode   string `json:"cityCode"`
+	CityName   string `json:"cityName"`
+	State      string `json:"state"`
+	ZipCode    string `json:"zipCode,omitempty"`
+	Phone      string `json:"phone,omitempty"`
+}
+
+type NfeItem struct {
+	Code           string   `json:"code"`
+	GTIN           string   `json:"gtin,omitempty"`
+	Description    string   `json:"description"`
+	NCM            string   `json:"ncm"`
+	CEST           string   `json:"cest,omitempty"`
+	BenefitCode    string   `json:"benefitCode,omitempty"`
+	Unit           string   `json:"unit"`
+	Quantity       float64  `json:"quantity"`
+	UnitPrice      float64  `json:"unitPrice"`
+	Discount       float64  `json:"discount,omitempty"`
+	CFOP           string   `json:"cfop"`
+	Freight        *float64 `json:"freight,omitempty"`
+	Insurance      *float64 `json:"insurance,omitempty"`
+	OtherExpenses  *float64 `json:"otherExpenses,omitempty"`
+	AdditionalInfo string   `json:"additionalInfo,omitempty"`
+	Tax            NfeTax   `json:"tax"`
+}
+
+type NfeTax struct {
+	ICMS   ICMS         `json:"icms"`
+	PIS    Contribution `json:"pis"`
+	COFINS Contribution `json:"cofins"`
+	DIFAL  *DIFAL       `json:"difal,omitempty"`
+	IBSCBS IBSCBS       `json:"ibsCbs"`
+}
+
+// DIFAL: venda interestadual a consumidor final não contribuinte (a API calcula os valores).
+type DIFAL struct {
+	DestinationRate float64  `json:"destinationRate"`
+	InterstateRate  int      `json:"interstateRate"`
+	FCPRate         *float64 `json:"fcpRate,omitempty"`
+	Method          string   `json:"method,omitempty"`
+}
+
+// NfeTransport: Mode é o modFrete (0 emitente, 1 destinatário, 2 terceiros,
+// 3 próprio remetente, 4 próprio destinatário, 9 sem frete).
+type NfeTransport struct {
+	Mode    string      `json:"mode"`
+	Carrier *NfeCarrier `json:"carrier,omitempty"`
+	Volumes []NfeVolume `json:"volumes,omitempty"`
+}
+
+type NfeCarrier struct {
+	CNPJ              string `json:"cnpj,omitempty"`
+	CPF               string `json:"cpf,omitempty"`
+	Name              string `json:"name"`
+	StateRegistration string `json:"stateRegistration,omitempty"`
+	Address           string `json:"address,omitempty"`
+	CityName          string `json:"cityName,omitempty"`
+	State             string `json:"state,omitempty"`
+}
+
+type NfeVolume struct {
+	Quantity    int      `json:"quantity"`
+	Species     string   `json:"species,omitempty"`
+	Brand       string   `json:"brand,omitempty"`
+	NetWeight   *float64 `json:"netWeight,omitempty"`
+	GrossWeight *float64 `json:"grossWeight,omitempty"`
+}
+
+// NfePayment: 90 = sem pagamento (valor 0); 99 = outros (descrição obrigatória).
+type NfePayment struct {
+	Method      string  `json:"method"`
+	Amount      float64 `json:"amount"`
+	Description string  `json:"description,omitempty"`
+}
+
+type NfeTotalsRequest struct {
+	Items         []NfeItem `json:"items"`
+	FinalConsumer bool      `json:"finalConsumer"`
+}
+
+// NfeTotals: os totais como a emissão calcula. Total é o vNF (o que os pagamentos cobrem).
+type NfeTotals struct {
+	Products      float64 `json:"products"`
+	Discount      float64 `json:"discount"`
+	Freight       float64 `json:"freight"`
+	Insurance     float64 `json:"insurance"`
+	OtherExpenses float64 `json:"otherExpenses"`
+	ICMSBase      float64 `json:"icmsBase"`
+	ICMS          float64 `json:"icms"`
+	FCP           float64 `json:"fcp"`
+	STBase        float64 `json:"stBase"`
+	ST            float64 `json:"st"`
+	FCPST         float64 `json:"fcpSt"`
+	IPI           float64 `json:"ipi"`
+	PIS           float64 `json:"pis"`
+	COFINS        float64 `json:"cofins"`
+	DIFAL         *struct {
+		ICMS float64 `json:"icms"`
+		FCP  float64 `json:"fcp"`
+	} `json:"difal"`
+	IBSCBS struct {
+		Base     float64 `json:"base"`
+		IBSState float64 `json:"ibsState"`
+		IBSCity  float64 `json:"ibsCity"`
+		CBS      float64 `json:"cbs"`
+	} `json:"ibsCbs"`
+	Total           float64 `json:"total"`
+	TotalWithIBSCBS float64 `json:"totalWithIbsCbs"`
+}
+
 // Document é a nota como a API fiscal devolve (emissão, consulta e webhooks).
 type Document struct {
 	ID           string  `json:"id"`

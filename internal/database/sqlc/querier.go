@@ -92,6 +92,7 @@ type Querier interface {
 	// Variação nova com a entrada inicial de estoque na mesma instrução
 	CreateGridProduct(ctx context.Context, arg CreateGridProductParams) (pgtype.UUID, error)
 	CreateInvoiceHistory(ctx context.Context, arg CreateInvoiceHistoryParams) error
+	CreateManualFiscalDocument(ctx context.Context, arg CreateManualFiscalDocumentParams) (FiscalDocument, error)
 	CreatePaymentHistory(ctx context.Context, arg CreatePaymentHistoryParams) error
 	CreatePaymentMethod(ctx context.Context, arg CreatePaymentMethodParams) error
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (pgtype.UUID, error)
@@ -227,6 +228,8 @@ type Querier interface {
 	GetFirstSaleDate(ctx context.Context, arg GetFirstSaleDateParams) (pgtype.Date, error)
 	GetFiscalDocument(ctx context.Context, arg GetFiscalDocumentParams) (FiscalDocument, error)
 	GetFiscalDocumentByExternalId(ctx context.Context, externalID pgtype.UUID) (FiscalDocument, error)
+	// ---------- Emissão manual (NF-e e NFC-e avulsas) ----------
+	GetFiscalDocumentByIdempotencyKey(ctx context.Context, arg GetFiscalDocumentByIdempotencyKeyParams) (FiscalDocument, error)
 	GetGeneralTotalStockValue(ctx context.Context, companyID pgtype.UUID) (float64, error)
 	GetGlobalTotalStockQuantity(ctx context.Context, companyID pgtype.UUID) (int32, error)
 	GetInventoryReport(ctx context.Context, arg GetInventoryReportParams) ([]GetInventoryReportRow, error)
@@ -351,6 +354,7 @@ type Querier interface {
 	ListExchangeSaleItems(ctx context.Context, saleID pgtype.UUID) ([]ListExchangeSaleItemsRow, error)
 	ListFeaturesActiveByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
 	ListFeaturesByPlanID(ctx context.Context, planID pgtype.UUID) ([]PlanFeature, error)
+	// Notas das vendas (só a última tentativa de cada venda) e notas manuais
 	ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumentsParams) ([]ListFiscalDocumentsRow, error)
 	// Última nota de cada venda (lista de vendas)
 	ListFiscalDocumentsBySales(ctx context.Context, arg ListFiscalDocumentsBySalesParams) ([]FiscalDocument, error)
@@ -383,6 +387,8 @@ type Querier interface {
 	ListProductsByCompanyPaginated(ctx context.Context, arg ListProductsByCompanyPaginatedParams) ([]ListProductsByCompanyPaginatedRow, error)
 	ListProductsByDate(ctx context.Context, arg ListProductsByDateParams) ([]ListProductsByDateRow, error)
 	ListProductsForExchange(ctx context.Context, arg ListProductsForExchangeParams) ([]ListProductsForExchangeRow, error)
+	// Produtos da nota manual com o perfil tributário resolvido: produto -> categoria -> padrão
+	ListProductsForManualDocument(ctx context.Context, arg ListProductsForManualDocumentParams) ([]ListProductsForManualDocumentRow, error)
 	ListProductsForPurchase(ctx context.Context, arg ListProductsForPurchaseParams) ([]ListProductsForPurchaseRow, error)
 	ListPurchaseBillsByOrder(ctx context.Context, orderID pgtype.UUID) ([]ListPurchaseBillsByOrderRow, error)
 	ListPurchaseCategories(ctx context.Context, companyID pgtype.UUID) ([]ListPurchaseCategoriesRow, error)

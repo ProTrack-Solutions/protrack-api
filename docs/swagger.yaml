@@ -1838,6 +1838,59 @@ definitions:
     - StatusActive
     - StatusInactive
     - StatusDeleted
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_client.NfeTotals:
+    properties:
+      cofins:
+        type: number
+      difal:
+        properties:
+          fcp:
+            type: number
+          icms:
+            type: number
+        type: object
+      discount:
+        type: number
+      fcp:
+        type: number
+      fcpSt:
+        type: number
+      freight:
+        type: number
+      ibsCbs:
+        properties:
+          base:
+            type: number
+          cbs:
+            type: number
+          ibsCity:
+            type: number
+          ibsState:
+            type: number
+        type: object
+      icms:
+        type: number
+      icmsBase:
+        type: number
+      insurance:
+        type: number
+      ipi:
+        type: number
+      otherExpenses:
+        type: number
+      pis:
+        type: number
+      products:
+        type: number
+      st:
+        type: number
+      stBase:
+        type: number
+      total:
+        type: number
+      totalWithIbsCbs:
+        type: number
+    type: object
   github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.CancelInput:
     properties:
       reason:
@@ -1912,18 +1965,32 @@ definitions:
         type: string
       id:
         type: string
+      model:
+        description: 55 = NF-e, 65 = NFC-e
+        type: integer
       number:
         type: integer
+      operation_nature:
+        type: string
       protocol:
+        type: string
+      recipient_document:
+        type: string
+      recipient_name:
         type: string
       reject_reason:
         type: string
       sale_id:
         type: string
+      source:
+        description: sale ou manual
+        type: string
       status:
         type: string
       status_code:
         type: string
+      total:
+        type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList:
     properties:
@@ -1962,9 +2029,18 @@ definitions:
         type: string
       id:
         type: string
+      model:
+        description: 55 = NF-e, 65 = NFC-e
+        type: integer
       number:
         type: integer
+      operation_nature:
+        type: string
       protocol:
+        type: string
+      recipient_document:
+        type: string
+      recipient_name:
         type: string
       reject_reason:
         type: string
@@ -1974,10 +2050,15 @@ definitions:
         type: string
       sale_total:
         type: number
+      source:
+        description: sale ou manual
+        type: string
       status:
         type: string
       status_code:
         type: string
+      total:
+        type: number
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalProfile:
     properties:
@@ -2063,6 +2144,179 @@ definitions:
       csc_id:
         type: string
       csc_secret:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualAddress:
+    properties:
+      city_code:
+        description: Código IBGE do município (7 dígitos)
+        type: string
+      city_name:
+        type: string
+      complement:
+        type: string
+      district:
+        type: string
+      number:
+        type: string
+      phone:
+        type: string
+      state:
+        type: string
+      street:
+        type: string
+      zip_code:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualCarrier:
+    properties:
+      address:
+        type: string
+      city_name:
+        type: string
+      document:
+        type: string
+      name:
+        type: string
+      state:
+        type: string
+      state_registration:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDifal:
+    properties:
+      destination_rate:
+        type: number
+      fcp_rate:
+        type: number
+      interstate_rate:
+        type: integer
+      method:
+        description: single (padrão) ou double (base dupla)
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput:
+    properties:
+      additional_info:
+        type: string
+      default_cfop:
+        description: |-
+          CFOP dos itens sem CFOP próprio (ex.: 5910 bonificação). Vazio = CFOP do perfil.
+          Na NF-e para outro estado o 5 vira 6 sozinho.
+        type: string
+      final_consumer:
+        description: indFinal (NF-e). Vazio = consumidor final quando o destinatário
+          não é contribuinte
+        type: boolean
+      idempotency_key:
+        description: 'Gerada pela tela ao abrir o formulário: o mesmo envio (duplo
+          clique) não vira duas notas'
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualItemInput'
+        type: array
+      model:
+        description: 55 = NF-e, 65 = NFC-e
+        type: integer
+      operation_nature:
+        description: natOp (NF-e). Vazio = "Venda de mercadoria"
+        type: string
+      payments:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualPayment'
+        type: array
+      presence:
+        description: |-
+          indPres (NF-e): 0 não se aplica, 1 presencial, 2 internet, 3 teleatendimento,
+          4 entrega em domicílio, 5 presencial fora do estabelecimento, 9 outros
+        type: string
+      recipient:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualRecipient'
+      transport:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualTransport'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualItemInput:
+    properties:
+      additional_info:
+        type: string
+      cfop:
+        description: Vazio = CFOP do perfil (5xxx; vira 6xxx na NF-e para outro estado)
+        type: string
+      description:
+        description: Vazio = nome do produto
+        type: string
+      difal:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDifal'
+      discount:
+        type: number
+      freight:
+        type: number
+      insurance:
+        type: number
+      other_expenses:
+        type: number
+      product_id:
+        type: string
+      quantity:
+        type: number
+      tax_profile_id:
+        description: Vazio = perfil do produto -> categoria -> padrão da empresa
+        type: string
+      unit_price:
+        type: number
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualPayment:
+    properties:
+      amount:
+        type: number
+      description:
+        type: string
+      method:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualRecipient:
+    properties:
+      address:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualAddress'
+      document:
+        description: CPF ou CNPJ (só dígitos ou com máscara)
+        type: string
+      email:
+        type: string
+      ie_indicator:
+        description: 'indIEDest: 1 contribuinte (IE obrigatória), 2 isento, 9 não
+          contribuinte'
+        type: string
+      name:
+        type: string
+      state_registration:
+        type: string
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualTransport:
+    properties:
+      carrier:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualCarrier'
+      mode:
+        description: 'modFrete: 0 emitente, 1 destinatário, 2 terceiros, 3 próprio
+          remetente, 4 próprio destinatário, 9 sem frete'
+        type: string
+      volumes:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualVolume'
+        type: array
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualVolume:
+    properties:
+      brand:
+        type: string
+      gross_weight:
+        type: number
+      net_weight:
+        type: number
+      quantity:
+        type: integer
+      species:
         type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ProductFiscal:
@@ -2207,6 +2461,31 @@ definitions:
         type: string
       enabled:
         type: boolean
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreview:
+    properties:
+      interstate:
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreviewItem'
+        type: array
+      problems:
+        items:
+          type: string
+        type: array
+      total:
+        description: 'Total a pagar: vNF na NF-e, soma dos itens na NFC-e'
+        type: number
+      totals:
+        $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_client.NfeTotals'
+    type: object
+  github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreviewItem:
+    properties:
+      cfop:
+        type: string
+      description:
+        type: string
     type: object
   github_com_ProTrack-Solutions_protrack-api_internal_label_domain.GenetareTagProductRequest:
     properties:
@@ -7111,12 +7390,20 @@ paths:
       - fiscal
   /fiscal/documents:
     get:
-      description: Última tentativa de cada venda. problems=true traz só rejeitadas,
-        com falha ou pendentes.
+      description: Última tentativa de cada venda e as notas manuais. problems=true
+        traz só rejeitadas, com falha ou pendentes.
       parameters:
       - description: Situação (AUTHORIZED, REJECTED, FAILED, PENDING, CANCELLED...)
         in: query
         name: status
+        type: string
+      - description: 55 = NF-e, 65 = NFC-e
+        in: query
+        name: model
+        type: integer
+      - description: sale (vendas) ou manual
+        in: query
+        name: source
         type: string
       - description: Só as que precisam de atenção
         in: query
@@ -7139,7 +7426,7 @@ paths:
             $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocumentList'
       security:
       - BearerAuth: []
-      summary: Notas fiscais (NFC-e) da empresa
+      summary: Notas fiscais (NFC-e e NF-e) da empresa
       tags:
       - fiscal
   /fiscal/documents/{id}/cancel:
@@ -7187,7 +7474,7 @@ paths:
             type: file
       security:
       - BearerAuth: []
-      summary: DANFC-e (PDF 80 mm) da nota
+      summary: 'PDF da nota: DANFC-e 80 mm (NFC-e) ou DANFE A4 (NF-e)'
       tags:
       - fiscal
   /fiscal/documents/{id}/xml:
@@ -7208,6 +7495,57 @@ paths:
       security:
       - BearerAuth: []
       summary: XML da nota
+      tags:
+      - fiscal
+  /fiscal/documents/manual:
+    post:
+      consumes:
+      - application/json
+      description: Nota sem venda e sem baixa de estoque. idempotency_key (UUID gerado
+        pela tela) evita nota duplicada. Problemas no pedido voltam 400 com a lista
+        em "problems".
+      parameters:
+      - description: Nota manual
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.FiscalDocument'
+      security:
+      - BearerAuth: []
+      summary: Emite NF-e ou NFC-e manual (avulsa)
+      tags:
+      - fiscal
+  /fiscal/documents/manual/preview:
+    post:
+      consumes:
+      - application/json
+      description: Devolve os problemas que impedem a emissão, o CFOP de cada item
+        e os totais (na NF-e, calculados pela API fiscal).
+      parameters:
+      - description: Nota manual
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_domain.ManualDocumentInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ProTrack-Solutions_protrack-api_internal_fiscal_service.ManualPreview'
+      security:
+      - BearerAuth: []
+      summary: Confere a NF-e/NFC-e manual antes de emitir
       tags:
       - fiscal
   /fiscal/go-live:

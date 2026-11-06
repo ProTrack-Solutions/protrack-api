@@ -21,7 +21,7 @@ import (
 
 // ---------- Cancelamento ----------
 
-// CancelDocument cancela a NFC-e autorizada na SEFAZ (dentro do prazo da UF).
+// CancelDocument cancela a nota (NFC-e ou NF-e) autorizada na SEFAZ (dentro do prazo da UF).
 func (s *Service) CancelDocument(ctx context.Context, companyId, id uuid.UUID, reason string) (domain.FiscalDocument, error) {
 	api, ok := s.emission()
 	if !ok {
@@ -41,7 +41,7 @@ func (s *Service) CancelDocument(ctx context.Context, companyId, id uuid.UUID, r
 	if d.Status != domain.StatusAuthorized || !d.ExternalID.Valid {
 		return domain.FiscalDocument{}, domain.ErrDocumentNotCancellable
 	}
-	result, err := api.CancelNfce(ctx, client.Environment(d.Environment), pgconv.PgUUIDToUUID(d.ExternalID).String(), reason)
+	result, err := api.CancelDocument(ctx, client.Environment(d.Environment), int(d.Model), pgconv.PgUUIDToUUID(d.ExternalID).String(), reason)
 	if err != nil {
 		return domain.FiscalDocument{}, translate(err)
 	}
@@ -59,7 +59,7 @@ func (s *Service) CancelDocument(ctx context.Context, companyId, id uuid.UUID, r
 		}
 		return domain.FiscalDocument{}, &APIError{Status: 422, Message: msg}
 	default:
-		// Ainda processando: o webhook nfce.cancelled (ou o worker) conclui
+		// Ainda processando: o webhook *.cancelled (ou o worker) conclui
 		err = s.repo.SetFiscalDocumentError(saveCtx, db.SetFiscalDocumentErrorParams{
 			ID: d.ID, ErrorMessage: pgtype.Text{String: "cancelamento enviado; aguardando a SEFAZ", Valid: true},
 		})
@@ -92,7 +92,7 @@ func (s *Service) ReconcileOnce(ctx context.Context, minAge time.Duration) (int,
 	}
 	for _, d := range docs {
 		if err := s.reconcile(ctx, api, d); err != nil {
-			log.Warn().Err(err).Str("fiscal_document", pgconv.PgUUIDToUUID(d.ID).String()).Msg("NFC-e: conferência falhou")
+			log.Warn().Err(err).Str("fiscal_document", pgconv.PgUUIDToUUID(d.ID).String()).Msg("nota fiscal: conferência falhou")
 		}
 	}
 	return len(docs), nil
@@ -116,18 +116,21 @@ func (s *Service) reconcile(ctx context.Context, api EmissionAPI, d db.FiscalDoc
 		if !issuer.Valid {
 			return nil
 		}
-		var req client.NfceRequest
-		if err := json.Unmarshal([]byte(d.RequestPayload), &req); err != nil || len(req.Items) == 0 {
+		// Reenvia exatamente o corpo gravado (a mesma Idempotency-Key exige o mesmo pedido)
+		var probe struct {
+			Items []json.RawMessage `json:"items"`
+		}
+		if err := json.Unmarshal([]byte(d.RequestPayload), &probe); err != nil || len(probe.Items) == 0 {
 			_, err = s.repo.ApplyFiscalDocumentResult(ctx, db.ApplyFiscalDocumentResultParams{
 				ID: d.ID, Status: domain.StatusFailed,
 				ErrorMessage: pgtype.Text{String: "pedido da nota perdido; emita de novo", Valid: true},
 			})
 			return err
 		}
-		_, err = s.send(ctx, api, env, pgconv.PgUUIDToUUID(issuer).String(), d, req)
+		_, err = s.send(ctx, api, env, pgconv.PgUUIDToUUID(issuer).String(), d, json.RawMessage(d.RequestPayload))
 		return err
 	}
-	doc, err := api.GetNfce(ctx, env, pgconv.PgUUIDToUUID(d.ExternalID).String())
+	doc, err := api.GetDocument(ctx, env, int(d.Model), pgconv.PgUUIDToUUID(d.ExternalID).String())
 	if err != nil {
 		_, markErr := s.repo.MarkFiscalDocumentRetry(ctx, db.MarkFiscalDocumentRetryParams{
 			ID: d.ID, ErrorMessage: d.ErrorMessage,
@@ -136,7 +139,7 @@ func (s *Service) reconcile(ctx context.Context, api EmissionAPI, d db.FiscalDoc
 	}
 	// Contingência com resultado incerto: a API fiscal emitiu outra nota no lugar
 	if doc.Status == client.StatusSuperseded && doc.ReplacedByID != nil {
-		replacement, err := api.GetNfce(ctx, env, *doc.ReplacedByID)
+		replacement, err := api.GetDocument(ctx, env, int(d.Model), *doc.ReplacedByID)
 		if err != nil {
 			return err
 		}
@@ -208,8 +211,9 @@ func (s *Service) HandleWebhook(ctx context.Context, signature string, body []by
 	if err != nil {
 		return err
 	}
-	if !strings.HasPrefix(payload.Type, "nfce.") || payload.Data.Document == nil {
-		return nil // NF-e, certificado e cobrança não interessam aqui
+	kind, event, _ := strings.Cut(payload.Type, ".")
+	if (kind != "nfce" && kind != "nfe") || payload.Data.Document == nil {
+		return nil // certificado, cobrança e carta de correção não interessam aqui
 	}
 	return s.inTx(ctx, func(q *repository.Repository) error {
 		n, err := q.InsertFiscalWebhookEvent(ctx, db.InsertFiscalWebhookEventParams{
@@ -229,14 +233,14 @@ func (s *Service) HandleWebhook(ctx context.Context, signature string, body []by
 		if err != nil {
 			return err
 		}
-		switch payload.Type {
-		case "nfce.cancelled":
+		switch event {
+		case "cancelled":
 			var reason pgtype.Text
 			if c := payload.Data.Cancellation; c != nil && c.Reason != nil {
 				reason = pgtype.Text{String: *c.Reason, Valid: true}
 			}
 			_, err = q.MarkFiscalDocumentCancelled(ctx, db.MarkFiscalDocumentCancelledParams{ID: current.ID, CancelReason: reason})
-		case "nfce.cancellation_rejected":
+		case "cancellation_rejected":
 			msg := "a SEFAZ recusou o cancelamento"
 			if c := payload.Data.Cancellation; c != nil && c.RejectReason != nil {
 				msg += ": " + *c.RejectReason

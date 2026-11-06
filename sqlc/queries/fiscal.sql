@@ -261,15 +261,24 @@ WHERE id IN (
 RETURNING *;
 
 -- name: ListFiscalDocuments :many
-SELECT fd.*, s.total_amount, s.sale_at, c.full_name AS customer_name, COUNT(*) OVER() AS total_count
+-- Notas das vendas (só a última tentativa de cada venda) e notas manuais
+SELECT fd.*,
+       COALESCE(s.total_amount, fd.total, 0)::numeric AS total_amount,
+       COALESCE(s.sale_at, fd.created_at)::timestamptz AS sale_at,
+       c.full_name AS customer_name,
+       COUNT(*) OVER() AS total_count
 FROM fiscal_documents fd
-JOIN sales s ON s.id = fd.sale_id
+LEFT JOIN sales s ON s.id = fd.sale_id
 LEFT JOIN customers c ON c.id = s.customer_id
 WHERE fd.company_id = @company_id
   AND (sqlc.narg(status)::text IS NULL OR fd.status = sqlc.narg(status)::text)
+  AND (sqlc.narg(model)::smallint IS NULL OR fd.model = sqlc.narg(model)::smallint)
+  AND (sqlc.narg(source)::text IS NULL OR fd.source = sqlc.narg(source)::text)
   AND (NOT @problems_only::bool OR fd.status IN ('REJECTED', 'FAILED', 'ERROR', 'PENDING'))
-  -- Por venda, só a última tentativa
-  AND fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+  AND (
+    fd.sale_id IS NULL
+    OR fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+  )
 ORDER BY fd.created_at DESC
 LIMIT @page_size::int OFFSET @page_offset::int;
 
@@ -279,6 +288,31 @@ SELECT DISTINCT ON (sale_id) *
 FROM fiscal_documents
 WHERE company_id = @company_id AND sale_id = ANY(@sale_ids::uuid[]) AND model = 65
 ORDER BY sale_id, attempt DESC;
+
+-- ---------- Emissão manual (NF-e e NFC-e avulsas) ----------
+
+-- name: GetFiscalDocumentByIdempotencyKey :one
+SELECT * FROM fiscal_documents WHERE idempotency_key = $1 AND company_id = $2;
+
+-- name: CreateManualFiscalDocument :one
+INSERT INTO fiscal_documents (
+    company_id, source, model, environment, attempt, idempotency_key, status,
+    request_payload, operation_nature, recipient_name, recipient_document, total, created_by
+) VALUES (
+    @company_id, 'manual', @model, @environment, 1, @idempotency_key, 'PENDING',
+    @request_payload, sqlc.narg(operation_nature), sqlc.narg(recipient_name),
+    sqlc.narg(recipient_document), @total, @created_by
+)
+RETURNING *;
+
+-- name: ListProductsForManualDocument :many
+-- Produtos da nota manual com o perfil tributário resolvido: produto -> categoria -> padrão
+SELECT p.id, p.name, p.barcode, p.ncm, p.cest, p.unit, p.origem_mercadoria,
+       COALESCE(p.tax_profile_id, pc.tax_profile_id, cfs.default_tax_profile_id) AS tax_profile_id
+FROM products p
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+LEFT JOIN company_fiscal_settings cfs ON cfs.company_id = p.company_id
+WHERE p.company_id = @company_id AND p.id = ANY(@ids::uuid[]) AND p.deleted_at IS NULL;
 
 -- name: InsertFiscalWebhookEvent :execrows
 INSERT INTO fiscal_webhook_events (id, type) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING;

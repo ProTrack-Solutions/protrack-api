@@ -11,7 +11,7 @@ var (
 	ErrSaleNotFound           = errors.New("venda não encontrada")
 	ErrSaleCanceled           = errors.New("a venda foi cancelada; não há nota a emitir")
 	ErrDocumentNotFound       = errors.New("nota fiscal não encontrada")
-	ErrDocumentNotPrintable   = errors.New("o DANFC-e só existe para nota autorizada")
+	ErrDocumentNotPrintable   = errors.New("o DANFE só existe para nota autorizada")
 	ErrDocumentNotCancellable = errors.New("só nota autorizada pode ser cancelada")
 	ErrInvalidCancelReason    = errors.New("a justificativa do cancelamento deve ter de 15 a 255 caracteres")
 )
@@ -34,24 +34,38 @@ const (
 	StatusFailed      = "FAILED"
 )
 
-// FiscalDocument é uma tentativa de NFC-e da venda.
+// Origem da nota: venda do PDV ou emissão manual (avulsa).
+const (
+	SourceSale   = "sale"
+	SourceManual = "manual"
+)
+
+// FiscalDocument é uma tentativa de NFC-e da venda ou uma nota manual (NF-e/NFC-e).
 type FiscalDocument struct {
-	ID           uuid.UUID  `json:"id"`
-	SaleID       uuid.UUID  `json:"sale_id"`
-	Environment  string     `json:"environment"`
-	Attempt      int32      `json:"attempt"`
-	Status       string     `json:"status"`
-	Number       *int32     `json:"number"`
-	AccessKey    *string    `json:"access_key"`
-	Protocol     *string    `json:"protocol"`
-	StatusCode   *string    `json:"status_code"`
-	RejectReason *string    `json:"reject_reason"`
-	ErrorMessage *string    `json:"error_message"`
-	Contingency  bool       `json:"contingency"`
-	AuthorizedAt *time.Time `json:"authorized_at"`
-	CancelReason *string    `json:"cancel_reason"`
-	CancelledAt  *time.Time `json:"cancelled_at"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID     uuid.UUID  `json:"id"`
+	SaleID *uuid.UUID `json:"sale_id"`
+	// 55 = NF-e, 65 = NFC-e
+	Model int16 `json:"model"`
+	// sale ou manual
+	Source            string     `json:"source"`
+	OperationNature   *string    `json:"operation_nature"`
+	RecipientName     *string    `json:"recipient_name"`
+	RecipientDocument *string    `json:"recipient_document"`
+	Total             *float64   `json:"total"`
+	Environment       string     `json:"environment"`
+	Attempt           int32      `json:"attempt"`
+	Status            string     `json:"status"`
+	Number            *int32     `json:"number"`
+	AccessKey         *string    `json:"access_key"`
+	Protocol          *string    `json:"protocol"`
+	StatusCode        *string    `json:"status_code"`
+	RejectReason      *string    `json:"reject_reason"`
+	ErrorMessage      *string    `json:"error_message"`
+	Contingency       bool       `json:"contingency"`
+	AuthorizedAt      *time.Time `json:"authorized_at"`
+	CancelReason      *string    `json:"cancel_reason"`
+	CancelledAt       *time.Time `json:"cancelled_at"`
+	CreatedAt         time.Time  `json:"created_at"`
 }
 
 // Printable: autorizada ou emitida em contingência (já vale e pode imprimir).
@@ -75,4 +89,12 @@ type FiscalDocumentList struct {
 
 type CancelInput struct {
 	Reason string `json:"reason"`
+}
+
+// DocumentFilter: filtros do painel de notas (vazio/zero = todos).
+type DocumentFilter struct {
+	Status       string
+	Model        int
+	Source       string
+	ProblemsOnly bool
 }

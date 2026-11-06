@@ -19,12 +19,15 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		read.GET("/settings", h.GetSettings)
 	}
 
-	// Notas das vendas: PDV e lista de vendas
+	// Notas das vendas (PDV e lista de vendas) e emissão manual de NF-e/NFC-e
 	sales := fiscal.Group("")
 	sales.Use(middleware.RequireModule("sales", h.queries))
 	{
 		sales.GET("/documents", h.ListDocuments)
 		sales.GET("/documents/:id/danfce", h.Danfce)
+		sales.GET("/documents/:id/danfe", h.Danfce)
+		sales.POST("/documents/manual/preview", h.PreviewManualDocument)
+		sales.POST("/documents/manual", h.EmitManualDocument)
 		sales.GET("/documents/:id/xml", h.Xml)
 		sales.POST("/documents/:id/cancel", h.CancelDocument)
 		sales.GET("/sales", h.SalesDocuments)

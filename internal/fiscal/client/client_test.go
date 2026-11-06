@@ -28,7 +28,7 @@ func TestNotConfigured(t *testing.T) {
 	if !c.Configured(EnvTest) || c.Configured(EnvLive) {
 		t.Fatal("configured por ambiente errado")
 	}
-	if _, err := c.GetNfce(context.Background(), EnvLive, "id"); !errors.Is(err, ErrNotConfigured) {
+	if _, err := c.GetDocument(context.Background(), EnvLive, ModelNfce, "id"); !errors.Is(err, ErrNotConfigured) {
 		t.Fatalf("esperava ErrNotConfigured, veio %v", err)
 	}
 }
@@ -134,7 +134,7 @@ func TestCancelRejectedComesBack(t *testing.T) {
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		fmt.Fprint(w, `{"event":{"id":"ev","type":"CANCELLATION","status":"REJECTED","rejectReason":"prazo"},"documentStatus":"AUTHORIZED","replayed":false}`)
 	})
-	out, err := c.CancelNfce(context.Background(), EnvTest, "doc", "Venda desfeita a pedido do cliente")
+	out, err := c.CancelDocument(context.Background(), EnvTest, ModelNfce, "doc", "Venda desfeita a pedido do cliente")
 	if err != nil {
 		t.Fatal(err)
 	}

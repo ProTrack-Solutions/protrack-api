@@ -25,7 +25,7 @@ UPDATE fiscal_documents SET
     authorized_at = COALESCE($10, authorized_at),
     updated_at = NOW()
 WHERE id = $11
-RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 `
 
 type ApplyFiscalDocumentResultParams struct {
@@ -83,6 +83,11 @@ func (q *Queries) ApplyFiscalDocumentResult(ctx context.Context, arg ApplyFiscal
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
@@ -97,7 +102,7 @@ WHERE id IN (
     LIMIT $2::int
     FOR UPDATE SKIP LOCKED
 )
-RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 `
 
 type ClaimFiscalDocumentsToReconcileParams struct {
@@ -140,6 +145,11 @@ func (q *Queries) ClaimFiscalDocumentsToReconcile(ctx context.Context, arg Claim
 			&i.UpdatedAt,
 			&i.RequestPayload,
 			&i.Retries,
+			&i.Source,
+			&i.OperationNature,
+			&i.RecipientName,
+			&i.RecipientDocument,
+			&i.Total,
 		); err != nil {
 			return nil, err
 		}
@@ -171,7 +181,7 @@ INSERT INTO fiscal_documents (
     $1, $2, 65, $3, $4, $5, $6,
     $7, $8, $9
 )
-RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 `
 
 type CreateFiscalDocumentParams struct {
@@ -224,6 +234,84 @@ func (q *Queries) CreateFiscalDocument(ctx context.Context, arg CreateFiscalDocu
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
+	)
+	return i, err
+}
+
+const createManualFiscalDocument = `-- name: CreateManualFiscalDocument :one
+INSERT INTO fiscal_documents (
+    company_id, source, model, environment, attempt, idempotency_key, status,
+    request_payload, operation_nature, recipient_name, recipient_document, total, created_by
+) VALUES (
+    $1, 'manual', $2, $3, 1, $4, 'PENDING',
+    $5, $6, $7,
+    $8, $9, $10
+)
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
+`
+
+type CreateManualFiscalDocumentParams struct {
+	CompanyID         pgtype.UUID    `json:"company_id"`
+	Model             int16          `json:"model"`
+	Environment       string         `json:"environment"`
+	IdempotencyKey    string         `json:"idempotency_key"`
+	RequestPayload    string         `json:"request_payload"`
+	OperationNature   pgtype.Text    `json:"operation_nature"`
+	RecipientName     pgtype.Text    `json:"recipient_name"`
+	RecipientDocument pgtype.Text    `json:"recipient_document"`
+	Total             pgtype.Numeric `json:"total"`
+	CreatedBy         pgtype.UUID    `json:"created_by"`
+}
+
+func (q *Queries) CreateManualFiscalDocument(ctx context.Context, arg CreateManualFiscalDocumentParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, createManualFiscalDocument,
+		arg.CompanyID,
+		arg.Model,
+		arg.Environment,
+		arg.IdempotencyKey,
+		arg.RequestPayload,
+		arg.OperationNature,
+		arg.RecipientName,
+		arg.RecipientDocument,
+		arg.Total,
+		arg.CreatedBy,
+	)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
@@ -430,7 +518,7 @@ func (q *Queries) GetCompanyForFiscal(ctx context.Context, id pgtype.UUID) (GetC
 }
 
 const getFiscalDocument = `-- name: GetFiscalDocument :one
-SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents WHERE id = $1 AND company_id = $2
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total FROM fiscal_documents WHERE id = $1 AND company_id = $2
 `
 
 type GetFiscalDocumentParams struct {
@@ -466,12 +554,17 @@ func (q *Queries) GetFiscalDocument(ctx context.Context, arg GetFiscalDocumentPa
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
 
 const getFiscalDocumentByExternalId = `-- name: GetFiscalDocumentByExternalId :one
-SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents WHERE external_id = $1
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total FROM fiscal_documents WHERE external_id = $1
 `
 
 func (q *Queries) GetFiscalDocumentByExternalId(ctx context.Context, externalID pgtype.UUID) (FiscalDocument, error) {
@@ -502,12 +595,65 @@ func (q *Queries) GetFiscalDocumentByExternalId(ctx context.Context, externalID 
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
+	)
+	return i, err
+}
+
+const getFiscalDocumentByIdempotencyKey = `-- name: GetFiscalDocumentByIdempotencyKey :one
+
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total FROM fiscal_documents WHERE idempotency_key = $1 AND company_id = $2
+`
+
+type GetFiscalDocumentByIdempotencyKeyParams struct {
+	IdempotencyKey string      `json:"idempotency_key"`
+	CompanyID      pgtype.UUID `json:"company_id"`
+}
+
+// ---------- Emissão manual (NF-e e NFC-e avulsas) ----------
+func (q *Queries) GetFiscalDocumentByIdempotencyKey(ctx context.Context, arg GetFiscalDocumentByIdempotencyKeyParams) (FiscalDocument, error) {
+	row := q.db.QueryRow(ctx, getFiscalDocumentByIdempotencyKey, arg.IdempotencyKey, arg.CompanyID)
+	var i FiscalDocument
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SaleID,
+		&i.Model,
+		&i.Environment,
+		&i.Attempt,
+		&i.IdempotencyKey,
+		&i.ExternalID,
+		&i.Status,
+		&i.Number,
+		&i.AccessKey,
+		&i.Protocol,
+		&i.StatusCode,
+		&i.RejectReason,
+		&i.ErrorMessage,
+		&i.EmissionType,
+		&i.AuthorizedAt,
+		&i.CancelReason,
+		&i.CancelledAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.RequestPayload,
+		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
 
 const getLatestFiscalDocumentBySale = `-- name: GetLatestFiscalDocumentBySale :one
-SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total FROM fiscal_documents
 WHERE sale_id = $1 AND company_id = $2 AND model = 65
 ORDER BY attempt DESC
 LIMIT 1
@@ -546,12 +692,17 @@ func (q *Queries) GetLatestFiscalDocumentBySale(ctx context.Context, arg GetLate
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
 
 const getLiveFiscalDocumentBySale = `-- name: GetLiveFiscalDocumentBySale :one
-SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries FROM fiscal_documents
+SELECT id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total FROM fiscal_documents
 WHERE sale_id = $1 AND model = 65 AND status NOT IN ('REJECTED', 'FAILED', 'ERROR')
 `
 
@@ -583,6 +734,11 @@ func (q *Queries) GetLiveFiscalDocumentBySale(ctx context.Context, saleID pgtype
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
@@ -778,62 +934,80 @@ func (q *Queries) ListCategoriesFiscal(ctx context.Context, companyID pgtype.UUI
 }
 
 const listFiscalDocuments = `-- name: ListFiscalDocuments :many
-SELECT fd.id, fd.company_id, fd.sale_id, fd.model, fd.environment, fd.attempt, fd.idempotency_key, fd.external_id, fd.status, fd.number, fd.access_key, fd.protocol, fd.status_code, fd.reject_reason, fd.error_message, fd.emission_type, fd.authorized_at, fd.cancel_reason, fd.cancelled_at, fd.created_by, fd.created_at, fd.updated_at, fd.request_payload, fd.retries, s.total_amount, s.sale_at, c.full_name AS customer_name, COUNT(*) OVER() AS total_count
+SELECT fd.id, fd.company_id, fd.sale_id, fd.model, fd.environment, fd.attempt, fd.idempotency_key, fd.external_id, fd.status, fd.number, fd.access_key, fd.protocol, fd.status_code, fd.reject_reason, fd.error_message, fd.emission_type, fd.authorized_at, fd.cancel_reason, fd.cancelled_at, fd.created_by, fd.created_at, fd.updated_at, fd.request_payload, fd.retries, fd.source, fd.operation_nature, fd.recipient_name, fd.recipient_document, fd.total,
+       COALESCE(s.total_amount, fd.total, 0)::numeric AS total_amount,
+       COALESCE(s.sale_at, fd.created_at)::timestamptz AS sale_at,
+       c.full_name AS customer_name,
+       COUNT(*) OVER() AS total_count
 FROM fiscal_documents fd
-JOIN sales s ON s.id = fd.sale_id
+LEFT JOIN sales s ON s.id = fd.sale_id
 LEFT JOIN customers c ON c.id = s.customer_id
 WHERE fd.company_id = $1
   AND ($2::text IS NULL OR fd.status = $2::text)
-  AND (NOT $3::bool OR fd.status IN ('REJECTED', 'FAILED', 'ERROR', 'PENDING'))
-  -- Por venda, só a última tentativa
-  AND fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+  AND ($3::smallint IS NULL OR fd.model = $3::smallint)
+  AND ($4::text IS NULL OR fd.source = $4::text)
+  AND (NOT $5::bool OR fd.status IN ('REJECTED', 'FAILED', 'ERROR', 'PENDING'))
+  AND (
+    fd.sale_id IS NULL
+    OR fd.attempt = (SELECT MAX(x.attempt) FROM fiscal_documents x WHERE x.sale_id = fd.sale_id AND x.model = fd.model)
+  )
 ORDER BY fd.created_at DESC
-LIMIT $5::int OFFSET $4::int
+LIMIT $7::int OFFSET $6::int
 `
 
 type ListFiscalDocumentsParams struct {
 	CompanyID    pgtype.UUID `json:"company_id"`
 	Status       pgtype.Text `json:"status"`
+	Model        pgtype.Int2 `json:"model"`
+	Source       pgtype.Text `json:"source"`
 	ProblemsOnly bool        `json:"problems_only"`
 	PageOffset   int32       `json:"page_offset"`
 	PageSize     int32       `json:"page_size"`
 }
 
 type ListFiscalDocumentsRow struct {
-	ID             pgtype.UUID        `json:"id"`
-	CompanyID      pgtype.UUID        `json:"company_id"`
-	SaleID         pgtype.UUID        `json:"sale_id"`
-	Model          int16              `json:"model"`
-	Environment    string             `json:"environment"`
-	Attempt        int32              `json:"attempt"`
-	IdempotencyKey string             `json:"idempotency_key"`
-	ExternalID     pgtype.UUID        `json:"external_id"`
-	Status         string             `json:"status"`
-	Number         pgtype.Int4        `json:"number"`
-	AccessKey      pgtype.Text        `json:"access_key"`
-	Protocol       pgtype.Text        `json:"protocol"`
-	StatusCode     pgtype.Text        `json:"status_code"`
-	RejectReason   pgtype.Text        `json:"reject_reason"`
-	ErrorMessage   pgtype.Text        `json:"error_message"`
-	EmissionType   pgtype.Int2        `json:"emission_type"`
-	AuthorizedAt   pgtype.Timestamptz `json:"authorized_at"`
-	CancelReason   pgtype.Text        `json:"cancel_reason"`
-	CancelledAt    pgtype.Timestamptz `json:"cancelled_at"`
-	CreatedBy      pgtype.UUID        `json:"created_by"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-	RequestPayload string             `json:"request_payload"`
-	Retries        int32              `json:"retries"`
-	TotalAmount    pgtype.Numeric     `json:"total_amount"`
-	SaleAt         pgtype.Timestamptz `json:"sale_at"`
-	CustomerName   pgtype.Text        `json:"customer_name"`
-	TotalCount     int64              `json:"total_count"`
+	ID                pgtype.UUID        `json:"id"`
+	CompanyID         pgtype.UUID        `json:"company_id"`
+	SaleID            pgtype.UUID        `json:"sale_id"`
+	Model             int16              `json:"model"`
+	Environment       string             `json:"environment"`
+	Attempt           int32              `json:"attempt"`
+	IdempotencyKey    string             `json:"idempotency_key"`
+	ExternalID        pgtype.UUID        `json:"external_id"`
+	Status            string             `json:"status"`
+	Number            pgtype.Int4        `json:"number"`
+	AccessKey         pgtype.Text        `json:"access_key"`
+	Protocol          pgtype.Text        `json:"protocol"`
+	StatusCode        pgtype.Text        `json:"status_code"`
+	RejectReason      pgtype.Text        `json:"reject_reason"`
+	ErrorMessage      pgtype.Text        `json:"error_message"`
+	EmissionType      pgtype.Int2        `json:"emission_type"`
+	AuthorizedAt      pgtype.Timestamptz `json:"authorized_at"`
+	CancelReason      pgtype.Text        `json:"cancel_reason"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CreatedBy         pgtype.UUID        `json:"created_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	RequestPayload    string             `json:"request_payload"`
+	Retries           int32              `json:"retries"`
+	Source            string             `json:"source"`
+	OperationNature   pgtype.Text        `json:"operation_nature"`
+	RecipientName     pgtype.Text        `json:"recipient_name"`
+	RecipientDocument pgtype.Text        `json:"recipient_document"`
+	Total             pgtype.Numeric     `json:"total"`
+	TotalAmount       pgtype.Numeric     `json:"total_amount"`
+	SaleAt            pgtype.Timestamptz `json:"sale_at"`
+	CustomerName      pgtype.Text        `json:"customer_name"`
+	TotalCount        int64              `json:"total_count"`
 }
 
+// Notas das vendas (só a última tentativa de cada venda) e notas manuais
 func (q *Queries) ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumentsParams) ([]ListFiscalDocumentsRow, error) {
 	rows, err := q.db.Query(ctx, listFiscalDocuments,
 		arg.CompanyID,
 		arg.Status,
+		arg.Model,
+		arg.Source,
 		arg.ProblemsOnly,
 		arg.PageOffset,
 		arg.PageSize,
@@ -870,6 +1044,11 @@ func (q *Queries) ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumen
 			&i.UpdatedAt,
 			&i.RequestPayload,
 			&i.Retries,
+			&i.Source,
+			&i.OperationNature,
+			&i.RecipientName,
+			&i.RecipientDocument,
+			&i.Total,
 			&i.TotalAmount,
 			&i.SaleAt,
 			&i.CustomerName,
@@ -886,7 +1065,7 @@ func (q *Queries) ListFiscalDocuments(ctx context.Context, arg ListFiscalDocumen
 }
 
 const listFiscalDocumentsBySales = `-- name: ListFiscalDocumentsBySales :many
-SELECT DISTINCT ON (sale_id) id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+SELECT DISTINCT ON (sale_id) id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 FROM fiscal_documents
 WHERE company_id = $1 AND sale_id = ANY($2::uuid[]) AND model = 65
 ORDER BY sale_id, attempt DESC
@@ -932,6 +1111,66 @@ func (q *Queries) ListFiscalDocumentsBySales(ctx context.Context, arg ListFiscal
 			&i.UpdatedAt,
 			&i.RequestPayload,
 			&i.Retries,
+			&i.Source,
+			&i.OperationNature,
+			&i.RecipientName,
+			&i.RecipientDocument,
+			&i.Total,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listProductsForManualDocument = `-- name: ListProductsForManualDocument :many
+SELECT p.id, p.name, p.barcode, p.ncm, p.cest, p.unit, p.origem_mercadoria,
+       COALESCE(p.tax_profile_id, pc.tax_profile_id, cfs.default_tax_profile_id) AS tax_profile_id
+FROM products p
+LEFT JOIN product_categories pc ON pc.id = p.category_id
+LEFT JOIN company_fiscal_settings cfs ON cfs.company_id = p.company_id
+WHERE p.company_id = $1 AND p.id = ANY($2::uuid[]) AND p.deleted_at IS NULL
+`
+
+type ListProductsForManualDocumentParams struct {
+	CompanyID pgtype.UUID   `json:"company_id"`
+	Ids       []pgtype.UUID `json:"ids"`
+}
+
+type ListProductsForManualDocumentRow struct {
+	ID               pgtype.UUID   `json:"id"`
+	Name             string        `json:"name"`
+	Barcode          pgtype.Text   `json:"barcode"`
+	Ncm              pgtype.Text   `json:"ncm"`
+	Cest             pgtype.Text   `json:"cest"`
+	Unit             UnitOfMeasure `json:"unit"`
+	OrigemMercadoria int16         `json:"origem_mercadoria"`
+	TaxProfileID     pgtype.UUID   `json:"tax_profile_id"`
+}
+
+// Produtos da nota manual com o perfil tributário resolvido: produto -> categoria -> padrão
+func (q *Queries) ListProductsForManualDocument(ctx context.Context, arg ListProductsForManualDocumentParams) ([]ListProductsForManualDocumentRow, error) {
+	rows, err := q.db.Query(ctx, listProductsForManualDocument, arg.CompanyID, arg.Ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListProductsForManualDocumentRow{}
+	for rows.Next() {
+		var i ListProductsForManualDocumentRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Barcode,
+			&i.Ncm,
+			&i.Cest,
+			&i.Unit,
+			&i.OrigemMercadoria,
+			&i.TaxProfileID,
 		); err != nil {
 			return nil, err
 		}
@@ -1177,7 +1416,7 @@ UPDATE fiscal_documents SET
     error_message = NULL,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 `
 
 type MarkFiscalDocumentCancelledParams struct {
@@ -1213,6 +1452,11 @@ func (q *Queries) MarkFiscalDocumentCancelled(ctx context.Context, arg MarkFisca
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }
@@ -1223,7 +1467,7 @@ UPDATE fiscal_documents SET
     retries = retries + 1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries
+RETURNING id, company_id, sale_id, model, environment, attempt, idempotency_key, external_id, status, number, access_key, protocol, status_code, reject_reason, error_message, emission_type, authorized_at, cancel_reason, cancelled_at, created_by, created_at, updated_at, request_payload, retries, source, operation_nature, recipient_name, recipient_document, total
 `
 
 type MarkFiscalDocumentRetryParams struct {
@@ -1260,6 +1504,11 @@ func (q *Queries) MarkFiscalDocumentRetry(ctx context.Context, arg MarkFiscalDoc
 		&i.UpdatedAt,
 		&i.RequestPayload,
 		&i.Retries,
+		&i.Source,
+		&i.OperationNature,
+		&i.RecipientName,
+		&i.RecipientDocument,
+		&i.Total,
 	)
 	return i, err
 }

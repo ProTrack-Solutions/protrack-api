@@ -19,13 +19,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// EmissionAPI é o que a emissão usa do cliente da API fiscal.
+// EmissionAPI é o que a emissão usa do cliente da API fiscal (NFC-e e NF-e:
+// model 65 ou 55 escolhe o caminho).
 type EmissionAPI interface {
-	EmitNfce(ctx context.Context, env client.Environment, issuerID, idempotencyKey string, in client.NfceRequest) (client.Document, error)
-	GetNfce(ctx context.Context, env client.Environment, documentID string) (client.Document, error)
-	Danfce(ctx context.Context, env client.Environment, documentID string) ([]byte, error)
-	Xml(ctx context.Context, env client.Environment, documentID string) ([]byte, error)
-	CancelNfce(ctx context.Context, env client.Environment, documentID, reason string) (client.CancellationResult, error)
+	EmitDocument(ctx context.Context, env client.Environment, model int, issuerID, idempotencyKey string, in any) (client.Document, error)
+	GetDocument(ctx context.Context, env client.Environment, model int, documentID string) (client.Document, error)
+	Printout(ctx context.Context, env client.Environment, model int, documentID string) ([]byte, error)
+	Xml(ctx context.Context, env client.Environment, model int, documentID string) ([]byte, error)
+	CancelDocument(ctx context.Context, env client.Environment, model int, documentID, reason string) (client.CancellationResult, error)
+	NfeTotals(ctx context.Context, env client.Environment, in client.NfeTotalsRequest) (client.NfeTotals, error)
 }
 
 // EmitTimeout: quanto o PDV espera a nota antes de seguir (o worker termina depois).
@@ -37,23 +39,34 @@ func (s *Service) emission() (EmissionAPI, bool) {
 }
 
 func toDocument(d db.FiscalDocument) domain.FiscalDocument {
+	var total *float64
+	if d.Total.Valid {
+		v := pgconv.PgNumericToFloat64(d.Total)
+		total = &v
+	}
 	return domain.FiscalDocument{
-		ID:           pgconv.PgUUIDToUUID(d.ID),
-		SaleID:       pgconv.PgUUIDToUUID(d.SaleID),
-		Environment:  d.Environment,
-		Attempt:      d.Attempt,
-		Status:       d.Status,
-		Number:       pgconv.PgInt4ToIntPtr(d.Number),
-		AccessKey:    pgconv.ParsePgTextToStringPtr(d.AccessKey),
-		Protocol:     pgconv.ParsePgTextToStringPtr(d.Protocol),
-		StatusCode:   pgconv.ParsePgTextToStringPtr(d.StatusCode),
-		RejectReason: pgconv.ParsePgTextToStringPtr(d.RejectReason),
-		ErrorMessage: pgconv.ParsePgTextToStringPtr(d.ErrorMessage),
-		Contingency:  d.EmissionType.Valid && d.EmissionType.Int16 == 9,
-		AuthorizedAt: pgconv.PgTimestamptzToTimePtr(d.AuthorizedAt),
-		CancelReason: pgconv.ParsePgTextToStringPtr(d.CancelReason),
-		CancelledAt:  pgconv.PgTimestamptzToTimePtr(d.CancelledAt),
-		CreatedAt:    pgconv.PgTimestamptzToTime(d.CreatedAt),
+		ID:                pgconv.PgUUIDToUUID(d.ID),
+		SaleID:            pgconv.PgUUIDToUUIDPtr(d.SaleID),
+		Model:             d.Model,
+		Source:            d.Source,
+		OperationNature:   pgconv.ParsePgTextToStringPtr(d.OperationNature),
+		RecipientName:     pgconv.ParsePgTextToStringPtr(d.RecipientName),
+		RecipientDocument: pgconv.ParsePgTextToStringPtr(d.RecipientDocument),
+		Total:             total,
+		Environment:       d.Environment,
+		Attempt:           d.Attempt,
+		Status:            d.Status,
+		Number:            pgconv.PgInt4ToIntPtr(d.Number),
+		AccessKey:         pgconv.ParsePgTextToStringPtr(d.AccessKey),
+		Protocol:          pgconv.ParsePgTextToStringPtr(d.Protocol),
+		StatusCode:        pgconv.ParsePgTextToStringPtr(d.StatusCode),
+		RejectReason:      pgconv.ParsePgTextToStringPtr(d.RejectReason),
+		ErrorMessage:      pgconv.ParsePgTextToStringPtr(d.ErrorMessage),
+		Contingency:       d.EmissionType.Valid && d.EmissionType.Int16 == 9,
+		AuthorizedAt:      pgconv.PgTimestamptzToTimePtr(d.AuthorizedAt),
+		CancelReason:      pgconv.ParsePgTextToStringPtr(d.CancelReason),
+		CancelledAt:       pgconv.PgTimestamptzToTimePtr(d.CancelledAt),
+		CreatedAt:         pgconv.PgTimestamptzToTime(d.CreatedAt),
 	}
 }
 
@@ -256,8 +269,9 @@ func (s *Service) EmitForSale(ctx context.Context, companyId, userId, saleId uui
 
 // send chama a API fiscal e grava o resultado. Erros transitórios não voltam
 // como erro: a nota fica PENDING com a mensagem e o worker tenta de novo.
-func (s *Service) send(ctx context.Context, api EmissionAPI, env client.Environment, issuer string, doc db.FiscalDocument, req client.NfceRequest) (db.FiscalDocument, error) {
-	result, callErr := api.EmitNfce(ctx, env, issuer, doc.IdempotencyKey, req)
+// req é o pedido (NfceRequest, NfeRequest ou o JSON gravado); o modelo vem da nota.
+func (s *Service) send(ctx context.Context, api EmissionAPI, env client.Environment, issuer string, doc db.FiscalDocument, req any) (db.FiscalDocument, error) {
+	result, callErr := api.EmitDocument(ctx, env, int(doc.Model), issuer, doc.IdempotencyKey, req)
 	// Grava mesmo se o contexto da requisição já acabou (timeout do PDV)
 	saveCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 10*time.Second)
 	defer cancel()
@@ -281,7 +295,7 @@ func (s *Service) send(ctx context.Context, api EmissionAPI, env client.Environm
 	if isAPI && apiErr.SefazUnavailable() {
 		msg = "SEFAZ sem resposta; a nota será enviada automaticamente"
 	}
-	log.Warn().Err(callErr).Str("fiscal_document", pgconv.PgUUIDToUUID(doc.ID).String()).Msg("NFC-e: falha transitória, worker vai reenviar")
+	log.Warn().Err(callErr).Str("fiscal_document", pgconv.PgUUIDToUUID(doc.ID).String()).Int16("model", doc.Model).Msg("nota fiscal: falha transitória, worker vai reenviar")
 	return s.repo.MarkFiscalDocumentRetry(saveCtx, db.MarkFiscalDocumentRetryParams{ID: doc.ID, ErrorMessage: pgtype.Text{String: msg, Valid: true}})
 }
 
@@ -325,7 +339,7 @@ func (s *Service) getDocument(ctx context.Context, companyId, id uuid.UUID) (db.
 	return d, err
 }
 
-// Printout devolve o PDF do DANFC-e (ou o XML) da nota autorizada.
+// Printout devolve o PDF (DANFC-e da NFC-e ou DANFE da NF-e) ou o XML da nota autorizada.
 func (s *Service) Printout(ctx context.Context, companyId, id uuid.UUID, xml bool) ([]byte, string, error) {
 	api, ok := s.emission()
 	if !ok {
@@ -342,16 +356,21 @@ func (s *Service) Printout(ctx context.Context, companyId, id uuid.UUID, xml boo
 	env := client.Environment(d.Environment)
 	ext := pgconv.PgUUIDToUUID(d.ExternalID).String()
 	key := pgconv.ParsePgTextToString(d.AccessKey)
-	if xml {
-		data, err := api.Xml(ctx, env, ext)
-		return data, "nfce-" + key + ".xml", translate(err)
+	model := int(d.Model)
+	prefix, pdf := "nfce-", "danfce-"
+	if model == domain.ModelNfe {
+		prefix, pdf = "nfe-", "danfe-"
 	}
-	data, err := api.Danfce(ctx, env, ext)
-	return data, "danfce-" + key + ".pdf", translate(err)
+	if xml {
+		data, err := api.Xml(ctx, env, model, ext)
+		return data, prefix + key + ".xml", translate(err)
+	}
+	data, err := api.Printout(ctx, env, model, ext)
+	return data, pdf + key + ".pdf", translate(err)
 }
 
 // ListDocuments: painel de notas (última tentativa de cada venda).
-func (s *Service) ListDocuments(ctx context.Context, companyId uuid.UUID, status string, problemsOnly bool, page, perPage int) (domain.FiscalDocumentList, error) {
+func (s *Service) ListDocuments(ctx context.Context, companyId uuid.UUID, f domain.DocumentFilter, page, perPage int) (domain.FiscalDocumentList, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -360,8 +379,10 @@ func (s *Service) ListDocuments(ctx context.Context, companyId uuid.UUID, status
 	}
 	rows, err := s.repo.ListFiscalDocuments(ctx, db.ListFiscalDocumentsParams{
 		CompanyID:    pgconv.ParseUUIDToPgType(companyId),
-		Status:       optText(strings.ToUpper(strings.TrimSpace(status))),
-		ProblemsOnly: problemsOnly,
+		Status:       optText(strings.ToUpper(strings.TrimSpace(f.Status))),
+		Model:        modelParam(f.Model),
+		Source:       optText(strings.ToLower(strings.TrimSpace(f.Source))),
+		ProblemsOnly: f.ProblemsOnly,
 		PageOffset:   int32((page - 1) * perPage),
 		PageSize:     int32(perPage),
 	})
@@ -376,14 +397,19 @@ func (s *Service) ListDocuments(ctx context.Context, companyId uuid.UUID, status
 			Number: r.Number, AccessKey: r.AccessKey, Protocol: r.Protocol, StatusCode: r.StatusCode,
 			RejectReason: r.RejectReason, ErrorMessage: r.ErrorMessage, EmissionType: r.EmissionType,
 			AuthorizedAt: r.AuthorizedAt, CancelReason: r.CancelReason, CancelledAt: r.CancelledAt,
-			CreatedAt: r.CreatedAt,
+			CreatedAt: r.CreatedAt, Source: r.Source, OperationNature: r.OperationNature,
+			RecipientName: r.RecipientName, RecipientDocument: r.RecipientDocument, Total: r.Total,
 		})
+		customer := pgconv.ParsePgTextToStringPtr(r.CustomerName)
+		if customer == nil {
+			customer = d.RecipientName
+		}
 		out.Total = r.TotalCount
 		out.Documents = append(out.Documents, domain.FiscalDocumentListItem{
 			FiscalDocument: d,
 			SaleTotal:      pgconv.PgNumericToFloat64(r.TotalAmount),
 			SaleAt:         pgconv.PgTimestamptzToTime(r.SaleAt),
-			CustomerName:   pgconv.ParsePgTextToStringPtr(r.CustomerName),
+			CustomerName:   customer,
 		})
 	}
 	return out, nil
@@ -470,4 +496,11 @@ func (s *Service) BeforeSaleUpdate(ctx context.Context, companyId, saleId uuid.U
 		return nil
 	}
 	return &domain.SaleBlockedError{Reason: "a venda já tem NFC-e e não pode ser alterada; cancele a venda (a nota é cancelada junto) e faça uma nova"}
+}
+
+func modelParam(model int) pgtype.Int2 {
+	if model != domain.ModelNfe && model != domain.ModelNfce {
+		return pgtype.Int2{}
+	}
+	return pgtype.Int2{Int16: int16(model), Valid: true}
 }

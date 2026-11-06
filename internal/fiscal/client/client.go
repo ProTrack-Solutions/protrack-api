@@ -274,18 +274,38 @@ func (c *Client) CopyFromHomologation(ctx context.Context, liveIssuerID string, 
 	return out, err
 }
 
-// ---- NFC-e ----
+// ---- Notas (NFC-e e NF-e: mesmo contrato, caminho por modelo) ----
 
-// EmitNfce emite a nota. Rejeição da SEFAZ (422 com a nota) volta como Document com
-// status REJECTED, sem erro; 202 volta PROCESSING. Erro só quando não há nota.
+// Modelos da nota fiscal.
+const (
+	ModelNfe  = 55
+	ModelNfce = 65
+)
+
+func modelPath(model int) string {
+	if model == ModelNfe {
+		return "nfe"
+	}
+	return "nfce"
+}
+
+// EmitNfce emite a NFC-e. Ver EmitDocument.
 func (c *Client) EmitNfce(ctx context.Context, env Environment, issuerID, idempotencyKey string, in NfceRequest) (Document, error) {
+	return c.EmitDocument(ctx, env, ModelNfce, issuerID, idempotencyKey, in)
+}
+
+// EmitDocument emite a nota do modelo. body é o pedido (NfceRequest, NfeRequest ou o
+// JSON já gravado, para reenviar igual). Rejeição da SEFAZ (422 com a nota) volta
+// como Document com status REJECTED, sem erro; 202 volta PROCESSING. Erro só quando
+// não há nota.
+func (c *Client) EmitDocument(ctx context.Context, env Environment, model int, issuerID, idempotencyKey string, in any) (Document, error) {
 	body, err := jsonBody(in)
 	if err != nil {
 		return Document{}, err
 	}
 	resp, raw, err := c.do(ctx, env, request{
 		method:      http.MethodPost,
-		path:        issuerPath(issuerID, "/nfce"),
+		path:        issuerPath(issuerID, "/"+modelPath(model)),
 		body:        body,
 		contentType: "application/json",
 		headers:     map[string]string{"Idempotency-Key": idempotencyKey},
@@ -302,20 +322,25 @@ func (c *Client) EmitNfce(ctx context.Context, env Environment, issuerID, idempo
 	return Document{}, parseAPIError(resp.StatusCode, raw)
 }
 
-func (c *Client) GetNfce(ctx context.Context, env Environment, documentID string) (Document, error) {
+func (c *Client) GetDocument(ctx context.Context, env Environment, model int, documentID string) (Document, error) {
 	var out Document
-	err := c.callJSON(ctx, env, http.MethodGet, "/nfce/"+url.PathEscape(documentID), nil, &out)
+	err := c.callJSON(ctx, env, http.MethodGet, "/"+modelPath(model)+"/"+url.PathEscape(documentID), nil, &out)
 	return out, err
 }
 
-// Danfce devolve o PDF de 80 mm (só nota autorizada ou em contingência).
-func (c *Client) Danfce(ctx context.Context, env Environment, documentID string) ([]byte, error) {
-	return c.raw(ctx, env, "/nfce/"+url.PathEscape(documentID)+"/danfce")
+// Printout devolve o PDF: DANFC-e 80 mm (NFC-e) ou DANFE A4 (NF-e). Só nota
+// autorizada ou em contingência.
+func (c *Client) Printout(ctx context.Context, env Environment, model int, documentID string) ([]byte, error) {
+	suffix := "/danfce"
+	if model == ModelNfe {
+		suffix = "/danfe"
+	}
+	return c.raw(ctx, env, "/"+modelPath(model)+"/"+url.PathEscape(documentID)+suffix)
 }
 
 // Xml devolve o XML autorizado.
-func (c *Client) Xml(ctx context.Context, env Environment, documentID string) ([]byte, error) {
-	return c.raw(ctx, env, "/nfce/"+url.PathEscape(documentID)+"/xml")
+func (c *Client) Xml(ctx context.Context, env Environment, model int, documentID string) ([]byte, error) {
+	return c.raw(ctx, env, "/"+modelPath(model)+"/"+url.PathEscape(documentID)+"/xml")
 }
 
 func (c *Client) raw(ctx context.Context, env Environment, path string) ([]byte, error) {
@@ -329,15 +354,15 @@ func (c *Client) raw(ctx context.Context, env Environment, path string) ([]byte,
 	return raw, nil
 }
 
-// CancelNfce pede o cancelamento. Rejeição do evento (422) volta no resultado.
-func (c *Client) CancelNfce(ctx context.Context, env Environment, documentID, reason string) (CancellationResult, error) {
+// CancelDocument pede o cancelamento. Rejeição do evento (422) volta no resultado.
+func (c *Client) CancelDocument(ctx context.Context, env Environment, model int, documentID, reason string) (CancellationResult, error) {
 	body, err := jsonBody(map[string]string{"reason": reason})
 	if err != nil {
 		return CancellationResult{}, err
 	}
 	resp, raw, err := c.do(ctx, env, request{
 		method:      http.MethodPost,
-		path:        "/nfce/" + url.PathEscape(documentID) + "/cancel",
+		path:        "/" + modelPath(model) + "/" + url.PathEscape(documentID) + "/cancel",
 		body:        body,
 		contentType: "application/json",
 	})
@@ -351,4 +376,11 @@ func (c *Client) CancelNfce(ctx context.Context, env Environment, documentID, re
 		}
 	}
 	return CancellationResult{}, parseAPIError(resp.StatusCode, raw)
+}
+
+// NfeTotals calcula os totais e impostos da NF-e (sem gravar nada) para a prévia.
+func (c *Client) NfeTotals(ctx context.Context, env Environment, in NfeTotalsRequest) (NfeTotals, error) {
+	var out NfeTotals
+	err := c.callJSON(ctx, env, http.MethodPost, "/nfe/totals", in, &out)
+	return out, err
 }
