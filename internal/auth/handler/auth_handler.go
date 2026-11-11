@@ -104,7 +104,9 @@ func (h *Handler) DemoLogin(c *gin.Context) {
 		return
 	}
 
-	allowed, err := h.rateLimiter.Allow(c.Request.Context(), "demo_login:"+c.ClientIP(), 10, time.Minute*15)
+	// Limite por IP do visitante (o web repassa via X-Forwarded-For). Folgado
+	// para quem divide o mesmo IP (NAT de escritório, escola, operadora móvel).
+	allowed, err := h.rateLimiter.Allow(c.Request.Context(), "demo_login:"+c.ClientIP(), 30, time.Minute*15)
 	if err != nil {
 		_ = c.Error(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "erro interno ao abrir a demonstração, tente novamente", "code": "INTERNAL_ERROR"})
